@@ -7,14 +7,17 @@
 
 ## 1. Purpose and architecture
 
-Build one deterministic Python service that converts a normalized profile into an affordable contribution/cash-priority plan, explanations, and monthly projections.
+Build one Python service with bounded AI priority selection and a deterministic financial engine that converts a normalized profile into an affordable contribution/cash-priority plan, explanations, and monthly projections.
 
 ~~~text
 Synthetic fixtures or Plaid Sandbox + confirmed inputs
   -> canonical financial profile
   -> calculated financial state
-  -> recommendation waterfall
-  -> monthly simulation
+  -> Financial State Agent (interpret computed indicators)
+  -> Recommendation Agent (propose bounded priority order)
+  -> Python validation and cash allocator
+  -> deterministic monthly simulation
+  -> Explanation Agent (explain validated decisions and changes)
   -> structured evaluation
   -> live SwiftUI response or bundled offline artifact
 ~~~
@@ -23,7 +26,7 @@ Use Python 3.12, FastAPI, Pydantic, Uvicorn, and pytest. Add the Plaid SDK only 
 
 Run on a designated teammate's Mac through a temporary HTTPS tunnel. No paid instance is required.
 
-Financial recommendations are deterministic. No LLM, trading, or portfolio optimization. Preserve an illustrative target-date allocation while personalizing contributions and cash priorities.
+AI selects a bounded priority order; Python validates it and computes every monetary amount. No trading or portfolio optimization. Preserve an illustrative target-date allocation while personalizing contributions and cash priorities.
 
 T. Rowe Price already researches target-date personalization. The prototype contributes the explainable implementation and participant experience. [T. Rowe Price research](https://www.troweprice.com/institutional/us/en/insights/articles/2024/q3/make-it-personal-the-next-chapter-for-target-date-solutions-na.html)
 
@@ -82,12 +85,13 @@ Pure functions:
 
 ~~~text
 derive_state(profile) -> FinancialState
-build_plan(profile, state) -> Plan
-simulate(profile, strategy, scenario, assumptions) -> Projection
-evaluate(profile, scenario) -> Evaluation
+validate_decision(profile, state, proposal) -> DecisionSummary
+build_plan(profile, state, decision) -> Plan
+simulate(profile, strategy, scenario, assumptions, decision) -> Projection
+evaluate(profile, scenario, validated_decision) -> Evaluation
 ~~~
 
-API and exporter call the same evaluator. Routers and the Plaid adapter contain no financial policy. Swift does not duplicate the engine.
+AI orchestration runs before the pure evaluator. API and exporter call the same evaluator with a validated decision. The exporter reads committed decision fixtures; it never makes live model calls. Routers and the Plaid adapter contain no financial policy. Swift does not duplicate the engine.
 
 Use Decimal and ROUND_HALF_UP for cash/debt accounting. Return integer cents. Floating-point compound return factors are acceptable, rounded to cents monthly. Allocate any final cent residual to cash so money is conserved.
 
@@ -256,6 +260,41 @@ Reason
   input_paths: string[]
 ~~~
 
+### AI decision and explanation contract
+
+~~~text
+DecisionSummary
+  decision_id: string
+  source: "ai" | "rules_fallback"
+  model_id: string | null
+  prompt_version: string
+  ordered_priorities: ("starter_reserve" | "high_apr_debt" | "full_reserve")[]
+  rationale:
+    - priority: string
+      summary: string
+      evidence_paths: string[]
+      tradeoff: string
+  constraint_checks:
+    - code: string
+      passed: boolean
+  fallback_reason: string | null
+
+AIExplanation
+  state_summary: string
+  narrative: string
+  source: "ai" | "template"
+  changes:
+    - field_path: string
+      before: string | number | boolean | null
+      after: string | number | boolean | null
+~~~
+
+Evaluation additionally contains decision_summary: DecisionSummary and explanation: AIExplanation. The structured decision summary is the stored reasoning trace: a concise decision record, not private chain-of-thought. Constraint checks and changes are computed by Python, never asserted by the LLM.
+
+FinancialProfile additionally accepts planning_preference: "balanced" | "cash_security" | "debt_reduction", default "balanced". This is an explicit customer input, not an inferred personality trait. Fixture provenance covers this field.
+
+The evaluate request additionally accepts previous_decision_id: string | null (default null). The backend keeps a bounded (128 entries), two-hour in-memory map of prior validated decisions and their state/action snapshots. Use cryptographically random opaque decision IDs; only possession of the ID and a matching profile ID permits comparison. Store each snapshot's profile hash, but allow financial inputs and preferences to change for that same profile so the explanation can describe those changes. Never look up prior snapshots by profile ID alone; an expired or unknown ID yields an initial-plan explanation with a warning. Bundled IDs need not exist on the live server. No database or raw model transcript is required. Previous decisions supply explanation context only, not authority over the next plan.
+
 ### Projection and assumptions
 
 ~~~text
@@ -402,7 +441,7 @@ Employer matching and high-interest debt are supported priorities, but this exac
 
 ## 8. Adaptive monthly waterfall
 
-Recompute monthly. Plan-screen actions are the first month's output from the same allocator.
+Recompute amounts monthly using one validated priority order for the whole evaluation. Plan-screen actions are the first month's output from the same allocator. The ordering below is the rules fallback; AI may reorder only Steps 3–5 under Section 9 constraints. Do not invoke agents inside the monthly loop.
 
 ### Step 0: Essential obligations
 
@@ -452,7 +491,7 @@ All modeled cash, including surplus, counts toward future reserve targets. Do no
 
 ### Primary action
 
-Keep all actions, but select the headline in this order:
+Keep all actions. Blocked issues, critical reserves, and an affordable increase to capture missing matching retain precedence. Thereafter select the first actionable priority in the validated order, followed by contribution increase or maintenance. The fallback order is:
 
 1. Blocked essential-cash-flow or missing-input issue.
 2. Critical reserve shortfall.
@@ -502,6 +541,26 @@ Template keys are lowercase reason codes. Facts contain all interpolation values
 For HIGH_APR_DEBT include debt ID, balance, APR, minimum, extra, and total payment. Match reasons separately include employee contribution, employer contribution, and required employee rate.
 
 No explanation introduces claims absent from the structured output. Allocation text says the curve is illustrative and no personal portfolio optimization was performed.
+
+### AI authority, orchestration, and stored reasoning traces
+
+Three backend stages share the same canonical financial state; a small sequential pipeline is sufficient. Developer 3 owns model calls, timeouts, structured outputs, and in-memory decision records. Developer 4 owns allowed actions, validation, templates, and financial meaning.
+
+1. **Financial State Agent:** interpret Python-computed liquidity, debt burden, savings capacity, and horizon. Python calculates debt burden as annual required minimums / annual gross salary, and savings capacity as current monthly surplus / take-home (null when take-home is zero). Put these additional metrics in the internal agent context; do not add readiness without a defined target. The agent cannot compute or overwrite indicators.
+2. **Recommendation Agent:** return a permutation of `starter_reserve`, `high_apr_debt`, and `full_reserve`, plus concise evidence-linked rationale and tradeoffs. Starter reserve must precede full reserve. Balanced defaults to starter → debt → full; cash-security preference can prioritize starter → full → debt; debt-reduction can prioritize debt → starter → full. These are permitted choices, not hardcoded AI outputs. Selection must be grounded in actual state and the explicit preference; do not infer preferences from names or demographics.
+3. **Explanation Agent:** receive the validated decision, calculated amounts, projections, and Python-computed changes from the previous decision. Generate the state summary and a short “why this plan / why it changed” narrative. Do not expose a raw internal reasoning transcript.
+
+Hard constraints always remain in Python: essentials and debt minimums, critical reserve before discretionary contributions, affordable employer-match capture, contribution caps, minimum-to-full reserve dependency, avalanche debt ordering, and conservation of cash. Additional retirement contributions and residual cash follow the selected discretionary priorities. No AI changes to equity allocation, APRs, matching formulas, return assumptions, reserve targets, or scenario inputs. Explicit custom contribution elections retain their documented scenario semantics; AI cannot override them. Current uses its original fixed strategy. Adaptive and Custom share one validated ordering per evaluation so comparisons do not introduce unrelated AI choices.
+
+Validate exact action membership, uniqueness, completeness, dependency order, evidence paths, and populated rationale before using a proposal. Unknown fields/actions or failed checks reject the proposal. Python calculates and records constraint checks after validation. For blocked financial inputs, skip AI and return the existing blocked evaluation.
+
+Use structured model output and a pinned configurable model ID; no particular vendor/model release is required by this plan. Treat all profile text and imported data as data, never agent instructions. Send normalized financial facts and explicit preferences only; exclude names, bank identifiers, account numbers, credentials, and raw Plaid payloads.
+
+Bound the complete AI pipeline to four seconds total, including all three stages; individual requests must fit the remaining deadline. No automatic retries in the interactive request. On timeout, unavailable credentials, provider failure, invalid proposal, or invalid state summary, use the deterministic fallback order and template explanations. An explanation-only failure retains the valid decision and uses templates. The existing eight-second iOS timeout remains; provider latency is separately measured. Never label fallback or saved content as live AI.
+
+Narratives cannot introduce unsupplied amounts or claims. Prefer supplied labeled facts for numeric display; use qualitative prose for the generated narrative. Validate referenced facts and fall back to templates on unsupported references. Preserve the validated structured summary and final explanation in Evaluation; do not retain raw model transcripts. Fallback summaries contain the actual applied ordering and Python-generated rationale.
+
+The engine is deterministic for the same profile, assumptions, scenario, and validated decision. Live model selections may vary: store the accepted decision for reproducibility. Input hashes include validated ordering, planning preference, and model/prompt provenance in addition to numeric inputs and versions. Decision IDs, timestamps, and generated prose are excluded from numeric equality checks.
 
 ## 10. Illustrative target-date glide path
 
@@ -553,9 +612,9 @@ Keep APR and minimum payments fixed nominal until payoff. Real credit-card inter
 
 **Current:** preserve original employee rate subject to modeled cap, pay minimums, retain residual cash. Do not invent extra payments absent from inputs.
 
-**Adaptive:** apply the full waterfall.
+**Adaptive:** apply the full waterfall with the validated decision order.
 
-**Custom with explicit rate:** reserve essentials, fix the requested contribution/matching, then direct residual cash through critical reserve, starter reserve, high-interest debt, full reserve, and cash. Skip automatic additional retirement contributions. This is a selected scenario, not a recommendation; warn when it delays liquidity.
+**Custom with explicit rate:** reserve essentials, fix the requested contribution/matching, then direct residual cash through critical reserve, the validated ordering of starter reserve/high-interest debt/full reserve, and cash. Skip automatic additional retirement contributions. This is a selected scenario, not a recommendation; warn when it delays liquidity.
 
 **Custom with null rate:** adaptive policy with the selected retirement age.
 
@@ -608,9 +667,11 @@ Emergency savings is part of cash, not an additional asset. Do not combine preta
 
 ### Monte Carlo
 
-Do not implement during the event. Random paths are easy; defensible success probabilities require targets, volatility, correlations, and drawdown modeling. Keep this in the post-hackathon backlog.
+Optional stretch only after the hour-12 MVP and AI acceptance checks pass, and before the hour-18 freeze. Use seeded Python simulations with disclosed assumptions; never route projections through an LLM. Keep deterministic projections as the demo default. Percentiles are not retirement success probabilities; do not add readiness scores or success claims.
 
 ## 12. Exact fixtures
+
+Demo framing: Morgan is a fictional T. Rowe Price customer created for this prototype. Jordan and Casey are fictional comparison profiles. Display “Fictional customer • Synthetic data • Not affiliated with or endorsed by T. Rowe Price.” No real customer information, actual fund-performance claims, or sponsor endorsement is implied. All preferences and account values are invented.
 
 All fixtures:
 
@@ -618,7 +679,7 @@ All fixtures:
 - Traditional employee contributions and 22% estimated marginal income-tax adjustment.
 - $24,500 employee planning cap.
 - Fully vested 100% match on the first 5% of salary.
-- Provenance fixture on every input.
+- Provenance fixture on every input; planning_preference is balanced by default.
 - No unlisted debts or expenses.
 
 Convert the specification's dollars below to integer cents in profiles.json.
@@ -643,7 +704,7 @@ debt:
   minimum: $200/month
 ~~~
 
-Expected: six months of reserves, full match, maintain 10% contribution, retain low-rate loan minimum, surplus to cash, 90% illustrative equity.
+Expected with the committed balanced decision: six months of reserves, full match, maintain 10% contribution, retain low-rate loan minimum, surplus to cash, 90% illustrative equity.
 
 ### Morgan — competing priorities
 
@@ -665,7 +726,7 @@ debt:
   minimum: $400/month
 ~~~
 
-Opening-month acceptance arithmetic:
+Opening-month acceptance arithmetic for the committed balanced decision:
 
 ~~~text
 Current employee contribution:     $560.00
@@ -681,6 +742,8 @@ Total debt payment:              $1,363.80
 ~~~
 
 One month of reserves is already funded. Preserve full matching and accelerate high-interest debt. After payoff, build three months of reserves, then increase contributions. Initial equity remains 90%, the same as Jordan.
+
+Optional AI-ordering demonstration: prepare a separate Morgan cash-security fixture variant and a reviewed decision that places full reserve before extra debt. Export its evaluation through the same engine and show the debt-interest tradeoff. This is additional to the nine required presets; label it as a saved AI decision. Balanced acceptance arithmetic above remains pinned to its original decision.
 
 ### Casey — approaching retirement
 
@@ -701,7 +764,7 @@ Expected: eight months of reserves, full match, maintain 12%, no urgent debt act
 
 ## 13. Offline artifact exporter
 
-Implement export_demo.py using the same evaluator as the API. No manually authored results.
+Implement export_demo.py using the same evaluator as the API. No manually authored numerical results. Store reviewed, validated AI decisions in backend/fixtures/decisions.json with model/prompt provenance and explanations; replay these during export. Include explicit rules-fallback fixtures for outages. Each preset reuses the profile's pinned ordering. Artifacts retain decision_summary and explanation; saved AI must be labeled as saved, not a live call.
 
 For each profile export:
 
@@ -733,7 +796,7 @@ scenario
 evaluation
 ~~~
 
-Profile hash: SHA-256 of server canonical profile JSON. Input hash additionally covers scenario, assumptions, and versions. Use sorted keys and stable compact JSON. Swift treats hashes as opaque.
+Profile hash: SHA-256 of server canonical profile JSON. Input hash additionally covers scenario, assumptions, versions, validated priority ordering, and model/prompt provenance. Use sorted keys and stable compact JSON. Swift treats hashes as opaque.
 
 Manifest maps profile/preset IDs to filenames. Check generated artifacts into the repo and copy them into iOS only after tests pass. Exclude timestamps from deterministic equality assertions.
 
@@ -788,6 +851,12 @@ Restart clears sessions; expired sessions return 401 SESSION_EXPIRED. Native OAu
 
 ~~~text
 APP_ENV=hackathon
+AI_ENABLED=true
+AI_PROVIDER=...
+AI_MODEL=...              # pin an available model ID at setup
+AI_API_KEY=...            # backend only
+AI_PROMPT_VERSION=1
+AI_TOTAL_TIMEOUT_SECONDS=4
 PLAID_ENABLED=false
 PLAID_ENV=sandbox
 PLAID_CLIENT_ID=...
@@ -797,7 +866,7 @@ SESSION_TTL_SECONDS=7200
 LOG_LEVEL=info
 ~~~
 
-Fail startup if enabled Plaid lacks credentials or uses non-Sandbox configuration. Commit only placeholder .env.example; ignore .env.
+Missing AI credentials disable live AI and expose rules fallback; do not break the demo. Fail startup if enabled Plaid lacks credentials or uses non-Sandbox configuration. Commit only placeholder .env.example; ignore .env.
 
 Boundaries:
 
@@ -849,7 +918,7 @@ Judging: Mac powered, lid open, server/tunnel running without reload, phone heal
 - First: fixtures, budget arithmetic, match tests.
 - Owns state, waterfall, simulation, facts, assumptions, tests, exporter.
 - Does not build UI or Plaid.
-- Does not implement Monte Carlo during the event.
+- Owns any gated Monte Carlo stretch; never delegates numeric projections to an LLM.
 
 Developer 1 uses contract examples for UI; Developer 2 decodes them into Swift. Contract changes require updated examples and a successful Swift decode.
 
@@ -861,10 +930,10 @@ Use small task branches, reviewed squash merges every one to two hours, buildabl
 - **Hours 1–2:** freeze schemas, examples, errors, versions, assumptions.
 - **Hours 2–4:** state/policy and a real phone-visible response plus matching bundle.
 - **Hour 4:** vertical-slice gate; cut Plaid if incomplete.
-- **Hours 4–7:** waterfall, reasons, profiles, accounting tests.
-- **Hours 7–10:** monthly current/adaptive/custom simulation and edge cases.
+- **Hours 4–7:** waterfall, reasons, profiles, accounting tests; bounded AI pipeline and structured decisions.
+- **Hours 7–10:** monthly current/adaptive/custom simulation and edge cases; AI validation, prior-decision diff, and fallback tests.
 - **Hours 10–12:** all presets, live/offline integration.
-- **Hour 12:** MVP gate: required product offline, live evaluator connected.
+- **Hour 12:** MVP gate: required product offline, live evaluator connected, bounded AI ordering and rules fallback verified.
 - **Hours 12–15:** conditional Plaid by Developer 3; financial audit by Developer 4.
 - **Hour 15:** cut incomplete Plaid.
 - **Hours 15–18:** reliability, data gaps, latency, integration.
@@ -875,6 +944,17 @@ Use small task branches, reviewed squash merges every one to two hours, buildabl
 - **Hours 23–24:** blocking fixes only.
 
 ## 18. Tests and acceptance
+
+AI acceptance:
+
+- Valid alternative ordering changes funded allocations when the fixture budget makes the tradeoff relevant.
+- Missing/duplicate/unknown priorities, full-before-starter, and invalid evidence paths fall back.
+- AI cannot change protected priorities, amounts, allocations, or assumptions.
+- Provider outage, invalid output, and deadline exhaustion preserve an honest rules-backed evaluation.
+- Explanation failure preserves a valid decision; no unsupported numbers reach the UI.
+- Prior IDs expire safely and cannot compare different profiles.
+- Saved decision replay reproduces numeric results and all nine artifacts without a model call.
+- Profile text cannot override system constraints; model requests exclude identifying data.
 
 Financial tests:
 
@@ -903,7 +983,7 @@ Simulation identities:
 - No negative debt balances.
 - Initial milestones equal 0 where already achieved.
 - Null means not reached.
-- Identical inputs/assumptions produce identical outputs.
+- Identical inputs/assumptions/validated ordering produce identical numerical outputs.
 - Horizon changes consistently update allocations and growth.
 - Different strategies can reasonably trade retirement balance against liquidity/debt.
 - Inflation adjustment uses the correct horizon.
@@ -921,7 +1001,7 @@ Contract/integration:
 - Backend shutdown preserves offline demo.
 - Stretch: partial imports, timeouts, invalid/expired sessions, restart, cancellation.
 
-Aim for local evaluation under 250 ms on fixtures and typical healthy-network responses under two seconds. Measure after integration; do not add caching infrastructure without evidence. Frontend timeout is eight seconds.
+Aim for the pure local engine under 250 ms on fixtures; measure AI-inclusive latency against the four-second pipeline deadline and eight-second client timeout. Measure after integration; do not add caching infrastructure without evidence. Frontend timeout is eight seconds.
 
 ## 19. Demo reasoning and done criteria
 

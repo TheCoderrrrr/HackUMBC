@@ -26,7 +26,7 @@ The backend owns financial calculations. Swift formats and displays results; it 
 - Financial snapshot with sources and dates.
 - One primary recommendation on Overview.
 - A plan separating employee contributions, employer matching, debt, liquidity, and allocation.
-- Deterministic explanations with supporting inputs.
+- AI explanations grounded in validated decisions, with deterministic template fallback and supporting inputs.
 - Current-versus-adaptive projections.
 - Custom retirement-age and contribution scenarios while connected.
 - Bundled engine-generated profiles and selected scenarios while offline.
@@ -36,7 +36,7 @@ The backend owns financial calculations. Swift formats and displays results; it 
 
 - No readiness score, probability of success, or guaranteed retirement-income number.
 - No automatic allocation adjustment based on debt or assets.
-- No LLM, chatbot, trading, authentication accounts, or production bank credentials.
+- No on-device LLM, chatbot, trading, authentication accounts, or production bank credentials. AI calls run on the backend.
 - No independent debt-payment slider. Contribution changes must affect other priorities.
 - Plaid Sandbox is conditional stretch work, not the main demo entry point.
 - No second financial engine in Swift.
@@ -79,7 +79,7 @@ Actions:
 - Secondary: **Connect Sandbox accounts**, visible only after the complete flow passes its gate.
 - Connection Settings toolbar action.
 
-Show: **Educational prototype using synthetic or Sandbox data.**
+Show: **Educational prototype using synthetic or Sandbox data.** Morgan is a fictional T. Rowe Price customer; Jordan and Casey are fictional comparison profiles. Display **Fictional customer • Synthetic data • Not affiliated with or endorsed by T. Rowe Price.**
 
 ### Overview tab
 
@@ -107,7 +107,7 @@ Sections:
 - **Emergency savings:** current months, starter target, full target.
 - **Target-date foundation:** stocks/bonds bar and explanation.
 
-Every section has **Why?**. Blocked actions show the missing input or cash-flow gap.
+Every section has **Why?**. Show the backend-generated narrative, selected priority order, supporting facts, tradeoffs, and constraint checks from the structured decision summary. Label decision origin **AI-assisted priorities**, **Rules fallback**, or **Saved AI-assisted priorities** independently of the existing data-mode badge. Never show raw internal model reasoning. Blocked actions show the missing input or cash-flow gap.
 
 Allocation copy:
 
@@ -121,7 +121,7 @@ Default: compare Current and Adaptive at the profile's original retirement age.
 
 Controls:
 
-- Retirement age: integer steps, current age +1 through 75.
+- Retirement age: integer steps, current age +1 through 80, matching backend validation.
 - Optional employee contribution override: 0–20%, steps of 0.5 percentage points.
 - **Compare scenario** button.
 - Offline preset buttons: original plan, retire two years later, contribution +1 percentage point.
@@ -209,7 +209,7 @@ Shared by Overview and Plan. Owns evaluation loading, retry, explanation selecti
 
 ### ExploreViewModel
 
-Owns draft controls, submitted settings, request task, and comparison result. Draft edits do not change the active recommendation. Displayed results retain their submitted settings.
+Owns draft controls, submitted settings, request task, and comparison result. Pass the last live decision ID for the same profile as previous_decision_id; reset it on profile or server changes. Missing/expired prior IDs simply show an initial-plan explanation. Draft edits do not change the active recommendation. Displayed results retain their submitted settings.
 
 ### ConnectionViewModel
 
@@ -423,7 +423,42 @@ UNASSIGNED_SURPLUS, BASELINE_ALLOCATION_RETAINED,
 MISSING_REQUIRED_INPUT, SIMPLIFIED_TAX_ESTIMATE
 ~~~
 
-Use deterministic English templates. Developer 4 owns financial meaning and facts; Developer 1 owns layout. Unknown template keys show a neutral explanation and supplied labeled facts, never an invented recommendation.
+Use the validated backend AI narrative when available, otherwise deterministic English templates. Developer 4 owns financial meaning and facts; Developer 1 owns layout. Unknown template keys show a neutral explanation and supplied labeled facts, never an invented recommendation.
+
+### AI decision and explanation contract
+
+~~~text
+DecisionSummary
+  decision_id: string
+  source: "ai" | "rules_fallback"
+  model_id: string | null
+  prompt_version: string
+  ordered_priorities: ("starter_reserve" | "high_apr_debt" | "full_reserve")[]
+  rationale:
+    - priority: string
+      summary: string
+      evidence_paths: string[]
+      tradeoff: string
+  constraint_checks:
+    - code: string
+      passed: boolean
+  fallback_reason: string | null
+
+AIExplanation
+  state_summary: string
+  narrative: string
+  source: "ai" | "template"
+  changes:
+    - field_path: string
+      before: string | number | boolean | null
+      after: string | number | boolean | null
+~~~
+
+Evaluation additionally contains decision_summary: DecisionSummary and explanation: AIExplanation. The structured decision summary is the stored reasoning trace: a concise decision record, not private chain-of-thought. Constraint checks and changes are computed by Python, never asserted by the LLM.
+
+FinancialProfile additionally accepts planning_preference: "balanced" | "cash_security" | "debt_reduction", default "balanced". This is an explicit customer input, not an inferred personality trait. Fixture provenance covers this field.
+
+The evaluate request additionally accepts previous_decision_id: string | null (default null). The backend keeps a bounded (128 entries), two-hour in-memory map of prior validated decisions and their state/action snapshots. Use cryptographically random opaque decision IDs; only possession of the ID and a matching profile ID permits comparison. Store each snapshot's profile hash, but allow financial inputs and preferences to change for that same profile so the explanation can describe those changes. Never look up prior snapshots by profile ID alone; an expired or unknown ID yields an initial-plan explanation with a warning. Bundled IDs need not exist on the live server. No database or raw model transcript is required. Previous decisions supply explanation context only, not authority over the next plan.
 
 ### Projection and assumptions
 
@@ -577,7 +612,7 @@ Developer 2 alone edits Xcode project settings and packages. Developer 1 does no
 - **Hours 2–4:** real recommendation on phone; same response loads from bundle.
 - **Hour 4 gate:** working vertical slice; otherwise remove Plaid.
 - **Hours 4–7:** Overview, Snapshot, Plan, explanations, profile switching.
-- **Hours 7–10:** Explore controls, chart, milestones, scenario submission.
+- **Hours 7–10:** Explore controls, chart, milestones, scenario submission; AI summaries, decision provenance, and change explanations.
 - **Hours 10–12:** offline presets, timeout handling, full device walkthrough.
 - **Hour 12 MVP gate:** required UI works offline and live evaluation works.
 - **Hours 12–15:** conditional LinkKit by Developer 2; polish by Developer 1.
@@ -605,6 +640,7 @@ Required checks:
 - Airplane-mode cold launch, profile switching, and every preset.
 - Disable custom offline submission without disabling presets.
 - Handle missing inputs and infeasible scenarios.
+- Verify AI/rules/saved labels, structured traces, expired prior IDs, and model-outage fallback.
 - Repair a changed tunnel URL without rebuilding.
 - Correct nominal/today-dollar labels and differing chart horizons.
 - Larger text and accessible labels.
@@ -621,7 +657,7 @@ Three-minute sequence:
 3. **0:50–1:25:** Morgan: same baseline allocation, preserve match, accelerate expensive debt.
 4. **1:25–2:10:** Why sheet and debt/cash/retirement comparison.
 5. **2:10–2:35:** retire-two-years-later preset or live scenario.
-6. **2:35–3:00:** explain the deterministic engine and target-date foundation.
+6. **2:35–3:00:** show the AI-selected priority order and structured decision summary; explain that Python computes and validates every amount.
 
 Show Plaid afterward only if asked and working.
 
