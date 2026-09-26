@@ -1,5 +1,18 @@
 # What Developer B needs from Developers A and C
 
+## Status (2026-09-26, pull request `team-needs`)
+
+| Request | Status |
+|---|---|
+| A1: spec text | **In the PR, needs Neil's approval**: `BACKEND.md` line 555 and `BACKEND_TEAM_SPLIT.md` lines 10 and 49 now say the AI may choose any documented order, default first, as your answers above describe. |
+| A2: Gemini key | **Resolved**: Eric uses his own key (Neil's item 2). |
+| A3: saved-explanation question | **Resolved**: Neil accepted `AIExplanation` + `valid_prose` (`DEVELOPER_A_NEEDS.md` item 3). |
+| A4: contracts | **Done by Neil**: `contracts/openapi.json` and `contracts/examples/` exist; `test_contracts.py` fails if stale. |
+| A5: one pytest version | **In the PR, needs Neil's approval**: `pytest==9.1.1` only, in `requirements-test.txt`, which now also installs the runtime requirements. |
+| C1, C2: `decisions.json` and the bundle before final export | **Tooling done** (`main`, `5716131`): `prepare_decisions`, then `export_demo --draft` writes the unreviewed bundle to `fixtures/draft/` for your audit. Waiting on Eric running it with his key. |
+| C3: tell B before changing how the simulation calls `allocate_month` | **Agreed**. The PR's `tests/test_engine_interface.py` also pins `allocate_month`'s signature, so a change on either side fails a test. |
+
+
 Last updated after PR #6. The live API now runs on Developer B's engine and Developer C's evaluator, and all 269 backend tests pass on Windows. Most earlier requests are done. This page lists Developer B's answers to C's open questions and what B still needs.
 
 ## Done since the last version

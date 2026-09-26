@@ -7,7 +7,7 @@ This document assigns the three backend workstreams for the Adaptive Retirement 
 - Use the contract in [BACKEND.md](BACKEND.md) and keep it synchronized with [FRONTEND.md](FRONTEND.md).
 - Python, not AI, calculates money, matching, debt payments, allocations, and projections.
 - Use two fixed agent calls: Recommendation receives Python-computed `FinancialState` indicators and returns an ordering, rationale, and tradeoffs; Explanation describes the validated decision and computed changes. There is no Financial State Agent.
-- The `planning_preference` ordering table governs standard cases. The Recommendation Agent supplies grounded rationale and tradeoffs; only the documented Morgan cash-security variant may demonstrate a non-default order. Python validates every proposal before use.
+- The `planning_preference` ordering table is the default order and the rules fallback. The Recommendation Agent may choose any of the three documented orders for any profile and supplies grounded rationale and tradeoffs; the saved Morgan cash-security variant demonstrates a non-default order. Python validates every proposal before use.
 - Money is integer USD cents; use `Decimal` with `ROUND_HALF_UP` for cash and debt accounting.
 - Do not add databases, authentication, microservices, Docker, or production banking support.
 - Keep `main` buildable. Use small branches and reviewed squash merges.
@@ -46,7 +46,7 @@ contracts/examples/
 - Implement derived state: contribution cash cost, allocatable budget, emergency months, employer matching, high-interest debt, and glide-path equity weight.
 - Compute liquidity, debt burden, savings capacity, and horizon in Python and pass them as structured `FinancialState` indicators directly to Developer A's Recommendation call. Do not add an intermediate LLM interpretation step.
 - Implement the deterministic waterfall, contribution cap rules, matching calculations, affordability checks, debt avalanche ordering, actions, reason facts, and constraint checks.
-- Own the `planning_preference` → default ordering table, validate AI priority proposals and evidence, allow only the documented Morgan cash-security exception, and create the deterministic rules fallback.
+- Own the `planning_preference` → default ordering table, validate AI priority proposals (any documented order, starter reserve before full reserve) and evidence, and create the deterministic rules fallback.
 - Define the template explanations and financial facts used by live and saved AI explanations.
 - Write unit tests for arithmetic, matching, liquidity, debt, tax-treatment, and Morgan's opening-month acceptance case.
 

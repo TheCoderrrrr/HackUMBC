@@ -1,5 +1,7 @@
-# Pinned test environment; the Developer B engine uses the Python standard library.
-pytest==8.4.2
+# Runtime dependencies plus the pinned test tools. Install this file to run the tests.
+-r requirements.txt
+pytest==9.1.1
+httpx==0.28.1
 colorama==0.4.6; sys_platform == "win32"
 iniconfig==2.3.0
 packaging==26.3
