@@ -1,0 +1,353 @@
+diff --git a/backend/app/ai/pipeline.py b/backend/app/ai/pipeline.py
+index b612143..dbdefd4 100644
+--- a/backend/app/ai/pipeline.py
++++ b/backend/app/ai/pipeline.py
+@@ -9,8 +9,6 @@ the rules order and/or template explanation, labeled honestly in the response.
+ """
+ from __future__ import annotations
+ 
+-import hashlib
+-import json
+ import logging
+ import re
+ import time
+@@ -19,6 +17,7 @@ from app import engine_port as engine
+ from app.ai.client import AITimeout, StructuredModel
+ from app.ai.prompts import SYSTEM, ExplanationOut, RecommendationOut, explanation_prompt, recommendation_prompt
+ from app.config import Settings
++from app.engine.canonical import profile_hash
+ from app.decisions import DecisionSnapshot, DecisionStore, diff, new_decision_id, snapshot_fields
+ from app.schemas import (
+     AIExplanation,
+@@ -27,7 +26,6 @@ from app.schemas import (
+     EvaluateRequest,
+     Evaluation,
+     EvaluationCore,
+-    FinancialProfile,
+     Rationale,
+     RecommendationProposal,
+ )
+@@ -44,11 +42,6 @@ _NUMBER_WORDS = re.compile(
+ )
+ 
+ 
+-def profile_hash(profile: FinancialProfile) -> str:
+-    canonical = json.dumps(profile.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
+-    return hashlib.sha256(canonical.encode()).hexdigest()
+-
+-
+ def valid_prose(out: ExplanationOut) -> bool:
+     for text, limit in ((out.state_summary, 400), (out.narrative, 900)):
+         if not text.strip() or len(text) > limit:
+@@ -74,13 +67,13 @@ def describe_change(change: Change) -> dict[str, str]:
+ 
+ def situation_flags(indicators: dict) -> dict[str, bool]:
+     """Qualitative state for the Explanation Agent, derived from Python-computed indicators."""
+-    apr = indicators.get("debt.highest_debt_apr")
+-    capture = indicators.get("match.capture_fraction")
++    cash = indicators["emergency_cash_cents"]
++    capture = indicators.get("financial_state.match_capture_fraction")
+     return {
+-        "starter_reserve_funded": bool(indicators.get("liquidity.starter_reserve_funded")),
+-        "full_reserve_funded": bool(indicators.get("liquidity.full_reserve_funded")),
+-        "has_high_interest_debt": bool(indicators.get("debt.high_interest_debt_cents")),
+-        "has_any_debt": apr is not None,
++        "starter_reserve_funded": cash >= indicators["financial_state.starter_reserve_target_cents"],
++        "full_reserve_funded": cash >= indicators["financial_state.full_reserve_target_cents"],
++        "has_high_interest_debt": bool(indicators.get("financial_state.high_interest_debt_cents")),
++        "has_any_debt": indicators.get("financial_state.highest_debt_apr") is not None,
+         "captures_full_employer_match": capture is not None and capture >= 1,
+     }
+ 
+@@ -155,12 +148,14 @@ class EvaluationPipeline:
+ 
+     def _explain(self, profile, core: EvaluationCore, decision: DecisionSummary, changes: list[Change],
+                  flags: dict[str, bool], *, initial: bool, deadline: float) -> AIExplanation | None:
++        primary = next(a for a in core.plan.actions if a.id == core.plan.primary_action_id)
+         facts = {
+             "planning_preference": profile.planning_preference,
+             "situation": flags,
+             "ordered_priorities": decision.ordered_priorities,
+             "rationale": [{"priority": r.priority, "summary": r.summary, "tradeoff": r.tradeoff} for r in decision.rationale],
+-            "primary_action": core.plan.primary_action_id,
++            # Action IDs embed debt IDs, so describe the primary action by category only.
++            "primary_action": {"category": primary.category, "status": primary.status},
+             "actions": [{"category": a.category, "status": a.status, "reason_codes": a.reason_codes} for a in core.plan.actions],
+             "reason_codes": [r.code for r in core.plan.reasons],
+             "is_initial_plan": initial,
+diff --git a/backend/app/engine_port.py b/backend/app/engine_port.py
+index 8277480..29ecfa3 100644
+--- a/backend/app/engine_port.py
++++ b/backend/app/engine_port.py
+@@ -1,15 +1,12 @@
+ """The only place the API layer touches the financial engine.
+ 
+ Developer A calls these functions; Developer B (state/policy) and Developer C
+-(simulation/evaluate) implement them. Until their modules land, `engine_stub`
+-provides placeholder implementations with the same signatures.
+-
+-To switch to the real engine, replace the import below with the real modules and
+-keep the names exported here unchanged. The API never duplicates financial rules.
++(simulation/evaluate) implement them. `engine_real` adapts their dict-based
++modules to these Pydantic signatures. The API never duplicates financial rules.
+ """
+ from __future__ import annotations
+ 
+-from app import engine_stub as _engine
++from app import engine_real as _engine
+ 
+ # Versions reported by /health and every Evaluation.
+ MODEL_VERSION: str = _engine.MODEL_VERSION
+@@ -34,7 +31,7 @@ default_order = _engine.default_order
+ # The prompt, validate_decision and the fallback all use this one source.
+ permitted_orders = _engine.permitted_orders
+ 
+-# agent_indicators(profile, state) -> dict[str, float | int | None]    [Developer B]
++# agent_indicators(profile, state) -> dict[str, float | int | str | None] [Developer B]
+ # Python-computed liquidity, debt burden, savings capacity and horizon sent to the
+ # Recommendation Agent. Keys double as the allowed evidence paths.
+ agent_indicators = _engine.agent_indicators
+diff --git a/backend/app/engine_real.py b/backend/app/engine_real.py
+new file mode 100644
+index 0000000..f89e9dd
+--- /dev/null
++++ b/backend/app/engine_real.py
+@@ -0,0 +1,144 @@
++"""Adapts the dict-based B/C engine to the Pydantic signatures in `engine_port`.
++
++Developer B's state/policy/explanations and Developer C's evaluator accept and
++return JSON-compatible mappings. This module validates their output with A's
++schemas and translates engine errors into the API envelope. It holds no
++financial rules of its own.
++"""
++from __future__ import annotations
++
++import json
++from pathlib import Path
++
++from app.engine import assumptions as _assumptions
++from app.engine import explanations as _explanations
++from app.engine import policy as _policy
++from app.engine import state as _state
++from app.engine.evaluate import evaluate as _evaluate
++from app.engine.monthly import InfeasibleScenario
++from app.engine.validation import ProfileValidationError
++from app.errors import ApiError
++from app.schemas import (
++    AIExplanation,
++    Change,
++    DecisionSummary,
++    EvaluationCore,
++    FinancialProfile,
++    FinancialState,
++    RecommendationProposal,
++    Scenario,
++)
++
++MODEL_VERSION: str = _assumptions.MODEL_VERSION
++POLICY_VERSION: str = _assumptions.POLICY_VERSION
++
++_FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "profiles.json"
++_BLOCKING = ("MISSING_REQUIRED_INPUT", "CASH_FLOW_SHORTFALL")
++# BACKEND_TEAM_SPLIT.md: the preference table governs standard profiles; only the
++# documented Morgan cash-security variant may demonstrate a non-default order.
++_ORDER_EXCEPTIONS = {"morgan-cash-security": ["starter_reserve", "high_apr_debt", "full_reserve"]}
++
++
++def _data(model) -> dict:
++    return model.model_dump(mode="json")
++
++
++def _profile_error(exc: ProfileValidationError) -> ApiError:
++    message = str(exc).removeprefix(f"{exc.path}: ")
++    return ApiError(422, "INVALID_PROFILE", message, [exc.path])
++
++
++def load_demo_profiles() -> list[FinancialProfile]:
++    data = json.loads(_FIXTURES.read_text(encoding="utf-8"))
++    return [FinancialProfile.model_validate(p) for p in data]
++
++
++def derive_state(profile: FinancialProfile) -> FinancialState:
++    try:
++        return FinancialState.model_validate(_state.derive_state(_data(profile)))
++    except ProfileValidationError as exc:
++        raise _profile_error(exc) from exc
++
++
++def blocking_issue(profile: FinancialProfile, state: FinancialState) -> str | None:
++    return next((code for code in _BLOCKING if code in state.warnings), None)
++
++
++def default_order(planning_preference: str) -> list[str]:
++    return list(_policy.default_priorities(planning_preference))
++
++
++def permitted_orders(profile: FinancialProfile) -> list[list[str]]:
++    """The preference default first, then the profile's documented exception if any."""
++    orders = [default_order(profile.planning_preference)]
++    extra = _ORDER_EXCEPTIONS.get(profile.id)
++    if extra and extra not in orders:
++        orders.append(list(extra))
++    return orders
++
++
++def agent_indicators(profile: FinancialProfile, state: FinancialState) -> dict[str, float | int | str | None]:
++    """B's allowlisted recommendation context, flattened so keys are evidence paths."""
++    context = _state.recommendation_context(_data(profile), _data(state))
++    nested = context.pop("financial_state")
++    return {**context, **{f"financial_state.{k}": v for k, v in nested.items()}}
++
++
++def validate_decision(
++    profile: FinancialProfile,
++    state: FinancialState,
++    proposal: RecommendationProposal | None,
++    *,
++    decision_id: str,
++    prompt_version: str,
++    fallback_reason: str | None = None,
++) -> DecisionSummary:
++    raw = None if proposal is None else {
++        "ordered_priorities": list(proposal.ordered_priorities),
++        "rationale": [r.model_dump() for r in proposal.rationale],
++    }
++    decision = _policy.validate_decision(
++        _data(profile), _data(state), raw,
++        model_id=proposal.model_id if proposal else None,
++        prompt_version=prompt_version,
++    )
++    if decision["source"] == "ai" and decision["ordered_priorities"] not in permitted_orders(profile):
++        decision = _policy.validate_decision(_data(profile), _data(state), None, prompt_version=prompt_version)
++        decision["fallback_reason"] = "ORDER_NOT_PERMITTED"
++    decision["decision_id"] = decision_id
++    if decision["source"] == "rules_fallback":
++        # A's orchestration knows why no proposal exists; B knows why one was rejected.
++        decision["fallback_reason"] = (
++            f"invalid_proposal: {decision['fallback_reason'].lower()}" if proposal is not None
++            else fallback_reason or decision["fallback_reason"]
++        )
++    return DecisionSummary.model_validate(decision)
++
++
++def evaluate(profile: FinancialProfile, scenario: Scenario | None, decision: DecisionSummary) -> EvaluationCore:
++    try:
++        evaluation = _evaluate(
++            profile, scenario, decision,
++            model_version=MODEL_VERSION, policy_version=POLICY_VERSION,
++        )
++    except ProfileValidationError as exc:
++        raise _profile_error(exc) from exc
++    except InfeasibleScenario as exc:
++        raise ApiError(
++            422, "INFEASIBLE_SCENARIO",
++            f"This scenario is short ${exc.shortfall_cents / 100:,.2f} in month {exc.month}. "
++            "Choose a lower contribution rate or a different retirement age.",
++            ["scenario.employee_contribution_rate"],
++        ) from exc
++    return EvaluationCore.model_validate(
++        evaluation.model_dump(exclude={"decision_summary", "explanation"})
++    )
++
++
++def template_explanation(
++    profile: FinancialProfile, core: EvaluationCore, decision: DecisionSummary, changes: list[Change]
++) -> AIExplanation:
++    return AIExplanation.model_validate(_explanations.template_explanation(
++        _data(profile), _data(core.financial_state), _data(decision), _data(core.plan),
++        changes=[c.model_dump(mode="json") for c in changes],
++    ))
+diff --git a/backend/tests/conftest.py b/backend/tests/conftest.py
+index 90af114..a1ba8a3 100644
+--- a/backend/tests/conftest.py
++++ b/backend/tests/conftest.py
+@@ -12,9 +12,9 @@ from app.config import Settings
+ from app.main import create_app
+ 
+ GOOD_RATIONALE = {
+-    "starter_reserve": ("Keep a month of expenses on hand.", ["liquidity.emergency_months"], "Slower debt payoff."),
+-    "high_apr_debt": ("The card charges a high rate.", ["debt.highest_debt_apr"], "Less cash cushion for now."),
+-    "full_reserve": ("Build a larger cushion later.", ["liquidity.full_reserve_funded"], "Delays extra saving."),
++    "starter_reserve": ("Keep a month of expenses on hand.", ["financial_state.emergency_months"], "Slower debt payoff."),
++    "high_apr_debt": ("The card charges a high rate.", ["financial_state.highest_debt_apr"], "Less cash cushion for now."),
++    "full_reserve": ("Build a larger cushion later.", ["financial_state.full_reserve_target_cents"], "Delays extra saving."),
+ }
+ 
+ 
+diff --git a/backend/tests/test_ai_pipeline.py b/backend/tests/test_ai_pipeline.py
+index ca0b3c4..5e082e1 100644
+--- a/backend/tests/test_ai_pipeline.py
++++ b/backend/tests/test_ai_pipeline.py
+@@ -43,7 +43,7 @@ def test_valid_ai_decision_is_used(morgan):
+     body = evaluate(make_client(model), morgan)
+     d = body["decision_summary"]
+     assert d["source"] == "ai" and d["model_id"] == "fake-flash" and d["fallback_reason"] is None
+-    assert d["rationale"][1]["evidence_paths"] == ["debt.highest_debt_apr"]
++    assert d["rationale"][1]["evidence_paths"] == ["financial_state.highest_debt_apr"]
+     assert body["explanation"]["source"] == "ai"
+     assert model.calls == [RecommendationOut, ExplanationOut]
+ 
+diff --git a/backend/tests/test_engine_integration.py b/backend/tests/test_engine_integration.py
+new file mode 100644
+index 0000000..671b054
+--- /dev/null
++++ b/backend/tests/test_engine_integration.py
+@@ -0,0 +1,58 @@
++"""The API serves the real B/C engine, and agrees with the exporter's evaluator."""
++from __future__ import annotations
++
++import json
++from pathlib import Path
++
++from app.engine.evaluate import evaluate as engine_evaluate
++from app.schemas import DecisionSummary, FinancialProfile, Scenario
++
++from .conftest import FakeModel, make_client, recommendation
++
++BALANCED = ["starter_reserve", "high_apr_debt", "full_reserve"]
++CASH_SECURITY = ["starter_reserve", "full_reserve", "high_apr_debt"]
++VARIANT = Path(__file__).parents[1] / "fixtures" / "morgan-cash-security-profile.json"
++
++
++def post(profile, scenario=None, model=None):
++    return make_client(model).post("/v1/evaluate", json={"profile": profile, "scenario": scenario})
++
++
++def test_morgan_api_returns_real_plan_and_projections(morgan):
++    body = post(morgan).json()
++    assert not any(w.startswith("STUB_ENGINE") for w in body["warnings"])
++    card = next(r for r in body["plan"]["reasons"] if r["facts"].get("debt_id") == morgan["debts"][0]["id"])
++    assert card["facts"]["extra_payment_cents"] == 96380
++    for strategy in ("current", "adaptive"):
++        projection = body["projections"][strategy]
++        assert projection["feasible"] and projection["points"][0]["month"] == 0
++        assert len(projection["points"]) == 12 * (morgan["retirement_age"] - morgan["age"]) + 1
++
++
++def test_api_numbers_equal_exporter_evaluator(morgan):
++    scenario = {"retirement_age": morgan["retirement_age"] + 2, "employee_contribution_rate": None}
++    body = post(morgan, scenario).json()
++    decision = DecisionSummary.model_validate(body["decision_summary"])
++    direct = engine_evaluate(FinancialProfile.model_validate(morgan), Scenario.model_validate(scenario), decision)
++    direct = direct.model_dump(mode="json")
++    for key in ("input_hash", "financial_state", "plan", "assumptions", "projections"):
++        assert body[key] == direct[key], key
++
++
++def test_unaffordable_custom_rate_is_422(morgan):
++    res = post(morgan, {"retirement_age": morgan["retirement_age"], "employee_contribution_rate": 0.29})
++    assert res.status_code == 422
++    assert res.json()["error"]["code"] == "INFEASIBLE_SCENARIO"
++
++
++def test_standard_profile_cannot_take_non_default_order(morgan):
++    d = post(morgan, model=FakeModel(recommend=recommendation(CASH_SECURITY))).json()["decision_summary"]
++    assert d["source"] == "rules_fallback"
++    assert d["fallback_reason"] == "invalid_proposal: order_not_permitted"
++    assert d["ordered_priorities"] == BALANCED
++
++
++def test_variant_accepts_documented_exception_through_real_policy():
++    variant = json.loads(VARIANT.read_text())
++    d = post(variant, model=FakeModel(recommend=recommendation(BALANCED))).json()["decision_summary"]
++    assert d["source"] == "ai" and d["ordered_priorities"] == BALANCED

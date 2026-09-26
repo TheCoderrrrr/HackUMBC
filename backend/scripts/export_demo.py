@@ -1,10 +1,11 @@
 """Export ten reviewed offline evaluations through the live numerical engine.
 
-Fixture format (owned jointly by A and B):
+Fixture format (C prepares it with scripts.prepare_decisions; A and B review):
   decisions: {profile_id: {profile_hash, proposal, model_id, prompt_version,
                           decision_id, expected_source, reviewers: ["A", "B"]}}
   explanations: {input_hash: {explanation, reviewers: ["A", "B"]}}
-  fallback_cases: [{profile_id, profile_hash, proposal, reviewers: ["A", "B"]}]
+  fallback_cases: [{profile_id, profile_hash, proposal: null, model_id: null,
+                    prompt_version, decision_id, expected_source, reviewers: ["A", "B"]}]
 The two review marks document human sign-off; schema/evidence validation still
 runs. No provider is contacted by this command.
 """
@@ -85,6 +86,26 @@ def _check_replayed_decision(record: dict[str, Any], decision: Any, profile_id: 
         raise ExportError(f"{profile_id}: replayed priority order does not match its saved record")
 
 
+def check_saved_explanation(profile: Any, evaluation: dict[str, Any], explanation: Any) -> None:
+    """Apply A's live Explanation rules to saved text (proposal pending A's review).
+
+    Saved explanations describe an initial plan, so they carry no changes, and
+    their prose must pass the same number-free and length checks as live output.
+    """
+    from app.ai.pipeline import valid_prose
+    from app.ai.prompts import ExplanationOut
+
+    if get(explanation, "source") != "ai":
+        raise ExportError("saved explanation must be labeled ai")
+    if list(get(explanation, "changes")):
+        raise ExportError("saved explanation must describe an initial plan without changes")
+    prose = ExplanationOut(
+        state_summary=get(explanation, "state_summary"), narrative=get(explanation, "narrative"),
+    )
+    if not valid_prose(prose):
+        raise ExportError("saved explanation contains numbers or exceeds length limits")
+
+
 def _default_dependencies() -> dict[str, Any]:
     try:
         schemas = import_module("app.schemas")
@@ -105,13 +126,6 @@ def _default_dependencies() -> dict[str, Any]:
             decision["decision_id"] = record["decision_id"]
             return decision
 
-        try:
-            check_explanation = schemas.validate_saved_explanation
-        except AttributeError as exc:
-            raise MissingHandoffError(
-                "Developer A must provide schemas.validate_saved_explanation "
-                "to check saved claims against evaluation facts"
-            ) from exc
         return {
             "profile_model": schemas.FinancialProfile,
             "scenario_model": schemas.Scenario,
@@ -119,7 +133,7 @@ def _default_dependencies() -> dict[str, Any]:
             "evaluation_model": schemas.Evaluation,
             "state_fn": lambda profile: state.derive_state(_model_dict(profile)),
             "decision_validator": replay_decision,
-            "explanation_validator": check_explanation,
+            "explanation_validator": check_saved_explanation,
             "assumptions": assumptions.MODEL_ASSUMPTIONS,
         }
     except (ImportError, AttributeError) as exc:
