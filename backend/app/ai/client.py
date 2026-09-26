@@ -5,6 +5,7 @@ the interactive path (BACKEND.md section 9).
 """
 from __future__ import annotations
 
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
@@ -20,6 +21,22 @@ _GEMINI_MIN_TIMEOUT_MS = 10_000
 
 class AITimeout(Exception):
     """The shared AI deadline ran out."""
+
+
+class AIRateLimited(Exception):
+    """The provider refused the call for quota reasons (HTTP 429)."""
+
+    def __init__(self, retry_after_s: float | None = None):
+        super().__init__("rate limited")
+        self.retry_after_s = retry_after_s
+
+
+_RETRY_IN = re.compile(r"retry in ([0-9.]+)s", re.IGNORECASE)
+
+
+def _retry_after(message: str) -> float | None:
+    match = _RETRY_IN.search(message or "")
+    return float(match.group(1)) if match else None
 
 
 class StructuredModel(Protocol):
@@ -48,6 +65,10 @@ class GeminiModel:
         except FutureTimeout as exc:
             future.cancel()  # drops the call if it never started
             raise AITimeout() from exc
+        except Exception as exc:
+            if getattr(exc, "code", None) == 429:
+                raise AIRateLimited(_retry_after(str(exc))) from exc
+            raise
 
     def _call(self, system: str, prompt: str, schema: type[T], deadline: float) -> tuple[T, str | None]:
         from google.genai import types
@@ -60,6 +81,8 @@ class GeminiModel:
             temperature=0.2,
             response_mime_type="application/json",
             response_schema=schema,
+            # We only want structured JSON; also silences the SDK's AFC warning.
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
             http_options=types.HttpOptions(
                 # Gemini rejects server deadlines under 10s (400 INVALID_ARGUMENT). Our real
                 # deadline is enforced by future.result(timeout=...) in generate().

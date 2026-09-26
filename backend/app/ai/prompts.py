@@ -6,6 +6,7 @@ no names, IDs, bank identifiers or raw Plaid payloads.
 from __future__ import annotations
 
 import json
+from functools import lru_cache
 from typing import Literal
 
 from pydantic import BaseModel, Field, create_model
@@ -27,7 +28,12 @@ class RecommendationOut(BaseModel):
 
 def recommendation_schema(evidence_keys: list[str]) -> type[RecommendationOut]:
     """RecommendationOut whose evidence_paths may only be the given keys (sent as a JSON-schema enum)."""
-    Key = Literal[tuple(evidence_keys)]  # type: ignore[valid-type]
+    return _recommendation_schema(tuple(evidence_keys))
+
+
+@lru_cache(maxsize=64)  # key sets repeat across requests; building Pydantic models is not free
+def _recommendation_schema(evidence_keys: tuple[str, ...]) -> type[RecommendationOut]:
+    Key = Literal[evidence_keys]  # type: ignore[valid-type]
     rationale = create_model("RationaleOutKeys", __base__=RationaleOut,
                              evidence_paths=(list[Key], Field(description="Indicator keys that support this priority.")))
     return create_model("RecommendationOutKeys", __base__=RecommendationOut, rationale=(list[rationale], ...))

@@ -100,8 +100,28 @@ def validate_decision(
     return DecisionSummary.model_validate(decision)
 
 
-def evaluate(profile: FinancialProfile, scenario: Scenario | None, decision: DecisionSummary) -> EvaluationCore:
-    state = derive_state(profile)
+def scenario_problem(
+    profile: FinancialProfile, state: State, decision: DecisionSummary, scenario: Scenario | None
+) -> str | None:
+    """A message when a fixed custom election cannot be funded (maps to 422 INFEASIBLE_SCENARIO)."""
+    if scenario is None or scenario.employee_contribution_rate is None:
+        return None
+    try:
+        month = _policy.allocate_month(
+            _dump(profile), state, decision.model_dump(mode="json"),
+            strategy="custom", employee_contribution_rate=scenario.employee_contribution_rate,
+        )
+    except ValueError as exc:  # e.g. above the annual employee cap
+        return str(exc)
+    if not month["feasible"]:
+        gap = month["shortfall_cents"] or 0
+        return f"This contribution needs ${gap / 100:,.2f} more per month than the budget allows."
+    return None
+
+
+def evaluate(
+    profile: FinancialProfile, state: State, scenario: Scenario | None, decision: DecisionSummary
+) -> EvaluationCore:
     plan = _policy.build_plan(_dump(profile), state, decision.model_dump(mode="json"))
     return EvaluationCore(
         schema_version=_assumptions.SCHEMA_VERSION,
@@ -118,10 +138,11 @@ def evaluate(profile: FinancialProfile, scenario: Scenario | None, decision: Dec
 
 
 def template_explanation(
-    profile: FinancialProfile, core: EvaluationCore, decision: DecisionSummary, changes: list[Change]
+    profile: FinancialProfile, state: State, core: EvaluationCore, decision: DecisionSummary,
+    changes: list[Change],
 ) -> AIExplanation:
     raw = _explanations.template_explanation(
-        _dump(profile), derive_state(profile), decision.model_dump(mode="json"),
+        _dump(profile), state, decision.model_dump(mode="json"),
         core.plan.model_dump(mode="json"), changes=[c.model_dump() for c in changes],
     )
     return AIExplanation.model_validate(raw)
