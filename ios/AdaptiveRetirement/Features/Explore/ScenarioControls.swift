@@ -278,12 +278,6 @@ struct OutcomeRows: View {
         "Emergency-reserve milestones",
         "Cash & debt at retirement"
     ]
-    private let symbols = [
-        "Retirement-account balance": "building.columns.fill",
-        "Debt-free timing & total interest": "creditcard.fill",
-        "Emergency-reserve milestones": "umbrella.fill",
-        "Cash & debt at retirement": "banknote.fill"
-    ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -308,7 +302,6 @@ struct OutcomeRows: View {
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: Space.m) {
-                            IconBadge(systemName: symbols[outcome] ?? "circle", size: 42)
                             Text(outcome)
                                 .font(.geist(15, .regular, relativeTo: .callout))
                                 .foregroundStyle(Palette.textSecondary)
@@ -323,7 +316,6 @@ struct OutcomeRows: View {
                             Text("Shown after a live calculation.")
                                 .font(.geist(12, .regular, relativeTo: .caption))
                                 .foregroundStyle(Palette.textCaption)
-                                .padding(.leading, 40)
                                 .padding(.bottom, Space.s)
                                 .transition(.opacity)
                         }

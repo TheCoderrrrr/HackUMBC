@@ -135,7 +135,6 @@ struct OverviewView: View {
         } label: {
             VStack(alignment: .leading, spacing: Space.l) {
                 HStack(spacing: Space.m) {
-                    IconBadge(systemName: "arrow.down.to.line.compact")
                     Text("Planned monthly contributions")
                         .font(.geist(17, .medium, relativeTo: .headline))
                         .foregroundStyle(Palette.textPrimary)
@@ -162,7 +161,6 @@ struct OverviewView: View {
     private var nextStep: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: Space.m) {
-                IconBadge(systemName: "flag.checkered", tint: Palette.blue)
                 Text("Your next step")
                     .font(.geist(18, .medium, relativeTo: .headline))
                     .foregroundStyle(Palette.textPrimary)
@@ -212,7 +210,6 @@ struct OverviewView: View {
     private var supportingDetails: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .center, spacing: Space.m) {
-                IconBadge(systemName: "umbrella.fill", tint: Palette.positive)
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Emergency savings")
                         .font(.geist(16, .regular, relativeTo: .body))
