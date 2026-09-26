@@ -1,211 +1,432 @@
-<div id="top">
-
 <div align="center">
 
 <!-- LOGO PLACEHOLDER: add the square logo as assets/logo.svg, then uncomment the line below. -->
-<!-- <img src="assets/logo.svg" width="160" alt="Adaptive Retirement logo"/> -->
+<!-- <img src="./assets/logo.svg" width="110" alt="Adaptive Retirement logo" /> -->
 
-# ADAPTIVE RETIREMENT
+### Adaptive Retirement - Target Date Fund 2.0
 
-<em>Target Date Fund 2.0: same retirement date, different financial lives.</em>
+**A personalization layer for target-date retirement plans: bounded AI agents read a participant's real cash flow, debt, and savings, then Python turns that into an affordable, explainable plan for where every next dollar should go.**
 
-<!-- BADGES -->
-<img src="https://img.shields.io/github/last-commit/TheCoderrrrr/HackUMBC?style=flat-square&logo=git&logoColor=white&color=13A89E" alt="last-commit">
-<img src="https://img.shields.io/github/languages/top/TheCoderrrrr/HackUMBC?style=flat-square&color=13A89E" alt="repo-top-language">
-<img src="https://img.shields.io/badge/status-hackathon%20prototype-F2A541?style=flat-square" alt="status">
+![Python](https://img.shields.io/badge/Python-3.12-3776AB)
+![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688)
+![Pydantic](https://img.shields.io/badge/Pydantic-contracts-E92063)
+![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS_17+-0D96F6)
+![Swift Charts](https://img.shields.io/badge/Swift_Charts-projections-F05138)
+![Plaid](https://img.shields.io/badge/Plaid-Sandbox_stretch-111111)
+![Cloudflare](https://img.shields.io/badge/Cloudflare-quick_tunnel-F38020)
 
-<em>Built with the tools and technologies:</em>
-
-<img src="https://img.shields.io/badge/Python%203.12-3776AB.svg?style=flat-square&logo=Python&logoColor=white" alt="Python">
-<img src="https://img.shields.io/badge/FastAPI-009688.svg?style=flat-square&logo=FastAPI&logoColor=white" alt="FastAPI">
-<img src="https://img.shields.io/badge/Pydantic-E92063.svg?style=flat-square&logo=Pydantic&logoColor=white" alt="Pydantic">
-<img src="https://img.shields.io/badge/pytest-0A9EDC.svg?style=flat-square&logo=Pytest&logoColor=white" alt="pytest">
-<br>
-<img src="https://img.shields.io/badge/Swift-F05138.svg?style=flat-square&logo=Swift&logoColor=white" alt="Swift">
-<img src="https://img.shields.io/badge/SwiftUI-0D96F6.svg?style=flat-square&logo=Swift&logoColor=white" alt="SwiftUI">
-<img src="https://img.shields.io/badge/iOS%2017+-000000.svg?style=flat-square&logo=Apple&logoColor=white" alt="iOS">
-<img src="https://img.shields.io/badge/Plaid%20Sandbox-111111.svg?style=flat-square" alt="Plaid Sandbox">
+HackUMBC 2026 - University of Maryland, Baltimore County
 
 </div>
-<br>
 
 ---
 
-## Table of Contents
+## Technical Thesis
 
-- [Overview](#overview)
-- [Features](#features)
-- [How It Works](#how-it-works)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-    - [Prerequisites](#prerequisites)
-    - [Installation](#installation)
-    - [Usage](#usage)
-    - [Testing](#testing)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [License](#license)
-- [Acknowledgments](#acknowledgments)
+Target-date funds are not bottlenecked by "can we build a good glide path?"
 
----
+The harder bottleneck is **personal context**.
 
-## Overview
+Two 35-year-olds retiring in the same year get the same fund, even if one has six months of savings and the other carries $18,000 of 25% APR credit-card debt. Today's default only looks at a birth year. Adaptive Retirement keeps the target-date fund as the investment foundation and personalizes what sits around it: how much to contribute, and where the next dollar should go.
 
-Target-date funds are the default investment in most 401(k) plans. They shift from stocks to bonds as retirement approaches, but they only look at one thing: your age. Two 30-year-olds get the same plan, even if one has no debt and a healthy savings cushion while the other carries high-interest debt and has almost no emergency savings.
+```mermaid
+flowchart TD
+    profileInput["Demo profile or Plaid Sandbox + confirmed inputs"] --> stateNode["Calculated financial state"]
 
-T. Rowe Price, whose target-date lineup is its largest product line, has publicly said that personalization is the next step for target-date solutions ([research](https://www.troweprice.com/institutional/us/en/insights/articles/2024/q3/make-it-personal-the-next-chapter-for-target-date-solutions-na.html)). **Adaptive Retirement** is a working prototype of that idea.
+    subgraph agentBox["Bounded AI layer"]
+        stateAgent["Financial State Agent"]
+        recAgent["Recommendation Agent"]
+    end
 
-It keeps the target-date strategy as the investment foundation and personalizes what sits around it: how much to contribute, and where the next available dollar should go.
+    stateNode --> stateAgent
+    stateAgent --> recAgent
+    recAgent --> validator["Python validation"]
+    validator --> allocator["Cash allocator"]
+    allocator --> simulation["Deterministic monthly simulation"]
+    simulation --> explainAgent["Explanation Agent"]
+    explainAgent --> evaluation["Structured evaluation"]
+    evaluation --> phone["SwiftUI iPhone app"]
+```
 
----
-
-## Features
-
-|      | Feature | Summary |
-| :--- | :---: | :--- |
-| 💵 | **Affordable contributions** | Recommends a retirement contribution that fits current take-home pay, living costs and required debt payments. |
-| 🎯 | **Next-dollar priorities** | Orders employer match, emergency savings and high-interest debt, with every dollar funded from one shared budget. |
-| 🤖 | **Bounded AI reasoning** | AI agents choose among permitted priority orders; Python validates the choice and computes every amount. |
-| 💬 | **Explainable plans** | Every section has a "Why?" with the decision, tradeoffs and supporting inputs, plus a template fallback. |
-| 📈 | **Projections** | Deterministic month-by-month projections of debt, cash and retirement assets: current vs. adaptive vs. custom. |
-| 📴 | **Works offline** | Nine engine-generated demo scenarios are bundled into the iPhone app, so the demo survives a network outage. |
-| 🏦 | **Plaid Sandbox (stretch)** | Optional import of debts and balances from Plaid Sandbox, confirmed by the user before evaluation. |
+**AI chooses the order of priorities. Python computes every dollar.** No trading, no portfolio optimization, and no money routed through a language model.
 
 ---
 
-## How It Works
+## Why Adaptive Retirement Exists
+
+When you join a 401(k) and don't pick investments, you are usually defaulted into a target-date fund. It shifts from stocks to bonds as you approach retirement, and the only input it uses is your age.
+
+Real financial lives differ in ways that matter:
+
+- one person has a healthy emergency fund, another has almost nothing,
+- one has a low-rate student loan, another has high-interest credit-card debt,
+- one captures the full employer match, another is leaving free money on the table,
+- one can afford to save more, another is already stretched.
+
+T. Rowe Price, whose target-date lineup is its largest product line, has publicly said that personalization is the logical next step for target-date solutions ([research](https://www.troweprice.com/institutional/us/en/insights/articles/2024/q3/make-it-personal-the-next-chapter-for-target-date-solutions-na.html)). This project is a working, explainable participant experience built around that idea.
+
+The result is a plan that can explain:
 
 ```text
-Demo profiles or Plaid Sandbox + confirmed inputs
-  -> Financial State Agent     interprets Python-computed liquidity, debt burden, savings capacity, horizon
-  -> Recommendation Agent      proposes a bounded priority order
-  -> Python validation         checks the proposal and allocates every dollar
-  -> Deterministic simulation  projects debt, cash and retirement assets monthly
-  -> Explanation Agent         explains why the plan looks the way it does
-  -> SwiftUI iPhone app        displays results (never recalculates them)
-```
-
-Demo profiles are fictional. **Morgan** (competing priorities) and **Jordan** (financially established) are both 35 and plan to retire at 67, but get different plans. **Casey** is approaching retirement.
-
----
-
-## Project Structure
-
-Planned layout (see [BACKEND.md](BACKEND.md) and [FRONTEND.md](FRONTEND.md)):
-
-```sh
-└── HackUMBC/
-    ├── README.md
-    ├── BACKEND.md              # backend and financial engine spec
-    ├── BACKEND_TEAM_SPLIT.md   # backend ownership
-    ├── FRONTEND.md             # SwiftUI app spec
-    ├── assets/                 # logo (to be added)
-    ├── backend/                # Python 3.12 + FastAPI service
-    │   ├── app/
-    │   │   ├── main.py
-    │   │   ├── api.py
-    │   │   ├── schemas.py
-    │   │   ├── engine/         # state, policy, simulation, assumptions
-    │   │   └── integrations/   # optional Plaid Sandbox
-    │   ├── fixtures/
-    │   ├── scripts/export_demo.py
-    │   └── tests/
-    ├── contracts/              # OpenAPI + example payloads
-    └── ios/                    # SwiftUI app
-        └── AdaptiveRetirement/
+what contribution fits this person's cash flow
+where the next available dollar should go
+why the priorities are ordered the way they are
+what happens to debt, cash, and retirement assets over time
+what changed since the last plan
 ```
 
 ---
 
-## Getting Started
+## What Adaptive Retirement Does
 
-### Prerequisites
+It turns a financial profile into a funded plan and a side-by-side projection.
 
-- **Backend:** Python 3.12
-- **iOS app:** a Mac with Xcode, and an iPhone running iOS 17+
-- **Demo hosting:** [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) for a temporary HTTPS tunnel
+```mermaid
+flowchart LR
+    profileNode["Financial profile"] --> essentialsNode["Essentials + debt minimums"]
+    essentialsNode --> criticalNode["Critical reserve"]
+    criticalNode --> matchNode["Employer match"]
+    matchNode --> priorityNode["AI-ordered priorities"]
+    priorityNode --> extraNode["Extra retirement saving"]
+    extraNode --> surplusNode["Residual cash"]
+    surplusNode --> projectNode["Monthly projection"]
+    projectNode --> explainNode["Why this plan"]
+```
 
-### Installation
+| Step | What happens |
+|---|---|
+| **Profile intake** | Loads a synthetic demo profile, or imports debts and balances from Plaid Sandbox for the user to confirm. |
+| **Financial state** | Python computes take-home cost of contributions, allocatable budget, emergency months, match capture, high-interest debt, and glide-path equity. |
+| **State interpretation** | The Financial State Agent interprets liquidity, debt burden, savings capacity, and horizon. It cannot compute or overwrite indicators. |
+| **Priority selection** | The Recommendation Agent orders starter reserve, high-APR debt, and full reserve, with evidence-linked rationale. |
+| **Validation** | Python rejects unknown, duplicate, or out-of-order priorities and falls back to a rules order. |
+| **Cash allocation** | A monthly waterfall funds every recommendation from one shared budget. |
+| **Simulation** | Current, Adaptive, and Custom strategies are projected month by month to retirement. |
+| **Explanation** | The Explanation Agent writes "why this plan / why it changed" from validated facts only, with template fallback. |
 
-1. **Clone the repository:**
+In short: **Adaptive Retirement is not a robo-advisor. It is an explainable cash-priority layer on top of a target-date fund.**
 
-    ```sh
-    git clone https://github.com/TheCoderrrrr/HackUMBC.git
-    cd HackUMBC/backend
-    ```
+### The adaptive waterfall
 
-2. **Create a virtual environment and install dependencies:**
+| Step | Priority | Why it matters |
+|---|---|---|
+| **0** | Essentials and required debt minimums | Nothing discretionary is recommended if basics are not covered. |
+| **1** | Critical reserve: min($1,000, one month of expenses) | Avoids raiding the 401(k) for a small emergency. May temporarily outrank the match, disclosed. |
+| **2** | Employer match | Captures the match up to the full-match rate when affordable. |
+| **3-5** | Starter reserve, high-APR debt (≥10%), full reserve | The only steps AI may reorder, within fixed rules. |
+| **6** | Retirement saving toward a 15% combined rate | Restores or raises contributions once liquidity and debt are handled. |
+| **7** | Residual cash | Kept as unassigned surplus; no brokerage or IRA optimization. |
 
-    ```sh
-    python -m venv .venv
-    source .venv/bin/activate        # Windows: .venv\Scripts\activate
-    pip install -r requirements.txt
-    ```
+---
 
-3. **Configure the environment:** copy `.env.example` to `.env` and fill in the AI provider settings. Without AI credentials, the backend uses its rules fallback.
+## What Judges Should Notice
 
-### Usage
+| Signal | Why it is impressive |
+|---|---|
+| **Same date, different plans** | Jordan and Morgan are both 35 and retire at 67, share the same 90% equity allocation, and get different plans. |
+| **Bounded AI** | AI picks among permitted priority orders; Python validates it and computes every amount. |
+| **Every dollar is funded** | Recommendations always fit take-home pay; money is conserved to the cent every month. |
+| **Explainable decisions** | Every plan section has a "Why?" with the selected order, tradeoffs, evidence, and Python-computed constraint checks. |
+| **Honest comparisons** | Retirement balance is shown next to debt interest and liquidity, so a lower balance is not automatically "worse." |
+| **Outage-proof demo** | Nine engine-generated scenarios are bundled in the app, so the phone demo works in airplane mode. |
 
-Start the API:
+---
 
-```sh
+## Demo Script
+
+1. Open the app and introduce **same retirement date, different financial lives**.
+2. Show **Jordan**: strong reserves, full match, maintain contributions.
+3. Switch to **Morgan**: same allocation, preserve the match, accelerate the 25% APR card.
+4. Open **Why?** and compare debt, cash, and retirement assets side by side.
+5. Run the **retire two years later** preset or a live scenario.
+6. Show the AI-selected priority order and structured decision summary, and explain that Python computes every amount.
+
+The strongest moment is the chain:
+
+```text
+same age -> different finances -> different priority order -> funded plan -> projection -> plain-language why
+```
+
+---
+
+## Demo Profiles
+
+All profiles are fictional, dated 2026-09-26, with traditional contributions, a 22% estimated tax adjustment, and a 100% match on the first 5% of salary.
+
+| Profile | Age → retire | Salary | Situation | Expected plan |
+|---|---|---|---|---|
+| **Jordan** | 35 → 67 | $120,000 | 6 months of reserves, 4% student loan | Full match, maintain 10%, surplus to cash |
+| **Morgan** | 35 → 67 | $84,000 | 1 month of reserves, $18,000 card at 25% APR | Preserve match at 5%, put $963.80/month extra on the card |
+| **Casey** | 58 → 65 | $110,000 | 8 months of reserves, no debt | Full match, maintain 12%, 60.5% equity |
+
+Morgan's opening month, computed by the engine:
+
+| Line | Amount |
+|---|---|
+| Resources before contribution | $5,236.80 |
+| Living expenses | $3,600.00 |
+| Debt minimum | $400.00 |
+| Adaptive contribution (5%), take-home cost | $273.00 |
+| Employer match | $350.00 |
+| **Extra debt payment** | **$963.80** |
+
+---
+
+## Product Surface
+
+| Screen | Purpose |
+|---|---|
+| **Welcome** | Introduces the prototype, the fictional profiles, and the "not affiliated" disclosure. |
+| **Overview** | Profile switcher, one primary action, match captured, emergency months, retirement balance. |
+| **Plan** | Contributions, monthly cash priorities, debt, emergency savings, and the target-date allocation bar, each with **Why?** |
+| **Explore** | Current vs. Adaptive projections, custom retirement age and contribution scenarios, and offline presets. |
+| **Sheets** | Financial snapshot with sources and dates, modeling assumptions, connection settings. |
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph iosBox["SwiftUI iPhone app"]
+        overviewView["Overview"]
+        planView["Plan"]
+        exploreView["Explore"]
+        apiClient["APIClient"]
+        demoRepo["Bundled demo artifacts"]
+    end
+
+    subgraph backendBox["FastAPI backend"]
+        routes["/v1 routes"]
+        stateEngine["State + policy engine"]
+        aiPipeline["AI agent pipeline"]
+        simEngine["Simulation engine"]
+        exporter["Offline exporter"]
+    end
+
+    subgraph externalBox["External"]
+        llm["LLM provider"]
+        plaid["Plaid Sandbox"]
+        tunnel["Cloudflare quick tunnel"]
+    end
+
+    overviewView --> apiClient
+    planView --> apiClient
+    exploreView --> apiClient
+    overviewView --> demoRepo
+    exploreView --> demoRepo
+
+    apiClient --> tunnel
+    tunnel --> routes
+    routes --> stateEngine
+    stateEngine --> aiPipeline
+    aiPipeline <--> llm
+    aiPipeline --> stateEngine
+    stateEngine --> simEngine
+    routes <--> plaid
+    exporter --> stateEngine
+    exporter --> demoRepo
+```
+
+The backend runs on a teammate's Mac and reaches the phone through a temporary HTTPS tunnel. The exporter uses the same evaluator as the API, so offline results are never handwritten.
+
+---
+
+## AI Authority
+
+AI is useful where judgment matters, and fenced off where money is computed.
+
+```mermaid
+sequenceDiagram
+    participant P as Python engine
+    participant S as Financial State Agent
+    participant R as Recommendation Agent
+    participant V as Python validator
+    participant E as Explanation Agent
+
+    P->>S: Computed indicators (liquidity, debt burden, capacity, horizon)
+    S-->>P: Interpretation, no new numbers
+    P->>R: State + explicit planning preference
+    R-->>V: Proposed priority order + rationale
+    V->>V: Check membership, order, evidence paths
+    V-->>P: Validated order, or rules fallback
+    P->>P: Allocate cash and simulate
+    P->>E: Validated decision, amounts, changes
+    E-->>P: "Why this plan" narrative, or template fallback
+```
+
+| AI may | AI may not |
+|---|---|
+| Order starter reserve, high-APR debt, and full reserve | Change essentials, debt minimums, or the critical reserve |
+| Cite evidence and tradeoffs | Change the match formula, APRs, caps, or return assumptions |
+| Explain the plan and what changed | Change the equity allocation |
+| Respect an explicit planning preference | Infer preferences from names or demographics |
+
+The whole AI pipeline has a four-second budget. On timeout, provider failure, or an invalid proposal, the app shows an honest **Rules fallback** label instead of pretending the AI ran.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | Swift, SwiftUI, Swift Charts, URLSession, iOS 17+ |
+| Backend | Python 3.12, FastAPI, Pydantic, Uvicorn |
+| Financial engine | Pure Python with `Decimal` cents and deterministic monthly simulation |
+| AI | Pinned, configurable LLM with structured output, called only from the backend |
+| Data | Synthetic fixtures; Plaid Sandbox Liabilities as a stretch |
+| Testing | pytest, Swift decoding tests, written device checklist |
+| Hosting | A teammate's Mac + Cloudflare quick tunnel |
+
+---
+
+## Repository Map
+
+```text
+BACKEND.md                        Backend and financial engine spec
+BACKEND_TEAM_SPLIT.md             Backend ownership
+FRONTEND.md                       SwiftUI app spec
+assets/                           Logo (to be added)
+
+backend/                          (planned)
+  app/
+    main.py                       FastAPI app
+    api.py                        Routes
+    schemas.py                    Pydantic contract
+    engine/
+      state.py                    Derived financial state
+      policy.py                   Waterfall, validation, reasons
+      simulation.py               Monthly projections
+      assumptions.py              Disclosed modeling assumptions
+    integrations/plaid.py         Optional Plaid Sandbox adapter
+  fixtures/profiles.json          Jordan, Morgan, Casey
+  scripts/export_demo.py          Offline artifact exporter
+  tests/
+
+contracts/                        OpenAPI + example payloads
+ios/AdaptiveRetirement/           SwiftUI app (planned)
+```
+
+---
+
+## API Surface
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /health` | Status, schema/model/policy versions, Plaid flag. |
+| `GET /v1/demo-profiles` | The three synthetic profiles. |
+| `POST /v1/evaluate` | Profile + optional scenario → state, plan, decision summary, explanation, projections. |
+| `POST /v1/plaid/link-token` | Stretch: create a Plaid Link token. |
+| `POST /v1/plaid/exchange` | Stretch: exchange the public token for an in-memory session. |
+| `POST /v1/plaid/import` | Stretch: import a draft profile with missing fields and warnings. |
+
+Money is integer USD cents. Rates are decimals (`0.05` = 5%).
+
+---
+
+## Local Setup
+
+### 1. Backend
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env
+```
+
+Fill in:
+
+```bash
+AI_ENABLED=true
+AI_PROVIDER=...
+AI_MODEL=...
+AI_API_KEY=...
+AI_TOTAL_TIMEOUT_SECONDS=4
+PLAID_ENABLED=false
+```
+
+Without AI credentials, the backend uses its rules fallback.
+
+Run:
+
+```bash
 uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Expose it to the phone (in a separate terminal), then enter the printed HTTPS URL in the app's Connection Settings:
+Check:
 
-```sh
-cloudflared tunnel --url http://localhost:8000
+```bash
+curl http://localhost:8000/health
 ```
 
-Open `ios/AdaptiveRetirement.xcodeproj` in Xcode and run on a physical iPhone.
+Test:
 
-### Testing
-
-```sh
-cd backend
+```bash
 pytest
 ```
 
----
+### 2. iPhone app
 
-## Roadmap
-
-- [ ] **`Vertical slice`**: Morgan's live evaluation reaches the phone and loads from the bundle.
-- [ ] **`MVP`**: all profiles, plan, explanations, projections, offline presets, AI ordering with rules fallback.
-- [ ] **`Stretch`**: Plaid Sandbox import and Monte Carlo projections.
-- [ ] **`Demo final`**: rehearsed live and offline demo on the physical iPhone.
+Open `ios/AdaptiveRetirement.xcodeproj` in Xcode, select your development team, and run on a physical iPhone.
 
 ---
 
-## Contributing
+## Demo Hosting
 
-- Work on short-lived task branches and open pull requests into `main`.
-- Keep `main` buildable; squash-merge reviewed PRs every one to two hours.
-- API contract changes require updated examples in `contracts/` and a successful Swift decode.
-- Python computes all money. AI output never sets amounts, allocations or assumptions.
+The phone cannot reach the Mac's `localhost`, so expose the backend with a Cloudflare quick tunnel:
 
----
+```bash
+cloudflared tunnel --url http://localhost:8000
+caffeinate -i
+```
 
-## License
-
-No license has been chosen yet.
+Enter the printed HTTPS URL in the app's **Connection Settings**. If the tunnel restarts and the URL changes, update it in the app; no rebuild is needed. The bundled offline presets keep the demo working if the tunnel goes down.
 
 ---
 
-## Acknowledgments
+## Why This Is Different From a Standard Target-Date Fund
 
-- Built for [HackUMBC](https://hackumbc.org/).
-- Inspired by T. Rowe Price's research on [target-date personalization](https://www.troweprice.com/institutional/us/en/insights/articles/2024/q3/make-it-personal-the-next-chapter-for-target-date-solutions-na.html).
-- README structure generated with [readme-ai](https://github.com/eli64s/readme-ai).
+| Standard target-date default | Adaptive Retirement |
+|---|---|
+| Uses age only. | Uses cash flow, debt, APRs, savings, and employer match. |
+| Same plan for everyone born the same year. | Same allocation, different contribution and cash priorities. |
+| Says nothing about debt or emergency savings. | Orders emergency savings, high-APR debt, and retirement saving. |
+| No explanation of why. | Shows the decision, tradeoffs, evidence, and what changed. |
+| One projection. | Compares current, adaptive, and custom strategies across debt, cash, and retirement assets. |
 
-*Educational prototype using synthetic or Sandbox data. Not affiliated with or endorsed by T. Rowe Price.*
+---
 
-<div align="right">
+## Hackathon Scope
 
-[![][back-to-top]](#top)
+MVP:
+
+- Three synthetic profiles with instant switching.
+- Adaptive waterfall with employer matching, reserves, and high-APR debt.
+- Bounded AI priority ordering with validation and rules fallback.
+- AI explanations grounded in validated facts, with template fallback.
+- Current vs. Adaptive vs. Custom monthly projections.
+- Nine bundled offline scenarios.
+- Physical-iPhone demo.
+
+Stretch:
+
+- Plaid Sandbox import of debts and balances.
+- Seeded Monte Carlo percentiles.
+
+Out of scope:
+
+- Readiness scores, success probabilities, or guaranteed income numbers.
+- Allocation changes based on debt or assets.
+- Trading, tax optimization, or production bank credentials.
+
+---
+
+*Educational prototype using synthetic or Sandbox data. Morgan, Jordan, and Casey are fictional. Not affiliated with or endorsed by T. Rowe Price.*
+
+<div align="center">
+
+**Adaptive Retirement: a target-date plan that understands more than your retirement date.**
 
 </div>
-
-[back-to-top]: https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square
-
