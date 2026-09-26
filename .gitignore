@@ -1,10 +1,13 @@
+# Local Python tooling and generated caches
+.venv/
+.tools/
 __pycache__/
 *.py[cod]
 .pytest_cache/
-.venv/
-.tools/
 .coverage
 htmlcov/
+
+# Local credentials
 .env
 .env.*
 !.env.example

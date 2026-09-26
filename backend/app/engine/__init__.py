@@ -1,1 +1,1 @@
-"""Pure financial evaluation components."""
+"""Deterministic financial engine."""

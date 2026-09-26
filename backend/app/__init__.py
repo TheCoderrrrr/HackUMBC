@@ -1,1 +1,1 @@
-"""Adaptive Retirement backend package."""
+"""Adaptive Retirement backend application."""

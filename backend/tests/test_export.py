@@ -116,7 +116,7 @@ def fixtures(source_profiles: list[dict]) -> dict:
             "fallback_cases": fallbacks}
 
 
-def fake_evaluate(profile, scenario, decision, *, allow_morgan_exception=False):
+def fake_evaluate(profile, scenario, decision):
     return {
         "schema_version": "1", "model_version": "1.0.0", "policy_version": "1.0.0",
         "profile_id": profile["id"],

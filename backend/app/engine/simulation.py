@@ -98,7 +98,7 @@ def _as_mapping(value: Any) -> dict[str, Any]:
 
 
 def _default_allocator(
-    profile: Any, decision: Any, allow_morgan_exception: bool,
+    profile: Any, decision: Any,
 ) -> tuple[Allocator, dict[str, Any]]:
     try:
         policy = import_module("app.engine.policy")
@@ -137,7 +137,6 @@ def _default_allocator(
             original_profile, original_state, original_decision,
             month=month, strategy=strategy,
             employee_contribution_rate=contribution_override,
-            allow_morgan_exception=allow_morgan_exception,
         )
         debt_months = tuple(
             DebtMonth(
@@ -259,7 +258,6 @@ def run_simulation(
     *,
     allocator: Allocator | None = None,
     equity_weight_fn: EquityWeight | None = None,
-    allow_morgan_exception: bool = False,
 ) -> SimulationRun:
     if strategy not in ("current", "adaptive", "custom"):
         raise ValueError(f"unknown strategy: {strategy}")
@@ -268,7 +266,7 @@ def run_simulation(
     using_b = allocator is None
     initial_state = None
     if allocator is None:
-        allocator, initial_state = _default_allocator(profile, decision, allow_morgan_exception)
+        allocator, initial_state = _default_allocator(profile, decision)
     equity_weight_fn = equity_weight_fn or _default_equity_weight()
 
     age = int(get(profile, "age"))
@@ -464,7 +462,6 @@ def simulate(
     *,
     allocator: Allocator | None = None,
     equity_weight_fn: EquityWeight | None = None,
-    allow_morgan_exception: bool = False,
 ) -> Projection:
     """Documented public simulation entry point."""
     return run_simulation(
@@ -475,7 +472,6 @@ def simulate(
         decision,
         allocator=allocator,
         equity_weight_fn=equity_weight_fn,
-        allow_morgan_exception=allow_morgan_exception,
     ).projection
 
 

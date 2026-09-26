@@ -93,12 +93,10 @@ def _default_dependencies() -> dict[str, Any]:
         assumptions = import_module("app.engine.assumptions")
         def replay_decision(profile: Any, state_value: Any, record: dict[str, Any]) -> dict[str, Any]:
             profile_data = _model_dict(profile)
-            is_variant = profile_data["id"] == VARIANT_ID
             decision = policy.validate_decision(
                 profile_data, state_value, record["proposal"],
                 model_id=record.get("model_id"),
                 prompt_version=record.get("prompt_version", "1"),
-                allow_morgan_exception=is_variant,
             )
             if decision["source"] != record["expected_source"]:
                 raise ExportError(f"{profile_data['id']}: saved proposal fell back during validation")
@@ -468,7 +466,6 @@ def export_bundle(
                 raise ExportError(f"{profile_id}: outage decision is mislabeled")
             fallback_evaluation = _model_dict(evaluator(
                 profile, None, fallback,
-                allow_morgan_exception=profile_id == VARIANT_ID,
             ))
             if fallback_evaluation["explanation"]["source"] != "template":
                 raise ExportError(f"{profile_id}: outage explanation is not a template")
@@ -485,7 +482,6 @@ def export_bundle(
                 try:
                     evaluation = evaluator(
                         profile, scenario, decisions[profile_id],
-                        allow_morgan_exception=profile_id == VARIANT_ID,
                     )
                     data = _model_dict(evaluation)
                     if data["profile_id"] != profile_id:

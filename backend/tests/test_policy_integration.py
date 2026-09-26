@@ -81,10 +81,9 @@ class PolicyIntegrationTests(unittest.TestCase):
         }
         decision = self.validate_decision(
             profile, state, proposal, model_id="integration-fixture",
-            allow_morgan_exception=True,
         )
         self.assertEqual(decision["source"], "ai")
-        result = evaluate(profile, None, decision, allow_morgan_exception=True)
+        result = evaluate(profile, None, decision)
         if hasattr(result, "model_dump"):
             result = result.model_dump(mode="json")
         self.assertEqual(result["decision_summary"]["ordered_priorities"], priorities)
@@ -130,7 +129,6 @@ class PolicyIntegrationTests(unittest.TestCase):
             decision = self.validate_decision(
                 profile, state, record["proposal"],
                 model_id=record["model_id"],
-                allow_morgan_exception=profile["id"] == "morgan-cash-security",
             )
             self.assertEqual(decision["source"], record["expected_source"])
             decision["decision_id"] = record["decision_id"]
@@ -160,7 +158,6 @@ class PolicyIntegrationTests(unittest.TestCase):
             decision = replay(profile, self.derive_state(profile), saved)
             opening = run_simulation(
                 profile, "adaptive", None, MODEL_ASSUMPTIONS, decision,
-                allow_morgan_exception=profile_id == "morgan-cash-security",
             ).opening_allocation
             scenarios = [None] if profile_id == "morgan-cash-security" else [
                 None,
@@ -172,7 +169,6 @@ class PolicyIntegrationTests(unittest.TestCase):
             for scenario in scenarios:
                 result = evaluate(
                     profile, scenario, decision,
-                    allow_morgan_exception=profile_id == "morgan-cash-security",
                 )
                 result_data = result.model_dump(mode="json") if hasattr(result, "model_dump") else result
                 explanations[result_data["input_hash"]] = {

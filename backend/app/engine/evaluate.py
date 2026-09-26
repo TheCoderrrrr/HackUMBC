@@ -75,7 +75,6 @@ def evaluate(
     schema_version: str = "1",
     model_version: str = "1.0.0",
     policy_version: str = "1.0.0",
-    allow_morgan_exception: bool = False,
 ) -> Any:
     """Return a complete Evaluation without provider, clock, storage, or IO.
 
@@ -101,18 +100,15 @@ def evaluate(
     current = run_simulation(
         profile, "current", None, assumptions, validated_decision,
         allocator=allocator, equity_weight_fn=equity_weight_fn,
-        allow_morgan_exception=allow_morgan_exception,
     )
     adaptive = run_simulation(
         profile, "adaptive", None, assumptions, validated_decision,
         allocator=allocator, equity_weight_fn=equity_weight_fn,
-        allow_morgan_exception=allow_morgan_exception,
     )
     custom = (
         run_simulation(
             profile, "custom", scenario, assumptions, validated_decision,
             allocator=allocator, equity_weight_fn=equity_weight_fn,
-            allow_morgan_exception=allow_morgan_exception,
         )
         if scenario is not None else None
     )
@@ -120,7 +116,6 @@ def evaluate(
     if use_b_plan:
         plan = plan_fn(
             _json(profile), _json(state), _json(validated_decision),
-            allow_morgan_exception=allow_morgan_exception,
         )
         if adaptive.opening_allocation and adaptive.opening_allocation.feasible:
             _check_opening_plan(plan, adaptive.opening_allocation.facts["raw_allocation"])
