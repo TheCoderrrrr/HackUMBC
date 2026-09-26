@@ -9,33 +9,28 @@ struct ProfileStep: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: Space.l)
-
-            SetupPrompt(heading: "Your profile")
-
-            VStack(spacing: 0) {
-                Color.clear
-                    .frame(width: 112, height: 112)
-                    .setupSlot(Slot.profileAvatar)
-                Text(profile.name)
-                    .font(.geist(24, .semibold, relativeTo: .title2))
-                    .foregroundStyle(Palette.textPrimary)
-                    .padding(.top, Space.xl)
-                Text("Sample profile")
-                    .font(SetupStyle.rowDetail)
-                    .foregroundStyle(Palette.textSecondary)
-                    .padding(.top, Space.s)
+            SetupHeader(
+                heading: "Your profile",
+                subtitle: Text("We'll show you around with a\nsample profile.")
+            ) {
+                Color.clear.setupSlot(Slot.profileAvatar)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.top, 40)
+
+            SetupPill {
+                Text(profile.name)
+                    .font(.geist(28, .semibold, relativeTo: .title))
+                    .foregroundStyle(Palette.textPrimary)
+            }
+            .padding(.top, Space.xxl)
             .accessibilityElement(children: .combine)
+            .accessibilityLabel("Sample profile: \(profile.name)")
 
             Spacer(minLength: Space.l)
 
             Text("Fictional profile · Not affiliated with T. Rowe Price.")
                 .font(.geist(11, .regular, relativeTo: .caption2))
-                .foregroundStyle(Palette.textSecondary)
-                .padding(.bottom, 29)
+                .foregroundStyle(SetupStyle.secondaryText)
+                .padding(.bottom, Space.l)
         }
     }
 }
@@ -47,10 +42,16 @@ struct AccountsStep: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SetupPrompt(heading: "Bring it together.")
+            SetupHeader(
+                heading: "Bring it together.",
+                subtitle: Text("Sample accounts for ") + Text(profile.name).foregroundColor(Palette.textPrimary)
+                    + Text(".\nNothing is actually linked.")
+            ) {
+                HeaderGlyph(symbol: "link")
+            }
 
             connection
-                .padding(.top, 48)
+                .padding(.top, Space.xxl)
 
             VStack(spacing: Space.xs) {
                 row("Retirement", Money.whole(profile.retirementBalanceCents))
@@ -59,11 +60,13 @@ struct AccountsStep: View {
                     row(profile.debts.first?.name ?? "Debt", Money.whole(profile.totalDebtCents))
                 }
             }
-            .padding(.top, 34)
+            .padding(.top, Space.xl)
+
+            Spacer(minLength: 0)
         }
     }
 
-    /// Avatar · dotted link · account icon. Sample data only — nothing is linked.
+/// Avatar · dotted link · account icon. Sample data only — nothing is linked.
     private var connection: some View {
         HStack(alignment: .top, spacing: 0) {
             endpoint(caption: profile.name) {
@@ -91,7 +94,7 @@ struct AccountsStep: View {
             visual().frame(width: 80, height: 80)
             Text(caption)
                 .font(.geist(13, .medium, relativeTo: .footnote))
-                .foregroundStyle(Palette.textSecondary)
+                .foregroundStyle(SetupStyle.secondaryText)
                 .lineLimit(1)
                 .fixedSize()
         }
@@ -102,7 +105,7 @@ struct AccountsStep: View {
         HStack {
             Text(title)
                 .font(.geist(16, .regular, relativeTo: .body))
-                .foregroundStyle(Palette.textSecondary)
+                .foregroundStyle(SetupStyle.secondaryText)
             Spacer(minLength: Space.m)
             Text(value)
                 .font(.geist(18, .semibold, relativeTo: .body))
@@ -123,7 +126,12 @@ struct FocusStep: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SetupPrompt(heading: "What comes first?")
+            SetupHeader(
+                heading: "What comes first?",
+                subtitle: Text("Pick one to start with.\nYou can change it anytime.")
+            ) {
+                HeaderGlyph(symbol: "flag")
+            }
 
             VStack(spacing: Space.m) {
                 ForEach(Focus.allCases) { focus in
@@ -136,7 +144,9 @@ struct FocusStep: View {
                     )
                 }
             }
-            .padding(.top, 40)
+            .padding(.top, Space.xxl)
+
+            Spacer(minLength: 0)
         }
     }
 }
@@ -166,13 +176,13 @@ private struct FocusRow: View {
                         .foregroundStyle(Palette.textPrimary)
                     Text(detail)
                         .font(SetupStyle.rowDetail)
-                        .foregroundStyle(Palette.textSecondary)
+                        .foregroundStyle(SetupStyle.secondaryText)
                 }
                 Spacer(minLength: Space.m)
 
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .symbolRenderingMode(.palette)
-                    .foregroundStyle(isSelected ? Palette.page : Palette.textSecondary, Palette.lavender)
+                    .foregroundStyle(isSelected ? Palette.page : SetupStyle.secondaryText, Palette.lavender)
                     .font(.system(size: 22, weight: .regular))
                     .contentTransition(.symbolEffect(.replace))
                     .padding(.trailing, Space.m)
@@ -204,30 +214,29 @@ struct ResultStep: View {
     var body: some View {
         let result = focus.result(for: profile)
         VStack(spacing: 0) {
-            SetupPrompt(heading: focus.resultHeading)
+            // The selected topic icon travels into the header slot.
+            SetupHeader(heading: focus.resultHeading, subtitle: Text(result.unit)) {
+                Color.clear.setupSlot(Slot.resultIcon)
+            }
 
-            VStack(spacing: Space.m) {
-                Color.clear
-                    .frame(width: 80, height: 80)
-                    .setupSlot(Slot.resultIcon)
-                    .padding(.bottom, 44 - Space.m)
+            SetupPill {
                 Text(result.amount)
-                    .font(.geist(48, .semibold, relativeTo: .largeTitle))
+                    .font(.geist(40, .semibold, relativeTo: .largeTitle))
                     .foregroundStyle(Palette.textPrimary)
                     .monospacedDigit()
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
-                Text(result.unit)
-                    .font(.geist(16, .regular, relativeTo: .body))
-                    .foregroundStyle(Palette.textPrimary)
-                Text(result.context)
-                    .font(SetupStyle.rowDetail)
-                    .foregroundStyle(Palette.textSecondary)
             }
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity)
-            .padding(.top, 40)
-            .accessibilityElement(children: .combine)
+            .padding(.top, Space.xxl)
+
+            Text(result.context)
+                .font(SetupStyle.rowDetail)
+                .foregroundStyle(SetupStyle.secondaryText)
+                .multilineTextAlignment(.center)
+                .padding(.top, Space.l)
+
+            Spacer(minLength: 0)
         }
+        .accessibilityElement(children: .combine)
     }
 }

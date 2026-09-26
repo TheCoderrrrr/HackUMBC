@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Splash → frosted four-step setup. The brand field stays mounted throughout;
-/// the wordmark and contours fade as the frosted surface and setup content appear.
+/// Splash → four-step setup. The brand field stays mounted throughout;
+/// the wordmark and contours fade as the setup content appears.
 struct SetupFlowView: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -11,9 +11,6 @@ struct SetupFlowView: View {
     var body: some View {
         ZStack {
             SetupAtmosphere(contours: isSplash ? 1 : 0)
-
-            SetupFrost()
-                .opacity(isSplash ? 0 : 1)
 
             if isSplash {
                 SplashWordmark(onTap: advanceFromSplash)
@@ -57,27 +54,6 @@ struct SetupFlowView: View {
     }
 }
 
-/// Setup glass: a whisper of material plus 40% charcoal, so the moving field
-/// stays visible behind the setup content.
-/// Reduce Transparency falls back to the shared opaque surface.
-private struct SetupFrost: View {
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
-    var body: some View {
-        if reduceTransparency {
-            FrostedSetupSurface()
-        } else {
-            ZStack {
-                Rectangle().fill(.ultraThinMaterial).opacity(0.15)
-                Palette.page.opacity(0.4)
-            }
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-        }
-    }
-}
-
 // MARK: - Onboarding
 
 struct OnboardingFlow: View {
@@ -88,12 +64,15 @@ struct OnboardingFlow: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ZStack {
+            navigationBar
+
+            ZStack(alignment: .top) {
                 stepContent
                     .id(step)
                     .transition(transition(for: step))
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.top, Space.xl)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
             actions
         }
@@ -131,6 +110,27 @@ struct OnboardingFlow: View {
         }
     }
 
+    // MARK: Navigation
+
+    private var navigationBar: some View {
+        HStack {
+            Button(action: back) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Palette.textPrimary)
+                    .frame(width: 44, height: 44)
+                    .background(SetupStyle.disc, in: Circle())
+            }
+            .buttonStyle(PressableStyle())
+            .accessibilityLabel("Back")
+            .opacity(step == .profile ? 0 : 1)
+            .disabled(step == .profile)
+
+            Spacer()
+        }
+        .padding(.top, Space.s)
+    }
+
     // MARK: Actions
 
     private var actions: some View {
@@ -141,8 +141,9 @@ struct OnboardingFlow: View {
             }
             .buttonStyle(PrimaryButtonStyle())
 
-            Button(action: secondary) {
-                Text(step == .profile ? "Use my accounts" : "Back")
+            // Space stays reserved so the primary button doesn't jump between steps.
+            Button(action: showAccountPreview) {
+                Text("Use my accounts")
                     .font(SetupStyle.secondaryAction)
                     .foregroundStyle(Palette.lavender)
                     .frame(maxWidth: .infinity, minHeight: 44)
@@ -150,6 +151,8 @@ struct OnboardingFlow: View {
                     .contentTransition(.opacity)
             }
             .buttonStyle(PressableStyle())
+            .opacity(step == .profile ? 1 : 0)
+            .disabled(step != .profile)
         }
         .padding(.bottom, 15)
     }
@@ -171,10 +174,12 @@ struct OnboardingFlow: View {
         }
     }
 
-    private func secondary() {
-        if step == .profile {
-            store.sheet = .accountPreview
-        } else if let previous = OnboardingStep(rawValue: step.rawValue - 1) {
+    private func showAccountPreview() {
+        store.sheet = .accountPreview
+    }
+
+    private func back() {
+        if let previous = OnboardingStep(rawValue: step.rawValue - 1) {
             go(to: previous)
         }
     }

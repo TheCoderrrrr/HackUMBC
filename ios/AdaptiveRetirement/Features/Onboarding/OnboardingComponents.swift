@@ -8,6 +8,8 @@ enum SetupStyle {
     /// Neutral disc behind the avatar and topic icons (iOS bordered control on the frosted surface).
     static let disc = Color(hex: 0x28292F)
     static let divider = Color(hex: 0x2D2E35)
+    /// Secondary text sits directly on the moving field (no frost), so it runs brighter.
+    static let secondaryText = Color.white.opacity(0.74)
 
     static let heading = Font.geist(26, .bold, relativeTo: .title)
     static let instruction = Font.geist(16, .regular, relativeTo: .body)
@@ -140,18 +142,58 @@ extension View {
     }
 }
 
-// MARK: - Prompt
+// MARK: - Header
 
-struct SetupPrompt: View {
+/// Top-aligned step header: small icon disc, heading, and a secondary line.
+struct SetupHeader<Icon: View>: View {
     let heading: String
+    let subtitle: Text
+    @ViewBuilder let icon: Icon
+
+    static var iconSize: CGFloat { 64 }
 
     var body: some View {
-        Text(heading)
-            .font(SetupStyle.heading)
-            .foregroundStyle(Palette.textPrimary)
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity)
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityAddTraits(.isHeader)
+        VStack(spacing: 0) {
+            icon
+                .frame(width: Self.iconSize, height: Self.iconSize)
+                .accessibilityHidden(true)
+
+            Text(heading)
+                .font(SetupStyle.heading)
+                .foregroundStyle(Palette.textPrimary)
+                .accessibilityAddTraits(.isHeader)
+                .padding(.top, Space.l)
+
+            subtitle
+                .font(SetupStyle.instruction)
+                .foregroundStyle(SetupStyle.secondaryText)
+                .lineSpacing(2)
+                .padding(.top, Space.s)
+        }
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity)
+    }
+}
+
+/// A topic disc drawn at header size.
+struct HeaderGlyph: View {
+    let symbol: String
+
+    var body: some View {
+        TopicDisc(symbol: symbol)
+            .scaleEffect(SetupHeader<EmptyView>.iconSize / TopicDisc.baseSize)
+    }
+}
+
+/// Charcoal capsule for a step's key value, like a code-entry pill.
+struct SetupPill<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        content
+            .padding(.horizontal, Space.xxl)
+            .frame(minHeight: 72)
+            .background(SetupStyle.disc, in: Capsule())
     }
 }
