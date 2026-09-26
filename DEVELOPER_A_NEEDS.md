@@ -1,5 +1,19 @@
 # What Neil (Developer A) needs from Kevin (B) and Eric (C)
 
+## Status (2026-09-26, pull request `team-needs`)
+
+Every item below is now done or waiting only on approval of the `team-needs` pull request.
+
+| # | Status |
+|---|---|
+| 1, 1b | **Done by Eric** (on `main`, `5716131`): `prepare_decisions` records `PROMPT_VERSION` and sends the live v2 prompt, and waits `retry_after_s` after `AIRateLimited`. |
+| 2 | **Done**: Eric uses his own key. |
+| 3 | **Done**: `prepare_decisions` imports only your guarded names. Eric asks you to guard three more (`ERIC_NEEDS.md`, Neil item 1). |
+| 4 | **In the PR, needs Kevin's approval**: `BACKEND.md` line 555 and `BACKEND_TEAM_SPLIT.md` lines 10 and 49 now describe the any-documented-order rule. |
+| 5 | **In the PR, needs Kevin's approval**: your layout. `requirements.txt` is runtime-only; `requirements-test.txt` is `-r requirements.txt` + `pytest==9.1.1` + `httpx` + Kevin's other pins. |
+| 6 | **In the PR, needs Kevin's approval**: Kevin confirmed the context in `DEVELOPER_B_REQUESTS.md`. New `tests/test_engine_interface.py` fails if `recommendation_context` keys, the `NO_AI_PROPOSAL` / `BLOCKED_FINANCIAL_INPUT` codes, the documented orders, or the signatures you and Eric call change. |
+
+
 Tested on `Neil` after merging `main` at `5034673` (2026-09-26): all **309 backend tests
 pass**, the live API runs on B's engine and C's evaluator, and `scripts/smoke.py` passes
 through a Cloudflare tunnel. Each item below lists the check that found it.

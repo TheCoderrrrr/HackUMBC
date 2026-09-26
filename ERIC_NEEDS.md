@@ -5,6 +5,10 @@ and `manifest.json`, which the iPhone app uses when the server or AI is down.
 Updated after `main` `4b041ce` (Neil's prompt v2, Kevin's PR #8). All 316
 backend tests pass on branch `Eric`.
 
+Pull request `team-needs` settles what Neil and Kevin still needed from each
+other: the spec's order rule, one pytest version, and a guard test for the
+engine names they rely on. Both status pages list what's left.
+
 ## Done for your requests
 
 | Request | Status |

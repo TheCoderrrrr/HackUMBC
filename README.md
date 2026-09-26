@@ -354,6 +354,7 @@ curl http://localhost:8000/health
 Test:
 
 ```bash
+pip install -r requirements-test.txt
 pytest
 ```
 
