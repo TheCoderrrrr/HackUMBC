@@ -107,4 +107,4 @@ backend/tests/test_export.py
 
 ## Done criteria
 
-The backend is ready when the API and offline bundle use the same tested evaluator; every recommended dollar is affordable; Morgan's $963.80 extra debt payment passes; all nine presets and the tenth Morgan cash-security artifact regenerate deterministically; `previous_decision_id` replay works by Hour 12; and the phone demo remains usable if the live server, AI provider, or Plaid is unavailable.
+The backend is ready when the API and offline bundle use the same tested evaluator; every recommended dollar is affordable; Morgan's $963.80 extra debt payment passes; all ten artifacts, including the Morgan cash-security demonstration, regenerate deterministically; `previous_decision_id` replay works by Hour 12; and the phone demo remains usable if the live server, AI provider, or Plaid is unavailable.

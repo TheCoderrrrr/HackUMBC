@@ -960,7 +960,7 @@ AI acceptance:
 - Provider outage, invalid output, and deadline exhaustion preserve an honest rules-backed evaluation.
 - Explanation failure preserves a valid decision; no unsupported numbers reach the UI.
 - Prior IDs expire safely and cannot compare different profiles.
-- Saved decision replay reproduces numeric results and all nine artifacts without a model call.
+- Saved decision replay reproduces numeric results and all ten artifacts without a model call.
 - Profile text cannot override system constraints; model requests exclude identifying data.
 
 Financial tests:
@@ -1001,7 +1001,7 @@ Contract/integration:
 - Error envelope consistent.
 - Unknown matching never becomes zero.
 - No NaN/Infinity.
-- All nine presets regenerate from the live function.
+- All ten artifacts regenerate from the live function.
 - Hashes, scenarios, versions match manifest.
 - No handwritten projection totals or probability scores.
 - Phone reaches health/evaluate over cellular through tunnel.
