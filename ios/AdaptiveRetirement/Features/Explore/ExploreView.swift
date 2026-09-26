@@ -104,9 +104,6 @@ struct ExploreView: View {
     /// The playhead's date and what the plan is doing then.
     private var transport: some View {
         HStack(alignment: .center, spacing: Space.m) {
-            IconBadge(systemName: contextSymbol, size: 60)
-                .contentTransition(.symbolEffect(.replace))
-                .animation(reduceMotion ? nil : Motion.select, value: contextSymbol)
             VStack(alignment: .leading, spacing: 0) {
                 WordRoll(text: ExploreTimeline.label(forMonth: selectedMonth))
                     .font(.numeral(24, .medium, relativeTo: .title2))
@@ -133,11 +130,6 @@ struct ExploreView: View {
             .accessibilityLabel(playLabel)
         }
         .frame(minHeight: 52)
-    }
-
-    /// The latest milestone at or before the playhead picks the readout's icon.
-    private var contextSymbol: String {
-        timeline.milestones.last { $0.month <= selectedMonth }.map(Self.symbol(for:)) ?? "calendar"
     }
 
     static func symbol(for milestone: Milestone) -> String {

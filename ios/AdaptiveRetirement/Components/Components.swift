@@ -518,23 +518,3 @@ struct GlassGroup<Content: View>: View {
         }
     }
 }
-
-
-// MARK: - Icons
-
-/// A tinted SF Symbol in a small glass tile — leads section headers and rows.
-struct IconBadge: View {
-    let systemName: String
-    var tint: Color = Palette.accent
-    var size: CGFloat = 48
-
-    var body: some View {
-        Image(systemName: systemName)
-            .font(.system(size: size * 0.44, weight: .semibold))
-            .symbolRenderingMode(.hierarchical)
-            .foregroundStyle(tint)
-            .frame(width: size, height: size)
-            .glassSurface(RoundedRectangle(cornerRadius: size * 0.32, style: .continuous), tint: tint)
-            .accessibilityHidden(true)
-    }
-}
