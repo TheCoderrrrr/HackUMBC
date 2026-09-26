@@ -115,7 +115,7 @@ def test_original_custom_cap_rejects_but_future_month_clips(morgan):
         cash_identity(result)
 
 
-def test_accepted_morgan_exception_survives_month_snapshot(morgan):
+def test_non_default_cash_security_order_survives_month_snapshot(morgan):
     morgan["planning_preference"] = "cash_security"
     state = derive_state(morgan)
     order = ["starter_reserve", "high_apr_debt", "full_reserve"]
@@ -124,13 +124,12 @@ def test_accepted_morgan_exception_survives_month_snapshot(morgan):
          "evidence_paths": ["financial_state.high_interest_debt_cents"],
          "tradeoff": "Debt repayment delays cash growth."} for priority in order
     ]}
-    decision = validate_decision(morgan, state, proposal, model_id="test-model",
-                                 allow_morgan_exception=True)
+    decision = validate_decision(morgan, state, proposal, model_id="test-model")
     assert decision["source"] == "ai"
     month = snapshot(morgan, state)
     month["emergency_cash_cents"] = 400000
     month["debts"][0]["balance_cents"] = 1000000
-    result = allocate_month(morgan, state, decision, month=month, allow_morgan_exception=True)
+    result = allocate_month(morgan, state, decision, month=month)
     assert result["debts"][0]["extra_payment_cents"] > 0
     assert decision["ordered_priorities"] == order
     cash_identity(result)
