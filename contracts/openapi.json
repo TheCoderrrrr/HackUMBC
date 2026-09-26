@@ -1,0 +1,1810 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Adaptive Retirement API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/demo-profiles": {
+      "get": {
+        "summary": "Demo Profiles",
+        "operationId": "demo_profiles_v1_demo_profiles_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoProfiles"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/evaluate": {
+      "post": {
+        "summary": "Evaluate",
+        "operationId": "evaluate_v1_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Evaluation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request Entity Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/plaid/link-token": {
+      "post": {
+        "summary": "Plaid Link Token",
+        "operationId": "plaid_link_token_v1_plaid_link_token_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request Entity Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/plaid/exchange": {
+      "post": {
+        "summary": "Plaid Exchange",
+        "operationId": "plaid_exchange_v1_plaid_exchange_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request Entity Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/plaid/import": {
+      "post": {
+        "summary": "Plaid Import",
+        "operationId": "plaid_import_v1_plaid_import_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request Entity Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AIExplanation": {
+        "properties": {
+          "state_summary": {
+            "type": "string",
+            "title": "State Summary"
+          },
+          "narrative": {
+            "type": "string",
+            "title": "Narrative"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "ai",
+              "template"
+            ],
+            "title": "Source"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/Change"
+            },
+            "type": "array",
+            "title": "Changes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "state_summary",
+          "narrative",
+          "source",
+          "changes"
+        ],
+        "title": "AIExplanation"
+      },
+      "Change": {
+        "properties": {
+          "field_path": {
+            "type": "string",
+            "title": "Field Path"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before"
+          },
+          "after": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "field_path",
+          "before",
+          "after"
+        ],
+        "title": "Change"
+      },
+      "ConstraintCheck": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "passed"
+        ],
+        "title": "ConstraintCheck"
+      },
+      "Debt": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "credit_card",
+              "student_loan",
+              "other"
+            ],
+            "title": "Type"
+          },
+          "balance_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Balance Cents"
+          },
+          "apr": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Apr"
+          },
+          "minimum_payment_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Minimum Payment Cents"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "balance_cents",
+          "apr",
+          "minimum_payment_cents"
+        ],
+        "title": "Debt"
+      },
+      "DecisionSummary": {
+        "properties": {
+          "decision_id": {
+            "type": "string",
+            "title": "Decision Id"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "ai",
+              "rules_fallback"
+            ],
+            "title": "Source"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "prompt_version": {
+            "type": "string",
+            "title": "Prompt Version"
+          },
+          "ordered_priorities": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "starter_reserve",
+                "high_apr_debt",
+                "full_reserve"
+              ]
+            },
+            "type": "array",
+            "title": "Ordered Priorities"
+          },
+          "rationale": {
+            "items": {
+              "$ref": "#/components/schemas/Rationale"
+            },
+            "type": "array",
+            "title": "Rationale"
+          },
+          "constraint_checks": {
+            "items": {
+              "$ref": "#/components/schemas/ConstraintCheck"
+            },
+            "type": "array",
+            "title": "Constraint Checks"
+          },
+          "fallback_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "decision_id",
+          "source",
+          "model_id",
+          "prompt_version",
+          "ordered_priorities",
+          "rationale",
+          "constraint_checks",
+          "fallback_reason"
+        ],
+        "title": "DecisionSummary"
+      },
+      "DemoProfiles": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version"
+          },
+          "profiles": {
+            "items": {
+              "$ref": "#/components/schemas/FinancialProfile"
+            },
+            "type": "array",
+            "title": "Profiles"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "schema_version",
+          "profiles"
+        ],
+        "title": "DemoProfiles"
+      },
+      "EmployerMatch": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "confirmed",
+              "none",
+              "unknown"
+            ],
+            "title": "Status"
+          },
+          "fully_vested": {
+            "type": "boolean",
+            "title": "Fully Vested"
+          },
+          "tiers": {
+            "items": {
+              "$ref": "#/components/schemas/MatchTier"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Tiers"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "fully_vested",
+          "tiers"
+        ],
+        "title": "EmployerMatch"
+      },
+      "ErrorBody": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "field_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Field Paths"
+          },
+          "retryable": {
+            "type": "boolean",
+            "title": "Retryable"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "field_paths",
+          "retryable"
+        ],
+        "title": "ErrorBody"
+      },
+      "ErrorEnvelope": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "title": "ErrorEnvelope"
+      },
+      "EvaluateRequest": {
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/FinancialProfile"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Scenario"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "previous_decision_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Decision Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profile"
+        ],
+        "title": "EvaluateRequest"
+      },
+      "Evaluation": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "policy_version": {
+            "type": "string",
+            "title": "Policy Version"
+          },
+          "profile_id": {
+            "type": "string",
+            "title": "Profile Id"
+          },
+          "input_hash": {
+            "type": "string",
+            "title": "Input Hash"
+          },
+          "financial_state": {
+            "$ref": "#/components/schemas/FinancialState"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/Plan"
+          },
+          "assumptions": {
+            "$ref": "#/components/schemas/ModelAssumptions"
+          },
+          "projections": {
+            "$ref": "#/components/schemas/Projections"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "decision_summary": {
+            "$ref": "#/components/schemas/DecisionSummary"
+          },
+          "explanation": {
+            "$ref": "#/components/schemas/AIExplanation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "schema_version",
+          "model_version",
+          "policy_version",
+          "profile_id",
+          "input_hash",
+          "financial_state",
+          "plan",
+          "assumptions",
+          "projections",
+          "warnings",
+          "decision_summary",
+          "explanation"
+        ],
+        "title": "Evaluation"
+      },
+      "FinancialProfile": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1",
+            "title": "Schema Version",
+            "default": "1"
+          },
+          "id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "currency": {
+            "type": "string",
+            "const": "USD",
+            "title": "Currency"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "demo",
+              "plaid_sandbox"
+            ],
+            "title": "Source"
+          },
+          "age": {
+            "type": "integer",
+            "maximum": 75.0,
+            "minimum": 18.0,
+            "title": "Age"
+          },
+          "retirement_age": {
+            "type": "integer",
+            "maximum": 80.0,
+            "title": "Retirement Age"
+          },
+          "annual_gross_salary_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Annual Gross Salary Cents"
+          },
+          "monthly_take_home_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Monthly Take Home Cents"
+          },
+          "monthly_living_expenses_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Monthly Living Expenses Cents"
+          },
+          "annual_employee_limit_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Annual Employee Limit Cents"
+          },
+          "employee_contribution_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Employee Contribution Rate"
+          },
+          "contribution_tax_treatment": {
+            "type": "string",
+            "enum": [
+              "traditional",
+              "roth"
+            ],
+            "title": "Contribution Tax Treatment"
+          },
+          "estimated_marginal_income_tax_rate": {
+            "type": "number",
+            "maximum": 0.5,
+            "minimum": 0.0,
+            "title": "Estimated Marginal Income Tax Rate"
+          },
+          "retirement_balance_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Retirement Balance Cents"
+          },
+          "emergency_cash_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Emergency Cash Cents"
+          },
+          "employer_match": {
+            "$ref": "#/components/schemas/EmployerMatch"
+          },
+          "debts": {
+            "items": {
+              "$ref": "#/components/schemas/Debt"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Debts"
+          },
+          "planning_preference": {
+            "type": "string",
+            "enum": [
+              "balanced",
+              "cash_security",
+              "debt_reduction"
+            ],
+            "title": "Planning Preference",
+            "default": "balanced"
+          },
+          "provenance": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Provenance"
+            },
+            "type": "object",
+            "title": "Provenance"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "as_of_date",
+          "currency",
+          "source",
+          "age",
+          "retirement_age",
+          "annual_gross_salary_cents",
+          "monthly_take_home_cents",
+          "monthly_living_expenses_cents",
+          "annual_employee_limit_cents",
+          "employee_contribution_rate",
+          "contribution_tax_treatment",
+          "estimated_marginal_income_tax_rate",
+          "retirement_balance_cents",
+          "emergency_cash_cents",
+          "employer_match",
+          "debts",
+          "provenance"
+        ],
+        "title": "FinancialProfile"
+      },
+      "FinancialState": {
+        "properties": {
+          "months_until_retirement": {
+            "type": "integer",
+            "title": "Months Until Retirement"
+          },
+          "gross_monthly_salary_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Gross Monthly Salary Cents"
+          },
+          "current_employee_contribution_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Current Employee Contribution Cents"
+          },
+          "current_employee_cash_cost_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Current Employee Cash Cost Cents"
+          },
+          "monthly_resources_before_retirement_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Monthly Resources Before Retirement Cents"
+          },
+          "monthly_required_debt_payments_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Monthly Required Debt Payments Cents"
+          },
+          "monthly_allocatable_budget_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Monthly Allocatable Budget Cents"
+          },
+          "current_monthly_surplus_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Current Monthly Surplus Cents"
+          },
+          "emergency_months": {
+            "type": "number",
+            "title": "Emergency Months"
+          },
+          "critical_reserve_target_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Critical Reserve Target Cents"
+          },
+          "starter_reserve_target_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Starter Reserve Target Cents"
+          },
+          "full_reserve_target_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Full Reserve Target Cents"
+          },
+          "employee_rate_for_full_match": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employee Rate For Full Match"
+          },
+          "current_monthly_employer_match_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": -10000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Monthly Employer Match Cents"
+          },
+          "maximum_monthly_employer_match_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": -10000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum Monthly Employer Match Cents"
+          },
+          "match_capture_fraction": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Capture Fraction"
+          },
+          "high_interest_debt_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "High Interest Debt Cents"
+          },
+          "highest_debt_apr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Highest Debt Apr"
+          },
+          "baseline_equity_weight": {
+            "type": "number",
+            "title": "Baseline Equity Weight"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "months_until_retirement",
+          "gross_monthly_salary_cents",
+          "current_employee_contribution_cents",
+          "current_employee_cash_cost_cents",
+          "monthly_resources_before_retirement_cents",
+          "monthly_required_debt_payments_cents",
+          "monthly_allocatable_budget_cents",
+          "current_monthly_surplus_cents",
+          "emergency_months",
+          "critical_reserve_target_cents",
+          "starter_reserve_target_cents",
+          "full_reserve_target_cents",
+          "employee_rate_for_full_match",
+          "current_monthly_employer_match_cents",
+          "maximum_monthly_employer_match_cents",
+          "match_capture_fraction",
+          "high_interest_debt_cents",
+          "highest_debt_apr",
+          "baseline_equity_weight",
+          "warnings"
+        ],
+        "title": "FinancialState"
+      },
+      "GlidePathAnchor": {
+        "properties": {
+          "years_to_retirement": {
+            "type": "number",
+            "title": "Years To Retirement"
+          },
+          "equity_weight": {
+            "type": "number",
+            "title": "Equity Weight"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "years_to_retirement",
+          "equity_weight"
+        ],
+        "title": "GlidePathAnchor"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status"
+          },
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "policy_version": {
+            "type": "string",
+            "title": "Policy Version"
+          },
+          "plaid_enabled": {
+            "type": "boolean",
+            "title": "Plaid Enabled"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "schema_version",
+          "model_version",
+          "policy_version",
+          "plaid_enabled"
+        ],
+        "title": "Health"
+      },
+      "MatchTier": {
+        "properties": {
+          "employee_rate_from": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Employee Rate From"
+          },
+          "employee_rate_to": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Employee Rate To"
+          },
+          "match_per_employee_dollar": {
+            "type": "number",
+            "maximum": 2.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Match Per Employee Dollar"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "employee_rate_from",
+          "employee_rate_to",
+          "match_per_employee_dollar"
+        ],
+        "title": "MatchTier"
+      },
+      "ModelAssumptions": {
+        "properties": {
+          "annual_equity_return": {
+            "type": "number",
+            "title": "Annual Equity Return"
+          },
+          "annual_bond_return": {
+            "type": "number",
+            "title": "Annual Bond Return"
+          },
+          "annual_cash_return": {
+            "type": "number",
+            "title": "Annual Cash Return"
+          },
+          "annual_inflation": {
+            "type": "number",
+            "title": "Annual Inflation"
+          },
+          "annual_salary_growth": {
+            "type": "number",
+            "title": "Annual Salary Growth"
+          },
+          "annual_living_cost_growth": {
+            "type": "number",
+            "title": "Annual Living Cost Growth"
+          },
+          "annual_employee_limit_growth": {
+            "type": "number",
+            "title": "Annual Employee Limit Growth"
+          },
+          "high_interest_apr_threshold": {
+            "type": "number",
+            "title": "High Interest Apr Threshold"
+          },
+          "retirement_total_saving_target": {
+            "type": "number",
+            "title": "Retirement Total Saving Target"
+          },
+          "critical_reserve_cap_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Critical Reserve Cap Cents"
+          },
+          "starter_reserve_months": {
+            "type": "number",
+            "title": "Starter Reserve Months"
+          },
+          "full_reserve_months": {
+            "type": "number",
+            "title": "Full Reserve Months"
+          },
+          "returns_net_of_fees": {
+            "type": "boolean",
+            "title": "Returns Net Of Fees"
+          },
+          "glide_path": {
+            "items": {
+              "$ref": "#/components/schemas/GlidePathAnchor"
+            },
+            "type": "array",
+            "title": "Glide Path"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "annual_equity_return",
+          "annual_bond_return",
+          "annual_cash_return",
+          "annual_inflation",
+          "annual_salary_growth",
+          "annual_living_cost_growth",
+          "annual_employee_limit_growth",
+          "high_interest_apr_threshold",
+          "retirement_total_saving_target",
+          "critical_reserve_cap_cents",
+          "starter_reserve_months",
+          "full_reserve_months",
+          "returns_net_of_fees",
+          "glide_path",
+          "limitations"
+        ],
+        "title": "ModelAssumptions"
+      },
+      "Plan": {
+        "properties": {
+          "primary_action_id": {
+            "type": "string",
+            "title": "Primary Action Id"
+          },
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/RecommendationAction"
+            },
+            "type": "array",
+            "title": "Actions"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/Reason"
+            },
+            "type": "array",
+            "title": "Reasons"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "primary_action_id",
+          "actions",
+          "reasons"
+        ],
+        "title": "Plan"
+      },
+      "Projection": {
+        "properties": {
+          "strategy": {
+            "type": "string",
+            "enum": [
+              "current",
+              "adaptive",
+              "custom"
+            ],
+            "title": "Strategy"
+          },
+          "retirement_age": {
+            "type": "integer",
+            "title": "Retirement Age"
+          },
+          "feasible": {
+            "type": "boolean",
+            "title": "Feasible"
+          },
+          "shortfall_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": -10000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shortfall Cents"
+          },
+          "retirement_balance_nominal_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": -10000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retirement Balance Nominal Cents"
+          },
+          "retirement_balance_today_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": -10000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retirement Balance Today Cents"
+          },
+          "cash_nominal_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": -10000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cash Nominal Cents"
+          },
+          "debt_nominal_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": -10000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debt Nominal Cents"
+          },
+          "cumulative_debt_interest_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": -10000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cumulative Debt Interest Cents"
+          },
+          "debt_free_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debt Free Month"
+          },
+          "starter_reserve_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starter Reserve Month"
+          },
+          "full_reserve_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Reserve Month"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectionPoint"
+            },
+            "type": "array",
+            "title": "Points"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "strategy",
+          "retirement_age",
+          "feasible",
+          "shortfall_cents",
+          "retirement_balance_nominal_cents",
+          "retirement_balance_today_cents",
+          "cash_nominal_cents",
+          "debt_nominal_cents",
+          "cumulative_debt_interest_cents",
+          "debt_free_month",
+          "starter_reserve_month",
+          "full_reserve_month",
+          "points"
+        ],
+        "title": "Projection"
+      },
+      "ProjectionPoint": {
+        "properties": {
+          "month": {
+            "type": "integer",
+            "title": "Month"
+          },
+          "retirement_balance_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Retirement Balance Cents"
+          },
+          "cash_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Cash Cents"
+          },
+          "debt_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Debt Cents"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "month",
+          "retirement_balance_cents",
+          "cash_cents",
+          "debt_cents"
+        ],
+        "title": "ProjectionPoint"
+      },
+      "Projections": {
+        "properties": {
+          "current": {
+            "$ref": "#/components/schemas/Projection"
+          },
+          "adaptive": {
+            "$ref": "#/components/schemas/Projection"
+          },
+          "custom": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Projection"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "current",
+          "adaptive",
+          "custom"
+        ],
+        "title": "Projections"
+      },
+      "Provenance": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "fixture",
+              "plaid_sandbox",
+              "user_confirmed"
+            ],
+            "title": "Source"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "as_of_date"
+        ],
+        "title": "Provenance"
+      },
+      "Rationale": {
+        "properties": {
+          "priority": {
+            "type": "string",
+            "title": "Priority"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "evidence_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Paths"
+          },
+          "tradeoff": {
+            "type": "string",
+            "title": "Tradeoff"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "priority",
+          "summary",
+          "evidence_paths",
+          "tradeoff"
+        ],
+        "title": "Rationale"
+      },
+      "Reason": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "template_key": {
+            "type": "string",
+            "title": "Template Key"
+          },
+          "facts": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Facts"
+          },
+          "input_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Input Paths"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "template_key",
+          "facts",
+          "input_paths"
+        ],
+        "title": "Reason"
+      },
+      "RecommendationAction": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "rank": {
+            "type": "integer",
+            "title": "Rank"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "cash_flow",
+              "contribution",
+              "emergency",
+              "debt",
+              "allocation"
+            ],
+            "title": "Category"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "action",
+              "maintain",
+              "blocked",
+              "information"
+            ],
+            "title": "Status"
+          },
+          "monthly_cash_cost_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Monthly Cash Cost Cents"
+          },
+          "employee_contribution_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": -10000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employee Contribution Cents"
+          },
+          "employee_contribution_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employee Contribution Rate"
+          },
+          "debt_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debt Id"
+          },
+          "target_balance_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": -10000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Balance Cents"
+          },
+          "reason_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reason Codes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "rank",
+          "category",
+          "status",
+          "monthly_cash_cost_cents",
+          "employee_contribution_cents",
+          "employee_contribution_rate",
+          "debt_id",
+          "target_balance_cents",
+          "reason_codes"
+        ],
+        "title": "RecommendationAction"
+      },
+      "Scenario": {
+        "properties": {
+          "retirement_age": {
+            "type": "integer",
+            "maximum": 80.0,
+            "title": "Retirement Age"
+          },
+          "employee_contribution_rate": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employee Contribution Rate"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "retirement_age"
+        ],
+        "title": "Scenario"
+      }
+    }
+  }
+}

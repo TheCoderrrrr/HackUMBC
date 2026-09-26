@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "INFEASIBLE_SCENARIO",
+    "message": "Custom employee contribution rate exceeds the original annual employee cap",
+    "field_paths": [
+      "scenario.employee_contribution_rate"
+    ],
+    "retryable": false
+  }
+}

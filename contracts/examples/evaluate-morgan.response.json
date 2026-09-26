@@ -1,0 +1,290 @@
+{
+  "schema_version": "1",
+  "model_version": "1.0.0",
+  "policy_version": "1.0.0",
+  "profile_id": "morgan",
+  "input_hash": "8531dc2a9111dc8c0189ab7335b859c282c84010087f7c6eb99586309a6610b7",
+  "financial_state": {
+    "months_until_retirement": 384,
+    "gross_monthly_salary_cents": 700000,
+    "current_employee_contribution_cents": 56000,
+    "current_employee_cash_cost_cents": 43680,
+    "monthly_resources_before_retirement_cents": 523680,
+    "monthly_required_debt_payments_cents": 40000,
+    "monthly_allocatable_budget_cents": 123680,
+    "current_monthly_surplus_cents": 80000,
+    "emergency_months": 1.0,
+    "critical_reserve_target_cents": 100000,
+    "starter_reserve_target_cents": 360000,
+    "full_reserve_target_cents": 1080000,
+    "employee_rate_for_full_match": 0.05,
+    "current_monthly_employer_match_cents": 35000,
+    "maximum_monthly_employer_match_cents": 35000,
+    "match_capture_fraction": 1.0,
+    "high_interest_debt_cents": 1800000,
+    "highest_debt_apr": 0.25,
+    "baseline_equity_weight": 0.9,
+    "warnings": [
+      "SIMPLIFIED_TAX_ESTIMATE"
+    ]
+  },
+  "plan": {
+    "primary_action_id": "debt-morgan-card",
+    "actions": [
+      {
+        "id": "employee-contribution",
+        "rank": 1,
+        "category": "contribution",
+        "status": "action",
+        "monthly_cash_cost_cents": 27300,
+        "employee_contribution_cents": 35000,
+        "employee_contribution_rate": 0.05,
+        "debt_id": null,
+        "target_balance_cents": null,
+        "reason_codes": [
+          "CAPTURE_EMPLOYER_MATCH",
+          "SIMPLIFIED_TAX_ESTIMATE"
+        ]
+      },
+      {
+        "id": "debt-morgan-card",
+        "rank": 2,
+        "category": "debt",
+        "status": "action",
+        "monthly_cash_cost_cents": 136380,
+        "employee_contribution_cents": null,
+        "employee_contribution_rate": null,
+        "debt_id": "morgan-card",
+        "target_balance_cents": 0,
+        "reason_codes": [
+          "HIGH_APR_DEBT"
+        ]
+      },
+      {
+        "id": "illustrative-allocation",
+        "rank": 3,
+        "category": "allocation",
+        "status": "information",
+        "monthly_cash_cost_cents": 0,
+        "employee_contribution_cents": null,
+        "employee_contribution_rate": null,
+        "debt_id": null,
+        "target_balance_cents": null,
+        "reason_codes": [
+          "BASELINE_ALLOCATION_RETAINED"
+        ]
+      }
+    ],
+    "reasons": [
+      {
+        "code": "CAPTURE_EMPLOYER_MATCH",
+        "template_key": "capture_employer_match",
+        "facts": {
+          "employee_contribution_cents": 35000,
+          "employer_contribution_cents": 35000,
+          "required_employee_rate": 0.05,
+          "original_employee_contribution_cents": 56000,
+          "actual_employee_rate": 0.05
+        },
+        "input_paths": [
+          "annual_gross_salary_cents",
+          "employee_contribution_rate",
+          "employer_match.status",
+          "employer_match.tiers"
+        ]
+      },
+      {
+        "code": "SIMPLIFIED_TAX_ESTIMATE",
+        "template_key": "simplified_tax_estimate",
+        "facts": {
+          "employee_contribution_cents": 35000,
+          "employee_cash_cost_cents": 27300,
+          "estimated_marginal_income_tax_rate": 0.22
+        },
+        "input_paths": [
+          "contribution_tax_treatment",
+          "estimated_marginal_income_tax_rate"
+        ]
+      },
+      {
+        "code": "HIGH_APR_DEBT",
+        "template_key": "high_apr_debt",
+        "facts": {
+          "debt_id": "morgan-card",
+          "balance_cents": 1800000,
+          "apr_rate": 0.25,
+          "minimum_payment_cents": 40000,
+          "extra_payment_cents": 96380,
+          "total_payment_cents": 136380
+        },
+        "input_paths": [
+          "debts.0.id",
+          "debts.0.balance_cents",
+          "debts.0.apr",
+          "debts.0.minimum_payment_cents"
+        ]
+      },
+      {
+        "code": "BASELINE_ALLOCATION_RETAINED",
+        "template_key": "baseline_allocation_retained",
+        "facts": {
+          "equity_weight_rate": 0.9,
+          "bond_weight_rate": 0.09999999999999998,
+          "months_until_retirement": 384
+        },
+        "input_paths": [
+          "age",
+          "retirement_age"
+        ]
+      }
+    ]
+  },
+  "assumptions": {
+    "annual_equity_return": 0.06,
+    "annual_bond_return": 0.03,
+    "annual_cash_return": 0.0,
+    "annual_inflation": 0.025,
+    "annual_salary_growth": 0.025,
+    "annual_living_cost_growth": 0.025,
+    "annual_employee_limit_growth": 0.025,
+    "high_interest_apr_threshold": 0.1,
+    "retirement_total_saving_target": 0.15,
+    "critical_reserve_cap_cents": 100000,
+    "starter_reserve_months": 1.0,
+    "full_reserve_months": 3.0,
+    "returns_net_of_fees": true,
+    "glide_path": [
+      {
+        "years_to_retirement": 30.0,
+        "equity_weight": 0.9
+      },
+      {
+        "years_to_retirement": 20.0,
+        "equity_weight": 0.8
+      },
+      {
+        "years_to_retirement": 10.0,
+        "equity_weight": 0.65
+      },
+      {
+        "years_to_retirement": 0.0,
+        "equity_weight": 0.5
+      }
+    ],
+    "limitations": [
+      "Illustrative nominal assumptions, not sponsor forecasts or a specific fund.",
+      "No volatility, retirement spending, withdrawals, or withdrawal taxation.",
+      "Traditional contribution cash cost uses a simplified fixed marginal tax adjustment.",
+      "Annualized employee cap excludes catch-up contributions and does not measure remaining legal current-year room.",
+      "Future cap growth is a planning assumption, not future law.",
+      "Debt APR and minimums remain fixed; real card conventions can differ.",
+      "No new borrowing, variable-rate debts, vesting schedules, or employer true-ups.",
+      "Reserve targets and 15% combined saving target are heuristics, not retirement adequacy estimates."
+    ]
+  },
+  "projections": {
+    "current": {
+      "strategy": "current",
+      "retirement_age": 67,
+      "feasible": false,
+      "shortfall_cents": null,
+      "retirement_balance_nominal_cents": null,
+      "retirement_balance_today_cents": null,
+      "cash_nominal_cents": null,
+      "debt_nominal_cents": null,
+      "cumulative_debt_interest_cents": null,
+      "debt_free_month": null,
+      "starter_reserve_month": null,
+      "full_reserve_month": null,
+      "points": []
+    },
+    "adaptive": {
+      "strategy": "adaptive",
+      "retirement_age": 67,
+      "feasible": false,
+      "shortfall_cents": null,
+      "retirement_balance_nominal_cents": null,
+      "retirement_balance_today_cents": null,
+      "cash_nominal_cents": null,
+      "debt_nominal_cents": null,
+      "cumulative_debt_interest_cents": null,
+      "debt_free_month": null,
+      "starter_reserve_month": null,
+      "full_reserve_month": null,
+      "points": []
+    },
+    "custom": null
+  },
+  "warnings": [
+    "STUB_PROJECTIONS: projections are placeholders until the simulation engine lands."
+  ],
+  "decision_summary": {
+    "decision_id": "dec_example",
+    "source": "rules_fallback",
+    "model_id": null,
+    "prompt_version": "1",
+    "ordered_priorities": [
+      "starter_reserve",
+      "high_apr_debt",
+      "full_reserve"
+    ],
+    "rationale": [
+      {
+        "priority": "starter_reserve",
+        "summary": "Build cash toward one month of living expenses when needed.",
+        "evidence_paths": [
+          "financial_state.emergency_months",
+          "financial_state.starter_reserve_target_cents"
+        ],
+        "tradeoff": "Cash held for emergencies is unavailable for extra debt or retirement contributions this month."
+      },
+      {
+        "priority": "high_apr_debt",
+        "summary": "Apply available extra cash to qualifying high-interest debt.",
+        "evidence_paths": [
+          "financial_state.high_interest_debt_cents",
+          "financial_state.highest_debt_apr"
+        ],
+        "tradeoff": "Extra debt payments may delay reserve growth."
+      },
+      {
+        "priority": "full_reserve",
+        "summary": "Build cash toward the three-month reserve target when needed.",
+        "evidence_paths": [
+          "financial_state.emergency_months",
+          "financial_state.full_reserve_target_cents"
+        ],
+        "tradeoff": "Additional reserves may delay high-interest debt repayment."
+      }
+    ],
+    "constraint_checks": [
+      {
+        "code": "EXACT_PRIORITY_MEMBERSHIP",
+        "passed": true
+      },
+      {
+        "code": "STARTER_BEFORE_FULL_RESERVE",
+        "passed": true
+      },
+      {
+        "code": "SUPPORTED_PREFERENCE_ORDER",
+        "passed": true
+      },
+      {
+        "code": "EVIDENCE_VALIDATED",
+        "passed": true
+      },
+      {
+        "code": "ESSENTIALS_AND_MATCH_PROTECTED",
+        "passed": true
+      }
+    ],
+    "fallback_reason": "AI_UNAVAILABLE"
+  },
+  "explanation": {
+    "state_summary": "Monthly resources before retirement contributions are $5,236.80; required debt payments are $400.00, and emergency cash covers 1 month of living expenses.",
+    "narrative": "Pay $1,363.80 on debt morgan-card at 25% APR, including $963.80 beyond the $400.00 required payment.",
+    "source": "template",
+    "changes": []
+  }
+}
