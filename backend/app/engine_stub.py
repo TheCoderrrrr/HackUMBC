@@ -64,7 +64,8 @@ def load_demo_profiles() -> list[FinancialProfile]:
     """Prefer Developer B's fixtures once they exist; fall back to the placeholder copy."""
     path = _B_FIXTURES if _B_FIXTURES.exists() else _A_PLACEHOLDER
     data = json.loads(path.read_text(encoding="utf-8"))
-    return [FinancialProfile.model_validate(p) for p in data["profiles"]]
+    items = data["profiles"] if isinstance(data, dict) else data  # B's file is a plain list
+    return [FinancialProfile.model_validate(p) for p in items]
 
 
 def _match_rate(profile: FinancialProfile, rate: Decimal) -> Decimal:

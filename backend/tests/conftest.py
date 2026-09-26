@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import copy
+import json
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -75,20 +77,9 @@ def make_client(model=None, **overrides) -> TestClient:
     return TestClient(create_app(settings, model=model))
 
 
-@pytest.fixture
-def profiles():
-    return {p.id: p.model_dump(mode="json") for p in engine.load_demo_profiles()}
-"""Canonical, isolated financial profiles for engine tests."""
-
-import json
-from copy import deepcopy
-from pathlib import Path
-
-import pytest
-
-
 @pytest.fixture(scope="session")
 def profiles():
+    """Canonical profiles from Developer B's fixtures (shared by engine and API tests)."""
     path = Path(__file__).parents[1] / "fixtures" / "profiles.json"
     return {profile["id"]: profile for profile in json.loads(path.read_text(encoding="utf-8"))}
 
@@ -96,4 +87,3 @@ def profiles():
 @pytest.fixture
 def morgan(profiles):
     return copy.deepcopy(profiles["morgan"])
-    return deepcopy(profiles["morgan"])
