@@ -14,7 +14,7 @@ struct AdaptiveRetirementApp: App {
             RootView()
                 .environmentObject(store)
                 .preferredColorScheme(.dark)
-                .tint(Palette.lavender)
+                .tint(Palette.accent)
         }
     }
 }

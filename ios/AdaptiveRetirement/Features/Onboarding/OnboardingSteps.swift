@@ -60,6 +60,8 @@ struct AccountsStep: View {
                     row(profile.debts.first?.name ?? "Debt", Money.whole(profile.totalDebtCents))
                 }
             }
+            // Optical inset: the round discs above read narrower than their frames.
+            .padding(.horizontal, Space.s)
             .padding(.top, Space.xl)
 
             Spacer(minLength: 0)
@@ -84,7 +86,6 @@ struct AccountsStep: View {
                 TopicDisc(symbol: "building.columns")
             }
         }
-        .padding(.horizontal, 20)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Sample accounts for \(profile.name)")
     }
@@ -182,7 +183,7 @@ private struct FocusRow: View {
 
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .symbolRenderingMode(.palette)
-                    .foregroundStyle(isSelected ? Palette.page : SetupStyle.secondaryText, Palette.lavender)
+                    .foregroundStyle(isSelected ? Palette.page : SetupStyle.secondaryText, Palette.accent)
                     .font(.system(size: 22, weight: .regular))
                     .contentTransition(.symbolEffect(.replace))
                     .padding(.trailing, Space.m)

@@ -14,8 +14,8 @@ struct TimelineScrubber: View {
     @State private var isDragging = false
 
     private static let trackLabels: [(title: String, symbol: String, tint: Color)] = [
-        ("Retirement", "building.columns.fill", Palette.lavender),
-        ("Debt", "creditcard.fill", Palette.peach),
+        ("Retirement", "building.columns.fill", Palette.accent),
+        ("Debt", "creditcard.fill", Palette.blue),
         ("Reserves", "umbrella.fill", Palette.textSecondary)
     ]
     private static let trackTops: [CGFloat] = [28, 54, 80]
@@ -79,14 +79,14 @@ struct TimelineScrubber: View {
             }
 
             // Retirement: baseline all the way, brighter after the increase.
-            bar(from: 0, to: last, top: Self.trackTops[0], width: width, fill: Palette.lavender.opacity(0.33))
+            bar(from: 0, to: last, top: Self.trackTops[0], width: width, fill: Palette.accent.opacity(0.33))
             if let increase = timeline.tracks.retirementIncreaseFrom {
                 bar(from: Double(increase), to: last, top: Self.trackTops[0], width: width,
-                    fill: Palette.lavender.opacity(0.75))
+                    fill: Palette.accent.opacity(0.75))
             }
             if let debt = timeline.tracks.debtPayoff {
                 bar(from: Double(debt.lowerBound), to: Double(debt.upperBound), top: Self.trackTops[1],
-                    width: width, fill: Color(hex: 0xD79C7F, opacity: 0.7))
+                    width: width, fill: Color(hex: 0x7FA6DE, opacity: 0.7))
             }
             if let reserve = timeline.tracks.reserveFunding {
                 bar(from: Double(reserve.lowerBound), to: Double(reserve.upperBound), top: Self.trackTops[2],

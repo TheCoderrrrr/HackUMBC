@@ -40,7 +40,7 @@ struct ExploreView: View {
                         Label("Modeling assumptions", systemImage: "slider.horizontal.3")
                     }
                         .font(.geist(15, .medium, relativeTo: .callout))
-                        .foregroundStyle(Palette.lavender)
+                        .foregroundStyle(Palette.accent)
                         .buttonStyle(PressableStyle())
                         .frame(minHeight: 44)
                         .padding(.top, 10)
@@ -54,7 +54,7 @@ struct ExploreView: View {
         .scrollIndicators(.hidden)
         .scrollDisabled(showsHint)
         .defaultScrollAnchor(Self.debugScrollAnchor)
-        .background(AmbientGlow())
+        .background(Palette.page.ignoresSafeArea())
         .safeAreaInset(edge: .top, spacing: 0) {
             ScreenHeader(title: "Explore") { HeaderAvatarButton() }
         }
@@ -80,10 +80,7 @@ struct ExploreView: View {
             TimelineScrubber(timeline: timeline, month: $month,
                              onInteract: userInteracted,
                              onSeek: { seek(to: $0) })
-                .padding(.horizontal, 14)
-                .padding(.vertical, Space.m)
-                .glassCard(cornerRadius: 22)
-                .padding(.top, Space.m)
+                .padding(.top, Space.l)
 
             Group {
                 if showsHint {
@@ -107,7 +104,7 @@ struct ExploreView: View {
     /// The playhead's date and what the plan is doing then.
     private var transport: some View {
         HStack(alignment: .center, spacing: Space.m) {
-            IconBadge(systemName: contextSymbol, size: 40)
+            IconBadge(systemName: contextSymbol, size: 60)
                 .contentTransition(.symbolEffect(.replace))
                 .animation(reduceMotion ? nil : Motion.select, value: contextSymbol)
             VStack(alignment: .leading, spacing: 0) {
@@ -125,7 +122,7 @@ struct ExploreView: View {
             Button(action: togglePlayback) {
                 Image(systemName: playSymbol)
                     .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Palette.lavender)
+                    .foregroundStyle(Palette.accent)
                     .contentTransition(.symbolEffect(.replace))
                     .frame(width: 30, height: 30)
             }
@@ -159,8 +156,7 @@ struct ExploreView: View {
                 .foregroundStyle(Palette.textSecondary)
                 .frame(minHeight: 40, alignment: .topLeading)
         } else {
-            GlassGroup(spacing: Space.s) {
-            HStack(alignment: .top, spacing: Space.s) {
+            HStack(alignment: .top, spacing: Space.m) {
                 ForEach(timeline.milestones) { milestone in
                     let isSelected = selectedMonth == milestone.month
                     Button {
@@ -170,13 +166,13 @@ struct ExploreView: View {
                         HStack(alignment: .top, spacing: Space.s) {
                             Image(systemName: Self.symbol(for: milestone))
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(Palette.lavender)
+                                .foregroundStyle(Palette.accent)
                                 .frame(width: 18)
                                 .padding(.top, 1)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(ExploreTimeline.label(forMonth: milestone.month))
                                     .font(.geist(13, .medium, relativeTo: .footnote))
-                                    .foregroundStyle(isSelected ? Palette.lavender : Palette.textPrimary)
+                                    .foregroundStyle(isSelected ? Palette.accent : Palette.textPrimary)
                                 Text(milestone.title)
                                     .font(.geist(11, .regular, relativeTo: .caption2))
                                     .foregroundStyle(Palette.textSecondary)
@@ -185,18 +181,14 @@ struct ExploreView: View {
                             }
                             Spacer(minLength: 0)
                         }
-                        .padding(.horizontal, Space.m)
-                        .padding(.vertical, 10)
                         .frame(maxWidth: .infinity, minHeight: 44, alignment: .topLeading)
-                        .glassSurface(RoundedRectangle(cornerRadius: 16, style: .continuous),
-                                      tint: isSelected ? Palette.lavender : nil, interactive: true)
+                        .contentShape(Rectangle())
                         .animation(Motion.select, value: isSelected)
                     }
                     .buttonStyle(PressableStyle())
                     .accessibilityLabel("\(ExploreTimeline.spokenLabel(forMonth: milestone.month)), \(milestone.title)")
                     .accessibilityHint("Moves the playhead to this date.")
                 }
-            }
             }
         }
     }
@@ -226,7 +218,7 @@ struct ExploreView: View {
                 store.phase = .onboarding
             }
             .font(.geist(15, .medium, relativeTo: .callout))
-            .foregroundStyle(Palette.lavender)
+            .foregroundStyle(Palette.accent)
             .buttonStyle(PressableStyle())
             .frame(minWidth: 72, minHeight: 44)
         }

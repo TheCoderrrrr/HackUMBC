@@ -3,9 +3,8 @@
 using namespace metal;
 
 // Adaptive brand atmosphere.
-// Broad indigo / lavender fields that drift, morph and slowly shift hue,
-// fading into charcoal at the edges; sixteen organic contour rings derived
-// from the same warped field; fine duotone grain.
+// Broad emerald / mint fields that drift, morph and slowly shift hue,
+// fading into charcoal at the edges; fine duotone grain.
 
 namespace atmosphere {
 
@@ -43,33 +42,13 @@ float fbm(float2 p) {
     return v;
 }
 
-// Domain warp shared by the colour field and the contours, so lines and glow morph together.
+// Domain warp for the colour field.
 float2 warp(float2 p, float t) {
     float2 q = float2(fbm(p * 1.6 + float2(0.0, t * 0.07)),
                       fbm(p * 1.6 + float2(5.2, -t * 0.06)));
     float2 r = float2(fbm(p * 1.2 + 3.0 * q + float2(1.7, 9.2) + t * 0.04),
                       fbm(p * 1.2 + 3.0 * q + float2(8.3, 2.8) - t * 0.035));
     return p + 0.22 * (r - 0.5);
-}
-
-// Low-frequency, two-octave noise for contours so rings stay smooth and organic.
-float softNoise(float2 p) {
-    return 0.65 * valueNoise(p) + 0.35 * valueNoise(p * 1.9 + 7.3);
-}
-
-float2 softWarp(float2 p, float t) {
-    float2 q = float2(softNoise(p * 1.4 + float2(0.0, t * 0.035)),
-                      softNoise(p * 1.4 + float2(5.2, -t * 0.03)));
-    return p + 0.13 * (q - 0.5);
-}
-
-// Organic radial height field for the contour rings.
-float ringField(float2 p, float t) {
-    float2 w = softWarp(p, t);
-    float2 c = float2(0.012 * sin(t * 0.07), 0.018 * cos(t * 0.05) - 0.01);
-    float2 d = (w - c) * float2(1.0, 0.86);
-    float breathe = 0.006 * sin(t * 0.21);
-    return length(d) + 0.035 * (softNoise(w * 2.2 - t * 0.02) - 0.5) + breathe;
 }
 
 half3 srgb(float r, float g, float b) { return half3(r / 255.0, g / 255.0, b / 255.0); }
@@ -83,12 +62,11 @@ float blob(float2 p, float2 c, float r) {
 
 /// - size: view size in points.
 /// - time: seconds (frozen under Reduce Motion).
-/// - contours: 0…1 opacity of the contour layer.
 /// - glow: 0…1 intensity of the colour field.
 /// - grain: 0…1 grain amount.
 /// - scale: display scale, for pixel-accurate grain.
 [[ stitchable ]] half4 adaptiveAtmosphere(float2 position, half4 color, float2 size, float time,
-                                          float contours, float glow, float grain, float scale) {
+                                          float glow, float grain, float scale) {
     using namespace atmosphere;
 
     float t = time;
@@ -97,12 +75,12 @@ float blob(float2 p, float2 c, float r) {
 
     float2 w = warp(p, t);
 
-    // Slow palette drift: indigo ↔ ultramarine ↔ violet, lavender ↔ periwinkle ↔ lilac.
+    // Slow palette drift: emerald ↔ teal ↔ leaf, mint ↔ seafoam ↔ lime.
     float h1 = 0.5 + 0.5 * sin(t * 0.12);
     float h2 = 0.5 + 0.5 * sin(t * 0.095 + 2.1);
-    half3 indigo   = mix(mix(srgb(73, 89, 204), srgb(52, 86, 214), h1), srgb(98, 76, 214), h2 * 0.55);
-    half3 lavender = mix(mix(srgb(169, 171, 255), srgb(150, 182, 255), h2), srgb(196, 170, 255), h1 * 0.45);
-    half3 deep     = mix(srgb(40, 46, 140), srgb(62, 40, 138), h1);
+    half3 emerald  = mix(mix(srgb(47, 158, 94), srgb(38, 140, 110), h1), srgb(84, 168, 70), h2 * 0.55);
+    half3 mint     = mix(mix(srgb(168, 230, 161), srgb(150, 225, 190), h2), srgb(196, 236, 150), h1 * 0.45);
+    half3 deep     = mix(srgb(22, 90, 52), srgb(30, 80, 40), h1);
     half3 charcoal = srgb(16, 17, 20);
 
     // Drifting fields.
@@ -118,38 +96,13 @@ float blob(float2 p, float2 c, float r) {
 
     half3 col = charcoal;
     col = mix(col, deep, half(saturate(g4 * 0.85 + g3 * 0.55)));
-    col = mix(col, indigo, half(saturate(g1 * 0.92)));
-    col = mix(col, lavender, half(saturate(g2 * 0.72)));
+    col = mix(col, emerald, half(saturate(g1 * 0.92)));
+    col = mix(col, mint, half(saturate(g2 * 0.72)));
 
     // Dissolve into charcoal at the edges.
     float edge = length(p * float2(1.55, 1.0));
     float vignette = smoothstep(0.66, 0.16, edge);
     col = mix(charcoal, col, half(vignette * glow));
-
-    // Contour rings: 16 nested rings, analytic pixel-space anti-aliasing.
-    if (contours > 0.001) {
-        const float spacing = 0.026;
-        const float inner = 0.05;
-        const float outer = inner + spacing * 16.0;
-        float drift = t * 0.0022; // very slow outward ripple
-
-        float px = 1.0 / size.y;
-        float f  = ringField(p, t);
-        float fx = ringField(p + float2(px, 0), t);
-        float fy = ringField(p + float2(0, px), t);
-        float gradLen = max(length(float2(fx - f, fy - f)), 1e-5); // field units per point
-
-        float phase = (f - inner - drift) / spacing;
-        float distPts = abs(fract(phase + 0.5) - 0.5) * spacing / gradLen;
-        float line = 1.0 - smoothstep(0.2, 0.95, distPts); // ≈0.7 pt stroke
-
-        float ringT = saturate((f - inner) / (outer - inner));
-        float band = smoothstep(inner - 0.01, inner + 0.02, f) * (1.0 - smoothstep(outer - 0.05, outer + 0.01, f));
-        float alpha = mix(0.15, 0.085, ringT) * band * contours;
-
-        half3 stroke = mix(lavender, half3(1.0), 0.25h);
-        col = mix(col, stroke, half(line * alpha));
-    }
 
     // Fine duotone grain — static, pixel-locked.
     if (grain > 0.001) {
@@ -178,8 +131,7 @@ float blob(float2 p, float2 c, float r) {
 }
 
 // Setup field: a flame-like gradient rising from the bottom edge only.
-// Soft tongues of lavender → indigo → deep violet dissolve into charcoal;
-// faint contour lines trace iso-levels of the same heat field.
+// Soft tongues of mint → emerald → deep forest dissolve into charcoal.
 
 namespace ember {
 
@@ -202,17 +154,17 @@ float heat(float2 p, float t) {
 
 half3 ramp(float h, float t) {
     using namespace atmosphere;
-    // Same slow drift as the brand field: indigo ↔ ultramarine ↔ violet.
+    // Same slow drift as the brand field: emerald ↔ teal ↔ leaf.
     float h1 = 0.5 + 0.5 * sin(t * 0.12);
     float h2 = 0.5 + 0.5 * sin(t * 0.095 + 2.1);
     half3 charcoal = srgb(16, 17, 20);
-    half3 deep     = mix(srgb(40, 46, 140), srgb(62, 40, 138), h1);
-    half3 indigo   = mix(mix(srgb(73, 89, 204), srgb(52, 86, 214), h1), srgb(98, 76, 214), h2 * 0.55);
-    half3 lavender = mix(mix(srgb(169, 171, 255), srgb(150, 182, 255), h2), srgb(196, 170, 255), h1 * 0.45);
+    half3 deep     = mix(srgb(22, 90, 52), srgb(30, 80, 40), h1);
+    half3 emerald  = mix(mix(srgb(47, 158, 94), srgb(38, 140, 110), h1), srgb(84, 168, 70), h2 * 0.55);
+    half3 mint     = mix(mix(srgb(168, 230, 161), srgb(150, 225, 190), h2), srgb(196, 236, 150), h1 * 0.45);
         half3 c = mix(charcoal, deep, half(smoothstep(-0.2, 0.3, h)));
-    c = mix(c, indigo,   half(smoothstep(0.24, 0.62, h)));
-    // Tops out at a mid lavender so the indigo button and lavender text stay legible.
-    c = mix(c, lavender, half(0.6 * smoothstep(0.62, 1.15, h)));
+    c = mix(c, emerald,  half(smoothstep(0.24, 0.62, h)));
+    // Tops out at a mid mint so the green button and accent text stay legible.
+    c = mix(c, mint, half(0.6 * smoothstep(0.62, 1.15, h)));
     return c;
 }
 
@@ -220,11 +172,10 @@ half3 ramp(float h, float t) {
 
 /// - size: view size in points.
 /// - time: seconds (frozen under Reduce Motion).
-/// - contours: 0…1 opacity of the contour lines.
 /// - grain: 0…1 grain amount.
 /// - scale: display scale, for pixel-accurate grain.
 [[ stitchable ]] half4 emberAtmosphere(float2 position, half4 color, float2 size, float time,
-                                       float contours, float grain, float scale) {
+                                       float grain, float scale) {
     using namespace atmosphere;
 
     float t = time;
@@ -233,23 +184,6 @@ half3 ramp(float h, float t) {
 
     float h = ember::heat(p, t);
     half3 col = ember::ramp(h, t);
-
-    // Contour lines on iso-levels of heat, analytic pixel-space anti-aliasing.
-    if (contours > 0.001) {
-        const float spacing = 0.11;
-        float px = 1.0 / size.y;
-        float hx = ember::heat(p + float2(px, 0), t);
-        float hy = ember::heat(p + float2(0, px), t);
-        float gradLen = max(length(float2(hx - h, hy - h)), 1e-5);
-
-        float phase = (h - 0.02 - t * 0.004) / spacing;
-        float distPts = abs(fract(phase + 0.5) - 0.5) * spacing / gradLen;
-        float line = 1.0 - smoothstep(0.25, 1.0, distPts);
-
-        // Visible through the flame body, fading out at its tips and in the hot core.
-        float band = smoothstep(0.0, 0.12, h) * (1.0 - smoothstep(0.85, 1.05, h));
-        col = mix(col, half3(1.0), half(line * band * 0.12 * contours));
-    }
 
     if (grain > 0.001) {
         float n = hash21(floor(position * scale / 0.75) + 0.5);

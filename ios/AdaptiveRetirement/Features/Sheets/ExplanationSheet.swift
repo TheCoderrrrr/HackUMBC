@@ -63,7 +63,7 @@ private struct PriorityStep: View {
         HStack(alignment: .top, spacing: 14) {
             Text("\(number)")
                 .font(.geist(13, .medium, relativeTo: .footnote))
-                .foregroundStyle(Palette.lavender)
+                .foregroundStyle(Palette.accent)
                 .frame(width: 27, height: 27)
                 .background(Circle().fill(Palette.raised))
                 .accessibilityHidden(true)

@@ -46,8 +46,8 @@ struct AvatarView: View {
     private var gradient: [Color] {
         switch profile.id {
         case "jordan": [Color(hex: 0x3F7A7A), Color(hex: 0x2A3F66)]
-        case "casey": [Color(hex: 0x9A6A52), Color(hex: 0x4A3552)]
-        default: [Color(hex: 0x7C83F2), Color(hex: 0x3A43A8)]
+        case "casey": [Color(hex: 0x52709A), Color(hex: 0x35405A)]
+        default: [Color(hex: 0x6FD08A), Color(hex: 0x2A7A4A)]
         }
     }
 }
@@ -153,7 +153,7 @@ struct PressableStyle: ButtonStyle {
     }
 }
 
-/// The one primary action per screen: indigo-tinted Liquid Glass capsule, Medium label.
+/// The one primary action per screen: green-tinted Liquid Glass capsule, Medium label.
 struct PrimaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
 
@@ -175,11 +175,11 @@ private struct PrimaryFill: ViewModifier {
 
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *), !reduceTransparency {
-            content.glassEffect(.regular.tint(Palette.indigo).interactive(), in: Capsule())
+            content.glassEffect(.regular.tint(Palette.accentStrong).interactive(), in: Capsule())
         } else {
             content.background {
                 Capsule()
-                    .fill(Palette.indigo)
+                    .fill(Palette.accentStrong)
                     .overlay {
                         // Hair-thin top highlight for material depth.
                         Capsule()
@@ -195,14 +195,14 @@ private struct PrimaryFill: ViewModifier {
     }
 }
 
-/// Secondary action: text-only lavender, or a hairline capsule when `bordered`.
+/// Secondary action: text-only accent, or a hairline capsule when `bordered`.
 struct SecondaryButtonStyle: ButtonStyle {
     var bordered = false
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(TypeScale.button)
-            .foregroundStyle(bordered ? Palette.textPrimary : Palette.lavender)
+            .foregroundStyle(bordered ? Palette.textPrimary : Palette.accent)
             .frame(maxWidth: .infinity, minHeight: 50)
             .background {
                 if bordered {
@@ -267,7 +267,7 @@ struct SectionHeader: View {
             if let whyAction {
                 Button("Why?", action: whyAction)
                     .font(TypeScale.labelMedium)
-                    .foregroundStyle(Palette.lavender)
+                    .foregroundStyle(Palette.accent)
                     .buttonStyle(PressableStyle())
                     .frame(minHeight: 44)
             }
@@ -519,41 +519,14 @@ struct GlassGroup<Content: View>: View {
     }
 }
 
-/// Soft brand light behind the main tabs, so glass has colour to bend.
-/// Static radial fields — no animation, hidden from VoiceOver.
-struct AmbientGlow: View {
-    var body: some View {
-        GeometryReader { proxy in
-            let w = proxy.size.width
-            ZStack {
-                Palette.page
-                RadialGradient(colors: [Palette.indigo.opacity(0.42), .clear],
-                               center: .center, startRadius: 0, endRadius: w * 0.75)
-                    .frame(width: w * 1.5, height: w * 1.5)
-                    .position(x: w * 0.95, y: w * 0.05)
-                RadialGradient(colors: [Palette.lavender.opacity(0.16), .clear],
-                               center: .center, startRadius: 0, endRadius: w * 0.6)
-                    .frame(width: w * 1.2, height: w * 1.2)
-                    .position(x: w * 0.05, y: proxy.size.height * 0.52)
-                RadialGradient(colors: [Palette.copper.opacity(0.12), .clear],
-                               center: .center, startRadius: 0, endRadius: w * 0.55)
-                    .frame(width: w * 1.1, height: w * 1.1)
-                    .position(x: w * 0.9, y: proxy.size.height * 0.95)
-            }
-        }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-}
 
 // MARK: - Icons
 
 /// A tinted SF Symbol in a small glass tile — leads section headers and rows.
 struct IconBadge: View {
     let systemName: String
-    var tint: Color = Palette.lavender
-    var size: CGFloat = 32
+    var tint: Color = Palette.accent
+    var size: CGFloat = 48
 
     var body: some View {
         Image(systemName: systemName)

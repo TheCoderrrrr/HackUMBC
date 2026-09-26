@@ -44,7 +44,7 @@ struct AccountPreviewSheet: View {
 
             Button("Back") { dismiss() }
                 .font(.geist(15, .medium, relativeTo: .subheadline))
-                .foregroundStyle(Palette.lavender)
+                .foregroundStyle(Palette.accent)
                 .frame(maxWidth: .infinity, minHeight: 44)
                 .buttonStyle(PressableStyle())
                 .padding(.top, Space.s)
@@ -53,7 +53,7 @@ struct AccountPreviewSheet: View {
         .padding(.bottom, Space.s)
         .background {
             ZStack {
-                AtmosphereView(contours: 0)
+                AtmosphereView()
                 FrostedSetupSurface()
             }
         }
@@ -85,7 +85,7 @@ private struct ConnectionGraphic: View {
         VStack(spacing: 12) {
             Image(systemName: symbol)
                 .font(.system(size: 30, weight: .regular))
-                .foregroundStyle(Palette.lavender)
+                .foregroundStyle(Palette.accent)
                 .frame(width: 80, height: 80)
                 .background(Circle().fill(Palette.raised))
             Text(label)

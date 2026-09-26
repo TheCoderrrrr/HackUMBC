@@ -29,14 +29,14 @@ enum Palette {
     static let textQuiet = Color(hex: 0x6E7180)
 
     /// Links, selection, chart emphasis.
-    static let lavender = Color(hex: 0xA9ABFF)
+    static let accent = Color(hex: 0xA8E6A1)
     /// Primary actions.
-    static let indigo = Color(hex: 0x4959CC)
-    static let indigoDeep = Color(hex: 0x2E3A96)
+    static let accentStrong = Color(hex: 0x2F9E5E)
+    static let accentDeep = Color(hex: 0x1F6B40)
     /// Comparison series / debt.
-    static let peach = Color(hex: 0xE8B79A)
-    static let copper = Color(hex: 0xC98A63)
-    static let copperDeep = Color(hex: 0x8F5A3C)
+    static let blue = Color(hex: 0x8FB8F5)
+    static let blueMid = Color(hex: 0x5E8FD6)
+    static let blueDeep = Color(hex: 0x2F5A96)
 
     static let positive = Color(hex: 0x8FD6B4)
 
@@ -63,19 +63,10 @@ extension Font {
         .custom(weight.postScriptName, size: size, relativeTo: style)
     }
 
-    static func geistMono(_ size: CGFloat, relativeTo style: Font.TextStyle = .body) -> Font {
-        .custom("GeistMono-Regular", size: size, relativeTo: style)
-    }
-
-    /// Figures — balances, amounts, percentages, ages — in Geist Mono: evenly set, engineered
-    /// digits that keep Geist's proportions. Pair with slight negative tracking at display sizes.
+    /// Figures — balances, amounts, percentages, ages — in Geist with tabular digits so
+    /// columns and ticking values stay aligned. Pair with slight negative tracking at display sizes.
     static func numeral(_ size: CGFloat, _ weight: GeistWeight = .medium, relativeTo style: Font.TextStyle = .body) -> Font {
-        let face = switch weight {
-        case .thin, .ultraLight, .light: "Light"
-        case .regular: "Regular"
-        case .medium: "Medium"
-        }
-        return .custom("GeistMono-\(face)", size: size, relativeTo: style)
+        geist(size, weight, relativeTo: style).monospacedDigit()
     }
 }
 
@@ -109,8 +100,7 @@ enum FontRegistry {
     /// Registers bundled Geist faces once at launch.
     static func registerAll() {
         let names = ["Geist-Thin", "Geist-UltraLight", "Geist-Light", "Geist-Regular",
-                     "Geist-Medium",
-                     "GeistMono-Light", "GeistMono-Regular", "GeistMono-Medium"]
+                     "Geist-Medium"]
         for name in names {
             guard let url = Bundle.main.url(forResource: name, withExtension: "ttf") else { continue }
             CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)

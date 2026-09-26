@@ -2,7 +2,7 @@ import SwiftUI
 import Charts
 
 /// Schematic Current vs Adaptive comparison: overlapping (unstacked) translucent
-/// areas fading to the baseline, a dashed peach contour, a solid lavender contour,
+/// areas fading to the baseline, a dashed blue contour, a solid accent contour,
 /// and an endpoint dot. Normalised illustrative values only.
 struct ComparisonChart: View {
     var adaptive: [Double] = IllustrativeProjection.adaptive()
@@ -25,8 +25,8 @@ struct ComparisonChart: View {
                     .foregroundStyle(by: .value("Series", point.series))
             }
             .chartForegroundStyleScale(domain: ["Current", "Adaptive"],
-                                       range: [fade(Palette.peach, top: 0.26, mid: 0.09),
-                                               fade(Color(hex: 0x9396F5), top: 0.36, mid: 0.14)])
+                                       range: [fade(Palette.blue, top: 0.26, mid: 0.09),
+                                               fade(Color(hex: 0x86DB8F), top: 0.36, mid: 0.14)])
             .modifier(Axes(yMax: yMax))
             .fillGrain()
 
@@ -47,11 +47,11 @@ struct ComparisonChart: View {
                 if let end = adaptive.last {
                     PointMark(x: .value("Progress", 1.0), y: .value("Balance", end))
                         .symbolSize(40)
-                        .foregroundStyle(Palette.lavender)
+                        .foregroundStyle(Palette.accent)
                 }
             }
             .chartForegroundStyleScale(domain: ["Current", "Adaptive"],
-                                       range: [Palette.peach.opacity(0.9), Palette.lavender])
+                                       range: [Palette.blue.opacity(0.9), Palette.accent])
             .modifier(Axes(yMax: yMax))
         }
         .accessibilityElement(children: .ignore)

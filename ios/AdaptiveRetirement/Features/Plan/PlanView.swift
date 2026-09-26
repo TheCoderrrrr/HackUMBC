@@ -10,21 +10,25 @@ struct PlanView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Space.m) {
-                contributions.planCard()
-                cashPriorities.planCard()
+            VStack(alignment: .leading, spacing: 0) {
+                contributions
+                divider
+                cashPriorities
                 ForEach(profile.debts) { debt in
-                    debtSection(debt).planCard(tint: Palette.copper)
+                    divider
+                    debtSection(debt)
                 }
-                emergency.planCard()
-                allocation.planCard()
+                divider
+                emergency
+                divider
+                allocation
             }
-            .padding(.horizontal, Space.l)
+            .padding(.horizontal, Space.xl)
             .padding(.top, Space.l)
             .padding(.bottom, 28)
         }
         .scrollIndicators(.hidden)
-        .background(AmbientGlow())
+        .background(Palette.page.ignoresSafeArea())
         .safeAreaInset(edge: .top, spacing: 0) {
             ScreenHeader {
                 Text("Your plan")
@@ -37,6 +41,11 @@ struct PlanView: View {
             }
         }
         .animation(Motion.reveal, value: profile.id)
+    }
+
+    private var divider: some View {
+        Hairline(color: Palette.hairlineStrong)
+            .padding(.vertical, Space.xl)
     }
 
     // MARK: Retirement contributions
@@ -79,23 +88,15 @@ struct PlanView: View {
     // MARK: Monthly cash priorities
 
     private var cashPriorities: some View {
-        let minimums = profile.debts.reduce(Int64(0)) { $0 + $1.minimumCents }
-        let flexible = profile.cashPriorities.reduce(Int64(0)) { $0 + $1.amountCents }
-        return VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
             PlanSectionHeader(title: "Monthly cash priorities", symbol: "arrow.triangle.branch") { store.sheet = .explanation }
                 .padding(.bottom, Space.l)
 
-            PaycheckFunnel(living: profile.monthlyLivingCents, minimums: minimums, flexible: flexible)
-                .padding(.bottom, Space.xs)
+            CashPriorityBand(priorities: profile.cashPriorities, height: 10)
+                .padding(.bottom, Space.m)
 
-            CashPriorityBand(priorities: profile.cashPriorities, height: 52)
-                .padding(.bottom, Space.l)
-
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.m), GridItem(.flexible(), spacing: Space.m)],
-                      spacing: Space.m) {
-                ForEach(profile.cashPriorities) { priority in
-                    PriorityTile(priority: priority, title: PlanCopy.tileTitle(for: priority))
-                }
+            ForEach(profile.cashPriorities.filter { $0.amountCents > 0 }) { priority in
+                CashPriorityRow(priority: priority, title: PlanCopy.tileTitle(for: priority))
             }
         }
     }
@@ -114,7 +115,7 @@ struct PlanView: View {
         }
 
         return VStack(alignment: .leading, spacing: 0) {
-            PlanSectionHeader(title: PlanCopy.debtTitle(debt), symbol: "creditcard.fill", tint: Palette.peach) { store.sheet = .explanation }
+            PlanSectionHeader(title: PlanCopy.debtTitle(debt), symbol: "creditcard.fill", tint: Palette.blue) { store.sheet = .explanation }
                 .padding(.bottom, Space.m)
 
             HStack(alignment: .firstTextBaseline) {
@@ -203,7 +204,7 @@ struct PlanView: View {
                     .accessibilityValue("Stocks \(OverviewCopy.percent(stocks)), bonds \(OverviewCopy.percent(1 - stocks))")
 
                 VStack(alignment: .leading, spacing: Space.l) {
-                    LegendFigure(color: Palette.lavender, title: "Stocks", value: OverviewCopy.percent(stocks))
+                    LegendFigure(color: Palette.accent, title: "Stocks", value: OverviewCopy.percent(stocks))
                     LegendFigure(color: PlanPalette.bonds, title: "Bonds", value: OverviewCopy.percent(1 - stocks))
                 }
                 .accessibilityHidden(true)
@@ -225,8 +226,8 @@ struct PlanView: View {
 // MARK: - Palette
 
 private enum PlanPalette {
-    /// Employer match: a paler, cooler lavender beside "You".
-    static let employer = [Color(hex: 0x8A8FD8), Color(hex: 0x6C70B4), Color(hex: 0x44466E)]
+    /// Employer match: a paler, cooler green beside "You".
+    static let employer = [Color(hex: 0x7FC98A), Color(hex: 0x5EA36C), Color(hex: 0x3A5E42)]
     /// Required minimum: muted, so the extra payment reads as the decision.
     static let minimum = [Color(hex: 0x5E5452), Color(hex: 0x4A4240), Color(hex: 0x332E2E)]
     static let bonds = Color(hex: 0x5C5F70)
@@ -234,48 +235,35 @@ private enum PlanPalette {
 
 // MARK: - Pieces
 
-/// Icon badge, 19 pt Medium section title, and a trailing glass **Why?** pill.
+/// Icon badge stacked above a 19 pt Medium section title with a trailing **Why?** link.
 private struct PlanSectionHeader: View {
     let title: String
     let symbol: String
-    var tint: Color = Palette.lavender
+    var tint: Color = Palette.accent
     let why: () -> Void
 
     var body: some View {
-        HStack(spacing: Space.m) {
+        VStack(alignment: .leading, spacing: Space.m) {
             IconBadge(systemName: symbol, tint: tint)
-            Text(title)
-                .font(.geist(19, .medium, relativeTo: .title3))
-                .foregroundStyle(Palette.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .accessibilityAddTraits(.isHeader)
-            Spacer(minLength: Space.s)
-            Button(action: why) {
-                Text("Why?")
-                    .font(.geist(13, .medium, relativeTo: .subheadline))
-                    .foregroundStyle(Palette.lavender)
-                    .padding(.horizontal, 12)
-                    .frame(minHeight: 30)
-                    .glassCapsule()
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
+            HStack(alignment: .firstTextBaseline, spacing: Space.s) {
+                Text(title)
+                    .font(.geist(19, .medium, relativeTo: .title3))
+                    .foregroundStyle(Palette.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: Space.s)
+                Button(action: why) {
+                    Text("Why?")
+                        .font(.geist(13, .medium, relativeTo: .subheadline))
+                        .foregroundStyle(Palette.accent)
+                        .frame(minWidth: 44, minHeight: 44, alignment: .trailing)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressableStyle())
+                .accessibilityLabel("Why? \(title)")
             }
-            .buttonStyle(PressableStyle())
-            .accessibilityLabel("Why? \(title)")
         }
-        .frame(minHeight: 44)
-    }
-}
-
-private extension View {
-    /// A Plan section on a glass card.
-    func planCard(tint: Color? = nil) -> some View {
-        padding(.horizontal, 18)
-            .padding(.top, Space.m)
-            .padding(.bottom, 18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .glassCard(tint: tint)
     }
 }
 
@@ -299,7 +287,7 @@ private struct HeroFigure: View {
 private struct StatusChip: View {
     var symbol: String? = nil
     let text: String
-    var tint: Color = Palette.lavender
+    var tint: Color = Palette.accent
 
     var body: some View {
         HStack(spacing: 5) {
@@ -347,7 +335,7 @@ private struct SegmentedBand: View {
                             Text(segment.value)
                                 .font(.numeral(16, .medium, relativeTo: .body))
                                 .tracking(-0.4)
-                                .foregroundStyle(Color(hex: 0xFAF9FF))
+                                .foregroundStyle(Color(hex: 0xF9FFFA))
                         }
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -412,128 +400,6 @@ private struct StatBlock: View {
     }
 }
 
-/// Take-home as a thin bar — living, debt minimums, then the flexible slice — with a soft
-/// wedge widening from that slice into the full-width priorities band below.
-private struct PaycheckFunnel: View {
-    let living: Int64
-    let minimums: Int64
-    let flexible: Int64
-
-    private var total: Double { Double(max(living + minimums + flexible, 1)) }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Space.m) {
-            HStack(spacing: Space.m) {
-                Legend(color: Color(hex: 0x3A3B44), title: "Living", value: Money.whole(living))
-                if minimums > 0 {
-                    Legend(color: Color(hex: 0x6A5E5B), title: "Minimums", value: Money.whole(minimums))
-                }
-                Spacer(minLength: 0)
-                Legend(color: Palette.lavender, title: "Priorities", value: Money.exact(flexible))
-            }
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
-
-            GeometryReader { proxy in
-                let gap: CGFloat = 3
-                let w = proxy.size.width - gap * 2
-                let livingW = w * Double(living) / total
-                let minimumW = w * Double(minimums) / total
-                let flexStart = livingW + minimumW + gap * 2
-
-                ZStack(alignment: .topLeading) {
-                    HStack(spacing: gap) {
-                        Capsule().fill(Palette.raised).frame(width: livingW)
-                        if minimums > 0 {
-                            Capsule().fill(Color(hex: 0x4A4240)).frame(width: minimumW)
-                        }
-                        Capsule().fill(Palette.lavender)
-                    }
-                    .frame(height: 8)
-
-                    Wedge(topStart: flexStart / proxy.size.width)
-                        .fill(LinearGradient(colors: [Palette.lavender.opacity(0.16), Palette.lavender.opacity(0.02)],
-                                             startPoint: .top, endPoint: .bottom))
-                        .frame(height: 26)
-                        .offset(y: 10)
-                }
-            }
-            .frame(height: 36)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Take-home \(Money.exact(living + minimums + flexible)): living \(Money.whole(living)), debt minimums \(Money.whole(minimums)), priorities \(Money.exact(flexible))")
-    }
-
-    private struct Legend: View {
-        let color: Color
-        let title: String
-        let value: String
-
-        var body: some View {
-            HStack(spacing: 5) {
-                Circle().fill(color).frame(width: 6, height: 6)
-                Text(title).font(.geist(11, .regular, relativeTo: .caption2)).foregroundStyle(Palette.textCaption)
-                Text(value).font(.numeral(11, .medium, relativeTo: .caption2)).foregroundStyle(Palette.textSecondary)
-            }
-        }
-    }
-
-    /// Trapezoid from [topStart, 1] at the top to the full width at the bottom.
-    private struct Wedge: Shape {
-        let topStart: CGFloat
-
-        func path(in rect: CGRect) -> Path {
-            Path { p in
-                p.move(to: CGPoint(x: rect.minX + rect.width * topStart, y: rect.minY))
-                p.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
-                p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-                p.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-                p.closeSubpath()
-            }
-        }
-    }
-}
-
-/// A cash priority as a small card: marker, short title, tinted amount. Unfunded cards recede.
-private struct PriorityTile: View {
-    let priority: CashPriority
-    let title: String
-
-    private var funded: Bool { priority.amountCents > 0 }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Space.s) {
-            HStack(spacing: 6) {
-                Circle()
-                    .strokeBorder(funded ? .clear : Palette.textQuiet, lineWidth: 1)
-                    .background(Circle().fill(funded ? priority.kind.accent : .clear))
-                    .frame(width: 7, height: 7)
-                Text(title)
-                    .font(.geist(12, .regular, relativeTo: .caption))
-                    .foregroundStyle(funded ? Palette.textSecondary : Palette.textQuiet)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-            }
-            Text(funded ? Money.exact(priority.amountCents) : "—")
-                .font(.numeral(20, .medium, relativeTo: .title3))
-                .tracking(-0.6)
-                .foregroundStyle(funded ? priority.kind.accent : Palette.textQuiet)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 14)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .fill(funded ? Palette.sheet : Palette.page))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .strokeBorder(funded ? Palette.hairlineStrong : Palette.hairline,
-                          style: StrokeStyle(lineWidth: 0.8, dash: funded ? [] : [3, 3])))
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title), \(Money.exact(priority.amountCents))")
-    }
-}
-
 /// One capsule per month of the full target, filled by months saved.
 private struct MonthMeter: View {
     let months: Double
@@ -547,7 +413,7 @@ private struct MonthMeter: View {
                     ZStack(alignment: .leading) {
                         Capsule().fill(Palette.raised)
                         Capsule()
-                            .fill(LinearGradient(colors: [Palette.lavender, Color(hex: 0x8A8FD8)],
+                            .fill(LinearGradient(colors: [Palette.accent, Color(hex: 0x7FC98A)],
                                                  startPoint: .top, endPoint: .bottom))
                             .frame(width: proxy.size.width * fill)
                     }
@@ -580,7 +446,7 @@ private struct TargetMark: View {
                     .font(funded ? .geist(14, .medium, relativeTo: .subheadline)
                                  : .numeral(14, .medium, relativeTo: .subheadline))
             }
-            .foregroundStyle(funded ? Palette.lavender : Palette.textPrimary)
+            .foregroundStyle(funded ? Palette.accent : Palette.textPrimary)
         }
         .accessibilityElement(children: .combine)
     }
@@ -597,7 +463,7 @@ private struct AllocationRing: View {
             ZStack {
                 Circle()
                     .trim(from: gap, to: max(stocks - gap, gap))
-                    .stroke(Palette.lavender, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                    .stroke(Palette.accent, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                 Circle()
                     .trim(from: min(stocks + gap, 1), to: max(1 - gap, min(stocks + gap, 1)))
                     .stroke(PlanPalette.bonds, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))

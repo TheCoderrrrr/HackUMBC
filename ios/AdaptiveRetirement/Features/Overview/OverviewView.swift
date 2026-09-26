@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Balance-first Overview: saved retirement balance, an edge-to-edge illustrative projection,
-/// planned contributions, then the next step as an open section.
+/// planned contributions, then the next step — the only card on the page.
 struct OverviewView: View {
     @EnvironmentObject private var store: AppStore
     /// 0…1 playhead on the projection while scrubbing.
@@ -14,20 +14,22 @@ struct OverviewView: View {
             VStack(alignment: .leading, spacing: 0) {
                 balanceSummary
                 projection
-                VStack(spacing: Space.m) {
-                    contributions
-                    nextStep
-                    supportingDetails
-                }
-                .padding(.horizontal, Space.l)
-                .padding(.bottom, Space.xl)
+                contributions
+                    .padding(.horizontal, Space.xl)
+                    .padding(.top, Space.m)
+                nextStep
+                    .padding(.horizontal, Space.l)
+                    .padding(.vertical, Space.xl)
+                supportingDetails
+                    .padding(.horizontal, Space.xl)
+                    .padding(.bottom, Space.xl)
                 footer
             }
             .padding(.top, Space.xs)
             .padding(.bottom, Space.xl)
         }
         .scrollIndicators(.hidden)
-        .background(AmbientGlow())
+        .background(Palette.page.ignoresSafeArea())
         .safeAreaInset(edge: .top, spacing: 0) {
             ScreenHeader {
                 ProfileSwitcher()
@@ -50,7 +52,7 @@ struct OverviewView: View {
         return VStack(alignment: .leading, spacing: Space.s) {
             Text(years.map { "Projected at age \(profile.age + $0)" } ?? "Retirement savings")
                 .font(.geist(18, .medium, relativeTo: .headline))
-                .foregroundStyle(years == nil ? Palette.textPrimary : Palette.lavender)
+                .foregroundStyle(years == nil ? Palette.textPrimary : Palette.accent)
                 .contentTransition(.opacity)
             BalanceAmount(cents: years.map { OverviewCopy.projectedCents(for: profile, years: $0) }
                           ?? profile.retirementBalanceCents)
@@ -80,10 +82,10 @@ struct OverviewView: View {
                         .font(.system(size: 10, weight: .semibold))
                 }
                 .font(.geist(13, .medium, relativeTo: .footnote))
-                .foregroundStyle(Palette.lavender)
+                .foregroundStyle(Palette.accent)
                 .padding(.horizontal, 12)
                 .frame(height: 30)
-                .glassCapsule(tint: Palette.lavender, interactive: false)
+                .glassCapsule(tint: Palette.accent, interactive: false)
                 .frame(height: 44)
                 .contentShape(Rectangle())
             }
@@ -151,9 +153,7 @@ struct OverviewView: View {
                                        caption: profile.matchCaptured ? "Full match" : "Partial match")
                 }
             }
-            .padding(20)
             .contentShape(Rectangle())
-            .glassCard()
         }
         .buttonStyle(PressableStyle(scale: 1, dim: 0.8))
         .accessibilityHint("Opens your plan")
@@ -162,7 +162,7 @@ struct OverviewView: View {
     private var nextStep: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: Space.m) {
-                IconBadge(systemName: "flag.checkered", tint: Palette.peach)
+                IconBadge(systemName: "flag.checkered", tint: Palette.blue)
                 Text("Your next step")
                     .font(.geist(18, .medium, relativeTo: .headline))
                     .foregroundStyle(Palette.textPrimary)
@@ -194,10 +194,10 @@ struct OverviewView: View {
                     Image(systemName: "arrow.right")
                         .font(.system(size: 13, weight: .semibold))
                 }
-                .foregroundStyle(Palette.lavender)
+                .foregroundStyle(Palette.accent)
                 .padding(.horizontal, Space.l)
                 .frame(minHeight: 40)
-                .glassCapsule(tint: Palette.lavender)
+                .glassCapsule(tint: Palette.accent)
                 .frame(minHeight: 44)
                 .contentShape(Capsule())
             }
@@ -206,11 +206,11 @@ struct OverviewView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassCard(tint: Palette.indigo)
+        .glassCard(tint: Palette.accentStrong)
     }
 
     private var supportingDetails: some View {
-        VStack(alignment: .leading, spacing: Space.s) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .center, spacing: Space.m) {
                 IconBadge(systemName: "umbrella.fill", tint: Palette.positive)
                 VStack(alignment: .leading, spacing: 3) {
@@ -226,7 +226,10 @@ struct OverviewView: View {
                 MonthsLabel(months: profile.emergencyMonths, size: 18)
             }
             .frame(minHeight: 58)
+            .padding(.bottom, Space.s)
             .accessibilityElement(children: .combine)
+
+            Hairline()
 
             Button {
                 store.sheet = .snapshot
@@ -240,15 +243,14 @@ struct OverviewView: View {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 14, weight: .medium))
                 }
-                .foregroundStyle(Palette.lavender)
-                .frame(minHeight: 44)
+                .foregroundStyle(Palette.accent)
+                .frame(minHeight: 52)
                 .contentShape(Rectangle())
             }
             .buttonStyle(PressableStyle())
+
+            Hairline()
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, Space.l)
-        .glassCard()
     }
 
     private var footer: some View {
@@ -302,7 +304,7 @@ private struct ProfileSwitcher: View {
     }
 }
 
-/// "$35,000" in Geist Mono with raised cents, per the Overview design.
+/// "$35,000" in Geist with raised cents, per the Overview design.
 private struct BalanceAmount: View {
     let cents: Int64
 

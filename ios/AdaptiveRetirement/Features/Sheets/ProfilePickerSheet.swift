@@ -84,7 +84,7 @@ private struct SelectionIndicator: View {
 
     var body: some View {
         ZStack {
-            Circle().fill(isSelected ? Palette.indigo : Palette.raised)
+            Circle().fill(isSelected ? Palette.accentStrong : Palette.raised)
             if isSelected {
                 Image(systemName: "checkmark")
                     .font(.system(size: 11, weight: .medium))

@@ -4,8 +4,8 @@ extension CashPriority.Kind {
     /// Top → bottom gradient for the band segment.
     var bandGradient: [Color] {
         switch self {
-        case .retirement: [Color(hex: 0x655CBA), Color(hex: 0x504990), Color(hex: 0x393350)]
-        case .debt: [Color(hex: 0x9F6548), Color(hex: 0x83543D), Color(hex: 0x573D33)]
+        case .retirement: [Color(hex: 0x5DAA4E), Color(hex: 0x47853D), Color(hex: 0x31502E)]
+        case .debt: [Color(hex: 0x4F72B0), Color(hex: 0x3F5C8F), Color(hex: 0x2F4260)]
         case .emergency: [Color(hex: 0x4F8C79), Color(hex: 0x3D6B5E), Color(hex: 0x2C4640)]
         case .remaining: [Color(hex: 0x5A5C68), Color(hex: 0x454650), Color(hex: 0x30313A)]
         }
@@ -14,8 +14,8 @@ extension CashPriority.Kind {
     /// Marker and amount colour, matched to the segment.
     var accent: Color {
         switch self {
-        case .retirement: Palette.lavender
-        case .debt: Color(hex: 0xE3AC8D)
+        case .retirement: Palette.accent
+        case .debt: Color(hex: 0x9CC0F5)
         case .emergency: Palette.positive
         case .remaining: Palette.textPrimary
         }
@@ -58,14 +58,16 @@ struct CashPriorityBand: View {
 
     private func segment(_ item: CashPriority) -> some View {
         ZStack {
-            BandFill(colors: item.kind.bandGradient, cornerRadius: height >= 48 ? 12 : 8)
-            Text(shareLabel(item))
+            BandFill(colors: item.kind.bandGradient, cornerRadius: min(height >= 48 ? 12 : 8, height / 2))
+            if height >= 24 {
+                Text(shareLabel(item))
                 .font(.numeral(13, .medium, relativeTo: .footnote))
                 .monospacedDigit()
-                .foregroundStyle(Color(hex: 0xFAF9FF))
+                .foregroundStyle(Color(hex: 0xF9FFFA))
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
                 .padding(.horizontal, 4)
+            }
         }
     }
 

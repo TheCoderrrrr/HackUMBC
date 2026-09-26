@@ -20,6 +20,29 @@ enum SetupStyle {
     static let secondaryAction = Font.geist(15, .medium, relativeTo: .subheadline)
 }
 
+// MARK: - Primary action
+
+/// Setup's primary action sits on the green flame field, where the standard green
+/// button disappears. A light capsule with page-dark text keeps it legible.
+struct SetupPrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(TypeScale.button)
+            .foregroundStyle(Palette.page)
+            .frame(maxWidth: .infinity, minHeight: 54)
+            .background {
+                Capsule()
+                    .fill(Palette.textPrimary)
+                    .brightness(configuration.isPressed ? -0.08 : 0)
+            }
+            .opacity(isEnabled ? 1 : 0.45)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .animation(Motion.press, value: configuration.isPressed)
+    }
+}
+
 // MARK: - Focus presentation
 
 extension Focus {
@@ -128,7 +151,7 @@ struct TopicDisc: View {
             .overlay {
                 Image(systemName: symbol)
                     .font(.system(size: 34, weight: .regular))
-                    .foregroundStyle(Palette.lavender)
+                    .foregroundStyle(Palette.accent)
             }
             .frame(width: Self.baseSize, height: Self.baseSize)
     }

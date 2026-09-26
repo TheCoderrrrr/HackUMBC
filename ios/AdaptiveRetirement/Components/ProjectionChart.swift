@@ -3,8 +3,8 @@ import Charts
 
 /// Layered translucent area chart for schematic projections (Swift Charts).
 ///
-/// `adaptive` draws a lavender area with a solid contour; the optional `comparison`
-/// draws a muted-peach area with a dashed contour. The series overlap — they are
+/// `adaptive` draws an accent area with a solid contour; the optional `comparison`
+/// draws a muted-blue area with a dashed contour. The series overlap — they are
 /// alternative scenario totals, not a stack. Both fills fade to transparent at the
 /// baseline and carry the fine duotone grain; contours and the marker stay crisp.
 ///
@@ -127,12 +127,12 @@ struct ProjectionChart: View {
     }
 
     private var fills: [LinearGradient] {
-        let adaptive = fade(Color(hex: 0x9396F5), top: 0.40, mid: 0.16)
-        return comparison == nil ? [adaptive] : [fade(Palette.peach, top: 0.28, mid: 0.10), adaptive]
+        let adaptive = fade(Color(hex: 0x86DB8F), top: 0.40, mid: 0.16)
+        return comparison == nil ? [adaptive] : [fade(Palette.blue, top: 0.28, mid: 0.10), adaptive]
     }
 
     private var strokes: [Color] {
-        comparison == nil ? [Palette.lavender] : [Palette.peach.opacity(0.9), Palette.lavender]
+        comparison == nil ? [Palette.accent] : [Palette.blue.opacity(0.9), Palette.accent]
     }
 
     /// Builds one chart over both series with the shared, hidden axes.
@@ -171,10 +171,10 @@ struct ProjectionChart: View {
                         .frame(width: 1, height: geo.size.height)
                         .position(x: x, y: geo.size.height / 2)
                     Circle()
-                        .fill(Palette.lavender)
+                        .fill(Palette.accent)
                         .overlay(Circle().strokeBorder(Palette.page, lineWidth: 2))
                         .frame(width: 10, height: 10)
-                        .background(Circle().fill(Palette.lavender.opacity(touching ? 0.22 : 0)).frame(width: 26, height: 26))
+                        .background(Circle().fill(Palette.accent.opacity(touching ? 0.22 : 0)).frame(width: 26, height: 26))
                         .animation(Motion.select, value: touching)
                         .position(x: x, y: y)
                 }

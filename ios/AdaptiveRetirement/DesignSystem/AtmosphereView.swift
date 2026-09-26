@@ -2,12 +2,9 @@ import SwiftUI
 
 /// The living brand field behind Splash and Onboarding.
 ///
-/// Drifts, morphs and slowly shifts hue; contour rings are derived from the same
-/// warped field so they breathe with the glow. Frozen under Reduce Motion.
+/// Drifts, morphs and slowly shifts hue. Frozen under Reduce Motion.
 /// Never intercepts touches and is hidden from VoiceOver.
 struct AtmosphereView: View {
-    /// 0…1 — contour ring layer (1 on splash, 0 on setup).
-    var contours: Double = 1
     /// 0…1 — colour field intensity.
     var glow: Double = 1
     /// 0…1 — grain amount.
@@ -33,7 +30,6 @@ struct AtmosphereView: View {
                         ShaderLibrary.adaptiveAtmosphere(
                             .float2(proxy.size),
                             .float(Float(t)),
-                            .float(Float(contours)),
                             .float(Float(glow)),
                             .float(Float(grain)),
                             .float(Float(displayScale))
@@ -47,10 +43,9 @@ struct AtmosphereView: View {
     }
 }
 
-/// Setup background: a flame-like gradient rising from the bottom edge, with faint
-/// contour lines. Frozen under Reduce Motion; never intercepts touches.
+/// Setup background: a flame-like gradient rising from the bottom edge.
+/// Frozen under Reduce Motion; never intercepts touches.
 struct EmberAtmosphereView: View {
-    var contours: Double = 1
     var grain: Double = 1
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -70,7 +65,6 @@ struct EmberAtmosphereView: View {
                         ShaderLibrary.emberAtmosphere(
                             .float2(proxy.size),
                             .float(Float(t)),
-                            .float(Float(contours)),
                             .float(Float(grain)),
                             .float(Float(displayScale))
                         )

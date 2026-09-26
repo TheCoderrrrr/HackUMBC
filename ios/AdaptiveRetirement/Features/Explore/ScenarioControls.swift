@@ -43,8 +43,8 @@ struct RetirementComparisonSection: View {
                 .padding(.top, 2)
 
             HStack(spacing: 20) {
-                LegendItem(title: "Current", color: Palette.peach, dashed: true, weight: .regular)
-                LegendItem(title: "Adaptive", color: Palette.lavender, dashed: false, weight: .medium)
+                LegendItem(title: "Current", color: Palette.blue, dashed: true, weight: .regular)
+                LegendItem(title: "Adaptive", color: Palette.accent, dashed: false, weight: .medium)
             }
             .frame(height: 28)
             .padding(.top, 15)
@@ -254,10 +254,10 @@ private struct PresetChip<Label: View>: View {
     var body: some View {
         Button(action: action) {
             label
-                .foregroundStyle(isSelected ? Palette.lavender : Palette.textSecondary)
+                .foregroundStyle(isSelected ? Palette.accent : Palette.textSecondary)
                 .padding(.horizontal, 14)
                 .frame(minHeight: 36)
-                .glassCapsule(tint: isSelected ? Palette.lavender : nil)
+                .glassCapsule(tint: isSelected ? Palette.accent : nil)
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
         }
@@ -308,7 +308,7 @@ struct OutcomeRows: View {
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: Space.m) {
-                            IconBadge(systemName: symbols[outcome] ?? "circle", size: 28)
+                            IconBadge(systemName: symbols[outcome] ?? "circle", size: 42)
                             Text(outcome)
                                 .font(.geist(15, .regular, relativeTo: .callout))
                                 .foregroundStyle(Palette.textSecondary)

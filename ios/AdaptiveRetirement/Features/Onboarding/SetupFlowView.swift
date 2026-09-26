@@ -11,7 +11,7 @@ struct SetupFlowView: View {
     var body: some View {
         ZStack {
             // Splash keeps the full brand field; setup crossfades to the bottom flame.
-            SetupAtmosphere(contours: isSplash ? 1 : 0)
+            AtmosphereView()
             EmberAtmosphereView()
                 .opacity(isSplash ? 0 : 1)
 
@@ -142,7 +142,7 @@ struct OnboardingFlow: View {
                 Text(primaryTitle)
                     .contentTransition(.opacity)
             }
-            .buttonStyle(PrimaryButtonStyle())
+            .buttonStyle(SetupPrimaryButtonStyle())
 
             // Space stays reserved so the primary button doesn't jump between steps.
             Button(action: showAccountPreview) {
