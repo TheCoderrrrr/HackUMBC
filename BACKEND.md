@@ -13,11 +13,10 @@ Build one Python service with bounded AI priority selection and a deterministic 
 Synthetic fixtures or Plaid Sandbox + confirmed inputs
   -> canonical financial profile
   -> calculated financial state
-  -> Financial State Agent (interpret computed indicators)
-  -> Recommendation Agent (propose bounded priority order)
+  -> Recommendation Agent (1: use computed indicators; propose bounded order, rationale, tradeoffs)
   -> Python validation and cash allocator
   -> deterministic monthly simulation
-  -> Explanation Agent (explain validated decisions and changes)
+  -> Explanation Agent (2: explain validated decisions and changes)
   -> structured evaluation
   -> live SwiftUI response or bundled offline artifact
 ~~~
@@ -92,6 +91,10 @@ evaluate(profile, scenario, validated_decision) -> Evaluation
 ~~~
 
 AI orchestration runs before the pure evaluator. API and exporter call the same evaluator with a validated decision. The exporter reads committed decision fixtures; it never makes live model calls. Routers and the Plaid adapter contain no financial policy. Swift does not duplicate the engine.
+
+Use the raw Anthropic or OpenAI Python SDK for the two fixed, single-shot agent calls, with Pydantic models for `DecisionSummary` and `AIExplanation`. Instructor may wrap the SDK for schema validation and retry-on-failure during fixture preparation; the interactive path has no automatic retries. Do not add LangChain, CrewAI, AutoGen, LangGraph, or another autonomous-agent orchestration framework. The two calls do not loop and share one hard total timeout.
+
+`POST /v1/evaluate` remains one synchronous request returning one `Evaluation` with both `decision_summary` and `explanation`. Do not split explanation into a second endpoint, polling, or streaming; `PlanViewModel` loads the evaluation in one call.
 
 Use Decimal and ROUND_HALF_UP for cash/debt accounting. Return integer cents. Floating-point compound return factors are acceptable, rounded to cents monthly. Allocate any final cent residual to cash so money is conserved.
 
@@ -544,11 +547,12 @@ No explanation introduces claims absent from the structured output. Allocation t
 
 ### AI authority, orchestration, and stored reasoning traces
 
-Three backend stages share the same canonical financial state; a small sequential pipeline is sufficient. Developer 3 owns model calls, timeouts, structured outputs, and in-memory decision records. Developer 4 owns allowed actions, validation, templates, and financial meaning.
+Two backend stages share the same canonical financial state; a small sequential pipeline is sufficient. Developer 3 owns model calls, timeouts, structured outputs, and in-memory decision records. Developer 4 owns allowed actions, validation, templates, and financial meaning.
 
-1. **Financial State Agent:** interpret Python-computed liquidity, debt burden, savings capacity, and horizon. Python calculates debt burden as annual required minimums / annual gross salary, and savings capacity as current monthly surplus / take-home (null when take-home is zero). Put these additional metrics in the internal agent context; do not add readiness without a defined target. The agent cannot compute or overwrite indicators.
-2. **Recommendation Agent:** return a permutation of `starter_reserve`, `high_apr_debt`, and `full_reserve`, plus concise evidence-linked rationale and tradeoffs. Starter reserve must precede full reserve. Balanced defaults to starter → debt → full; cash-security preference can prioritize starter → full → debt; debt-reduction can prioritize debt → starter → full. These are permitted choices, not hardcoded AI outputs. Selection must be grounded in actual state and the explicit preference; do not infer preferences from names or demographics.
-3. **Explanation Agent:** receive the validated decision, calculated amounts, projections, and Python-computed changes from the previous decision. Generate the state summary and a short “why this plan / why it changed” narrative. Do not expose a raw internal reasoning transcript.
+1. **Recommendation Agent:** receive Python-computed `FinancialState` indicators directly as structured input: liquidity, debt burden, savings capacity, and horizon. Python calculates debt burden as annual required minimums / annual gross salary, and savings capacity as current monthly surplus / take-home (null when take-home is zero). Include these metrics in the internal agent context; do not add readiness without a defined target. In one call, return a permutation of `starter_reserve`, `high_apr_debt`, and `full_reserve`, plus concise evidence-linked rationale and tradeoffs. Starter reserve must precede full reserve. Ground the text in actual state and explicit preference; do not infer preferences from names or demographics. The agent cannot compute or overwrite indicators.
+2. **Explanation Agent:** receive the validated decision, calculated amounts, projections, and Python-computed changes from the previous decision. Generate the state summary and a short “why this plan / why it changed” narrative. Do not expose a raw internal reasoning transcript.
+
+Policy decision: the `planning_preference` → ordering table is the default for standard cases: balanced → starter/debt/full; cash-security → starter/full/debt; debt-reduction → debt/starter/full. The Recommendation Agent supplies grounded rationale and tradeoffs for the applied order. Its ordering discretion is limited to the documented Morgan cash-security variant in Section 12, where a non-default order is demonstrated; Python rejects a non-default proposal for a standard case and validates every proposed order before use. The same timeout and invalid-output fallback rules apply.
 
 Hard constraints always remain in Python: essentials and debt minimums, critical reserve before discretionary contributions, affordable employer-match capture, contribution caps, minimum-to-full reserve dependency, avalanche debt ordering, and conservation of cash. Additional retirement contributions and residual cash follow the selected discretionary priorities. No AI changes to equity allocation, APRs, matching formulas, return assumptions, reserve targets, or scenario inputs. Explicit custom contribution elections retain their documented scenario semantics; AI cannot override them. Current uses its original fixed strategy. Adaptive and Custom share one validated ordering per evaluation so comparisons do not introduce unrelated AI choices.
 
@@ -556,11 +560,13 @@ Validate exact action membership, uniqueness, completeness, dependency order, ev
 
 Use structured model output and a pinned configurable model ID; no particular vendor/model release is required by this plan. Treat all profile text and imported data as data, never agent instructions. Send normalized financial facts and explicit preferences only; exclude names, bank identifiers, account numbers, credentials, and raw Plaid payloads.
 
-Bound the complete AI pipeline to four seconds total, including all three stages; individual requests must fit the remaining deadline. No automatic retries in the interactive request. On timeout, unavailable credentials, provider failure, invalid proposal, or invalid state summary, use the deterministic fallback order and template explanations. An explanation-only failure retains the valid decision and uses templates. The existing eight-second iOS timeout remains; provider latency is separately measured. Never label fallback or saved content as live AI.
+Bound the complete AI pipeline to four seconds total across the two calls; individual requests must fit the remaining deadline. Removing the third call roughly doubles the available per-call latency margin. No automatic retries in the interactive request. On timeout, unavailable credentials, provider failure, invalid proposal, or invalid state summary, use the deterministic fallback order and template explanations. An explanation-only failure retains the valid decision and uses templates. The existing eight-second iOS timeout remains; provider latency is separately measured. Never label fallback or saved content as live AI.
 
 Narratives cannot introduce unsupplied amounts or claims. Prefer supplied labeled facts for numeric display; use qualitative prose for the generated narrative. Validate referenced facts and fall back to templates on unsupported references. Preserve the validated structured summary and final explanation in Evaluation; do not retain raw model transcripts. Fallback summaries contain the actual applied ordering and Python-generated rationale.
 
 The engine is deterministic for the same profile, assumptions, scenario, and validated decision. Live model selections may vary: store the accepted decision for reproducibility. Input hashes include validated ordering, planning preference, and model/prompt provenance in addition to numeric inputs and versions. Decision IDs, timestamps, and generated prose are excluded from numeric equality checks.
+
+Decision replay through `previous_decision_id` and the bounded 128-entry, oldest-out in-memory map is required at the Hour 12 MVP gate for `ExploreViewModel` and acceptance tests. Do not defer or cut it under time pressure: no persistence, no eviction policy beyond FIFO/oldest-out, and no database.
 
 ## 10. Illustrative target-date glide path
 
@@ -743,7 +749,7 @@ Total debt payment:              $1,363.80
 
 One month of reserves is already funded. Preserve full matching and accelerate high-interest debt. After payoff, build three months of reserves, then increase contributions. Initial equity remains 90%, the same as Jordan.
 
-Optional AI-ordering demonstration: prepare a separate Morgan cash-security fixture variant and a reviewed decision that places full reserve before extra debt. Export its evaluation through the same engine and show the debt-interest tradeoff. This is additional to the nine required presets; label it as a saved AI decision. Balanced acceptance arithmetic above remains pinned to its original decision.
+Team decision for sign-off before the Hour 18 feature freeze: keep the AI-reordering demonstration as a tenth artifact. Prepare a separate Morgan cash-security fixture variant and a reviewed decision that orders starter reserve → high-APR debt → full reserve instead of the cash-security default of starter reserve → full reserve → high-APR debt. Ground this one documented exception in Morgan's 25% APR debt and show the debt-interest versus liquidity tradeoff. Export its evaluation through the same engine as `morgan-cash-security.json`. This is additional to the nine required presets; label it as a saved AI decision. Balanced acceptance arithmetic above remains pinned to its original decision.
 
 ### Casey — approaching retirement
 
@@ -782,6 +788,7 @@ profiles.json
 <profile>-original.json
 <profile>-retire-plus-two.json
 <profile>-contribution-plus-one.json
+morgan-cash-security.json
 ~~~
 
 Each artifact:
@@ -798,7 +805,7 @@ evaluation
 
 Profile hash: SHA-256 of server canonical profile JSON. Input hash additionally covers scenario, assumptions, versions, validated priority ordering, and model/prompt provenance. Use sorted keys and stable compact JSON. Swift treats hashes as opaque.
 
-Manifest maps profile/preset IDs to filenames. Check generated artifacts into the repo and copy them into iOS only after tests pass. Exclude timestamps from deterministic equality assertions.
+Manifest maps profile/preset IDs to filenames and includes the separate Morgan cash-security variant mapped to `morgan-cash-security.json`. Check generated artifacts into the repo and copy them into iOS only after tests pass. Exclude timestamps from deterministic equality assertions. The demo script's 2:35–3:00 segment shows this specific saved artifact, its priority ordering, and its structured decision summary.
 
 ## 14. Optional Plaid Sandbox
 
@@ -953,7 +960,7 @@ AI acceptance:
 - Provider outage, invalid output, and deadline exhaustion preserve an honest rules-backed evaluation.
 - Explanation failure preserves a valid decision; no unsupported numbers reach the UI.
 - Prior IDs expire safely and cannot compare different profiles.
-- Saved decision replay reproduces numeric results and all nine artifacts without a model call.
+- Saved decision replay reproduces numeric results and all ten artifacts without a model call.
 - Profile text cannot override system constraints; model requests exclude identifying data.
 
 Financial tests:
@@ -994,7 +1001,7 @@ Contract/integration:
 - Error envelope consistent.
 - Unknown matching never becomes zero.
 - No NaN/Infinity.
-- All nine presets regenerate from the live function.
+- All ten artifacts regenerate from the live function.
 - Hashes, scenarios, versions match manifest.
 - No handwritten projection totals or probability scores.
 - Phone reaches health/evaluate over cellular through tunnel.
