@@ -6,7 +6,7 @@ import time
 
 from fastapi import FastAPI, Request
 
-from app.ai.client import GeminiModel, StructuredModel
+from app.ai.client import StructuredModel, build_model
 from app.ai.pipeline import EvaluationPipeline
 from app.api import router
 from app.config import Settings, load_settings
@@ -19,8 +19,8 @@ log = logging.getLogger("adaptive_retirement")
 
 def create_app(settings: Settings | None = None, model: StructuredModel | None = None) -> FastAPI:
     settings = settings or load_settings()
-    if model is None and settings.ai_available:
-        model = GeminiModel(settings.gemini_api_key, settings.ai_model, settings.ai_thinking_level)
+    if model is None:
+        model = build_model(settings)
 
     app = FastAPI(title="Adaptive Retirement API", version="1.0.0")
     app.state.settings = settings
@@ -48,7 +48,8 @@ def create_app(settings: Settings | None = None, model: StructuredModel | None =
         return response
 
     app.include_router(router)
-    log.info("AI %s (model=%s)", "enabled" if model else "disabled: rules fallback", settings.ai_model)
+    log.info("AI %s (provider=%s, model=%s)", "enabled" if model else "disabled: rules fallback",
+             settings.ai_provider, settings.ai_model)
     return app
 
 

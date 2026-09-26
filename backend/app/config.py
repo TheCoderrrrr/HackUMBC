@@ -16,6 +16,9 @@ from app.ai.prompts import PROMPT_VERSION
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 THINKING_LEVELS = {"minimal", "low", "medium", "high"}
+REASONING_EFFORTS = {"none", "minimal", "low", "medium", "high"}
+PROVIDERS = {"openai", "gemini"}
+DEFAULT_MODELS = {"openai": "gpt-6-luna", "gemini": "gemini-3.5-flash-lite"}  # team decision: OpenAI
 IOS_TIMEOUT_SECONDS = 8.0
 
 
@@ -30,9 +33,12 @@ class ConfigError(SystemExit):
 class Settings:
     app_env: str = "hackathon"
     ai_enabled: bool = True
-    ai_model: str = "gemini-3.5-flash-lite"
+    ai_provider: str = "openai"
+    ai_model: str = "gpt-6-luna"
+    openai_api_key: str | None = None
+    ai_reasoning_effort: str | None = "low"      # OpenAI reasoning models
     gemini_api_key: str | None = None
-    ai_thinking_level: str | None = "minimal"
+    ai_thinking_level: str | None = "minimal"    # Gemini only
     ai_prompt_version: str = PROMPT_VERSION  # owned by the prompt code, not .env
     ai_total_timeout_seconds: float = 4.0
     ai_min_explanation_seconds: float = 0.8
@@ -44,7 +50,8 @@ class Settings:
 
     @property
     def ai_available(self) -> bool:
-        return self.ai_enabled and bool(self.gemini_api_key)
+        key = self.openai_api_key if self.ai_provider == "openai" else self.gemini_api_key
+        return self.ai_enabled and bool(key)
 
 
 def _str(name: str, default: str | None) -> str | None:
@@ -84,10 +91,22 @@ def load_settings() -> Settings:
     thinking = _str("AI_THINKING_LEVEL", "minimal").lower()  # empty -> default; "none" disables
     if thinking not in THINKING_LEVELS | {"none"}:
         raise ConfigError(f"AI_THINKING_LEVEL={thinking!r} must be one of {sorted(THINKING_LEVELS)} or none")
+    provider = _str("AI_PROVIDER", "openai").lower()
+    if provider not in PROVIDERS:
+        raise ConfigError(f"AI_PROVIDER={provider!r} must be one of {sorted(PROVIDERS)}")
+    model = _str("AI_MODEL", DEFAULT_MODELS[provider])
+    if (provider == "openai") == model.lower().startswith("gemini"):
+        raise ConfigError(f"AI_MODEL={model!r} does not match AI_PROVIDER={provider!r}")
+    effort = _str("AI_REASONING_EFFORT", "low").lower()
+    if effort not in REASONING_EFFORTS:
+        raise ConfigError(f"AI_REASONING_EFFORT={effort!r} must be one of {sorted(REASONING_EFFORTS)}")
     settings = Settings(
         app_env=_str("APP_ENV", "hackathon"),
         ai_enabled=_bool("AI_ENABLED", True),
-        ai_model=_str("AI_MODEL", "gemini-3.5-flash-lite"),
+        ai_provider=provider,
+        ai_model=model,
+        openai_api_key=_str("OPENAI_API_KEY", None),
+        ai_reasoning_effort=effort,
         gemini_api_key=_str("GEMINI_API_KEY", None),
         ai_thinking_level=None if thinking == "none" else thinking,
         # The whole AI pipeline must finish well inside the iOS request timeout.

@@ -37,3 +37,22 @@ def test_signatures_used_by_c_scripts():
     assert list(inspect.signature(GeminiModel.generate).parameters) == [
         "self", "system", "prompt", "schema", "timeout_s"]
     assert hasattr(AIRateLimited(3.0), "retry_after_s")
+
+
+def test_names_c_relies_on_for_openai_and_saved_decisions():
+    """README "Open Implementation Items", Neil item 4."""
+    from app.ai.client import OpenAIModel, build_model
+    from app.ai.pipeline import explanation_facts
+    from app.engine_port import permitted_orders
+    from app.schemas import Evaluation
+
+    assert "decision_summary" in Evaluation.model_fields and "explanation" in Evaluation.model_fields
+    assert list(inspect.signature(permitted_orders).parameters) == ["profile"]
+    assert list(inspect.signature(explanation_facts).parameters) == [
+        "profile", "state", "core", "decision", "changes", "initial"]
+    assert inspect.signature(explanation_facts).parameters["initial"].kind is inspect.Parameter.KEYWORD_ONLY
+    assert list(inspect.signature(OpenAIModel.__init__).parameters) == [
+        "self", "api_key", "model_id", "reasoning_effort"]
+    assert list(inspect.signature(OpenAIModel.generate).parameters) == [
+        "self", "system", "prompt", "schema", "timeout_s"]
+    assert list(inspect.signature(build_model).parameters) == ["settings"]
