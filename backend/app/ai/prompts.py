@@ -1,4 +1,4 @@
-"""Prompts and output shapes for the two fixed agent calls (prompt version 1).
+"""Prompts and output shapes for the two fixed agent calls (version: PROMPT_VERSION below).
 
 Only normalized financial facts and the explicit planning preference are sent:
 no names, IDs, bank identifiers or raw Plaid payloads.
@@ -10,6 +10,10 @@ from functools import lru_cache
 from typing import Literal
 
 from pydantic import BaseModel, Field, create_model
+
+# Recorded in every DecisionSummary. Bump whenever prompt wording or output schemas change,
+# because saved decisions and input hashes carry it as provenance.
+PROMPT_VERSION = "2"
 
 PriorityOut = Literal["starter_reserve", "high_apr_debt", "full_reserve"]
 
@@ -65,9 +69,16 @@ def recommendation_prompt(preference: str, permitted_orders: list[list[str]], in
         order_rule = (f"The policy order for that preference is {json.dumps(permitted_orders[0])}. "
                       "Use it; Python rejects other orders.")
     else:
-        listed = "; ".join(json.dumps(o) for o in permitted_orders)
-        order_rule = (f"The permitted orders are: {listed}. The first is the policy default. Choose the one the "
-                      "indicators support best and explain the tradeoff; Python rejects any other order.")
+        default, others = permitted_orders[0], permitted_orders[1:]
+        order_rule = (
+            f"Its default order is {json.dumps(default)}. Other permitted orders: "
+            f"{'; '.join(json.dumps(o) for o in others)}. Python rejects any order not listed.\n"
+            "- Decide on the financial evidence, not the preference label alone. Keep the default unless the "
+            "indicators give a clear reason to move a priority. Once the starter reserve is funded, paying "
+            "high-interest debt usually saves more than holding extra cash, because the debt's rate is far above "
+            "what cash earns. When that applies, pay the debt before the full reserve even if the preference "
+            "favors cash, and say in the tradeoff what the person gives up compared with their preference."
+        )
     return (
         "Task: order the three discretionary cash priorities for this person and justify each.\n\n"
         "Priorities:\n"

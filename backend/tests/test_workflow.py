@@ -175,3 +175,11 @@ def test_thinking_level_parsing(monkeypatch):
     for raw, expected in (("", "minimal"), ("LOW", "low"), ("none", None)):
         monkeypatch.setenv("AI_THINKING_LEVEL", raw)
         assert load_settings().ai_thinking_level == expected
+
+
+def test_stale_prompt_version_in_env_is_ignored(monkeypatch, caplog):
+    from app.ai.prompts import PROMPT_VERSION
+    from app.config import load_settings
+    monkeypatch.setenv("AI_PROMPT_VERSION", "1")
+    assert load_settings().ai_prompt_version == PROMPT_VERSION
+    assert "AI_PROMPT_VERSION=1 in .env is ignored" in caplog.text

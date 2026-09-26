@@ -3,7 +3,7 @@
   "model_version": "1.0.0",
   "policy_version": "1.0.0",
   "profile_id": "casey",
-  "input_hash": "6ccf62997f3c7935691c5042611220109c95d236b3cd4fd367305f9bc6dc558b",
+  "input_hash": "a673caf27f8f32f978e128feea9d46dff03e437ff189ae383682cdf1df041b26",
   "financial_state": {
     "months_until_retirement": 84,
     "gross_monthly_salary_cents": 916667,
@@ -1252,7 +1252,7 @@
     "decision_id": "dec_example",
     "source": "rules_fallback",
     "model_id": null,
-    "prompt_version": "1",
+    "prompt_version": "2",
     "ordered_priorities": [
       "starter_reserve",
       "high_apr_debt",

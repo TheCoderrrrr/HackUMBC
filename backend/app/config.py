@@ -4,11 +4,14 @@ Invalid values stop startup with one clear ConfigError line instead of a traceba
 """
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+from app.ai.prompts import PROMPT_VERSION
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
@@ -30,7 +33,7 @@ class Settings:
     ai_model: str = "gemini-3.5-flash-lite"
     gemini_api_key: str | None = None
     ai_thinking_level: str | None = "minimal"
-    ai_prompt_version: str = "1"
+    ai_prompt_version: str = PROMPT_VERSION  # owned by the prompt code, not .env
     ai_total_timeout_seconds: float = 4.0
     ai_min_explanation_seconds: float = 0.8
     plaid_enabled: bool = False
@@ -74,6 +77,10 @@ def _number(name: str, default: float, low: float, high: float, cast=float):
 
 
 def load_settings() -> Settings:
+    stale = _str("AI_PROMPT_VERSION", None)
+    if stale is not None and stale != PROMPT_VERSION:
+        logging.getLogger("adaptive_retirement").warning(
+            "AI_PROMPT_VERSION=%s in .env is ignored; the prompt code is version %s", stale, PROMPT_VERSION)
     thinking = _str("AI_THINKING_LEVEL", "minimal").lower()  # empty -> default; "none" disables
     if thinking not in THINKING_LEVELS | {"none"}:
         raise ConfigError(f"AI_THINKING_LEVEL={thinking!r} must be one of {sorted(THINKING_LEVELS)} or none")
@@ -83,7 +90,6 @@ def load_settings() -> Settings:
         ai_model=_str("AI_MODEL", "gemini-3.5-flash-lite"),
         gemini_api_key=_str("GEMINI_API_KEY", None),
         ai_thinking_level=None if thinking == "none" else thinking,
-        ai_prompt_version=_str("AI_PROMPT_VERSION", "1"),
         # The whole AI pipeline must finish well inside the iOS request timeout.
         ai_total_timeout_seconds=_number("AI_TOTAL_TIMEOUT_SECONDS", 4.0, 0.5, IOS_TIMEOUT_SECONDS - 1),
         plaid_enabled=_bool("PLAID_ENABLED", False),

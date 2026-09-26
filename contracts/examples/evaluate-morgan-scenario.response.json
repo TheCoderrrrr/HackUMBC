@@ -3,7 +3,7 @@
   "model_version": "1.0.0",
   "policy_version": "1.0.0",
   "profile_id": "morgan",
-  "input_hash": "244d0bd20c540cf6b95e434ea244578a9e65555670b460feeeb0cc5906e878ec",
+  "input_hash": "d1da94b5ef2aeecf05429f8e5ac8e1c79e0d06bd02abd2ba045fff90684972f4",
   "financial_state": {
     "months_until_retirement": 384,
     "gross_monthly_salary_cents": 700000,
@@ -7314,7 +7314,7 @@
     "decision_id": "dec_example",
     "source": "rules_fallback",
     "model_id": null,
-    "prompt_version": "1",
+    "prompt_version": "2",
     "ordered_priorities": [
       "starter_reserve",
       "high_apr_debt",
