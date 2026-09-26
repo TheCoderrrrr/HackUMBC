@@ -15,6 +15,7 @@ from pydantic import BaseModel
 T = TypeVar("T", bound=BaseModel)
 
 _executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="ai-call")
+_GEMINI_MIN_TIMEOUT_MS = 10_000
 
 
 class AITimeout(Exception):
@@ -60,7 +61,9 @@ class GeminiModel:
             response_mime_type="application/json",
             response_schema=schema,
             http_options=types.HttpOptions(
-                timeout=max(1, int(remaining * 1000)),
+                # Gemini rejects server deadlines under 10s (400 INVALID_ARGUMENT). Our real
+                # deadline is enforced by future.result(timeout=...) in generate().
+                timeout=max(_GEMINI_MIN_TIMEOUT_MS, int(remaining * 1000)),
                 retry_options=types.HttpRetryOptions(attempts=1),
             ),
         )

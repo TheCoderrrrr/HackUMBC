@@ -18,9 +18,9 @@ def _bool(name: str, default: bool) -> bool:
 class Settings:
     app_env: str = "hackathon"
     ai_enabled: bool = True
-    ai_model: str = "gemini-flash-latest"
+    ai_model: str = "gemini-3.5-flash-lite"
     gemini_api_key: str | None = None
-    ai_thinking_level: str | None = None
+    ai_thinking_level: str | None = "minimal"
     ai_prompt_version: str = "1"
     ai_total_timeout_seconds: float = 4.0
     plaid_enabled: bool = False
@@ -38,9 +38,9 @@ def load_settings() -> Settings:
     settings = Settings(
         app_env=os.getenv("APP_ENV", "hackathon"),
         ai_enabled=_bool("AI_ENABLED", True),
-        ai_model=os.getenv("AI_MODEL", "gemini-flash-latest"),
+        ai_model=os.getenv("AI_MODEL", "gemini-3.5-flash-lite"),
         gemini_api_key=os.getenv("GEMINI_API_KEY") or None,
-        ai_thinking_level=os.getenv("AI_THINKING_LEVEL") or None,
+        ai_thinking_level=os.getenv("AI_THINKING_LEVEL", "minimal") or None,
         ai_prompt_version=os.getenv("AI_PROMPT_VERSION", "1"),
         ai_total_timeout_seconds=float(os.getenv("AI_TOTAL_TIMEOUT_SECONDS", "4")),
         plaid_enabled=_bool("PLAID_ENABLED", False),
