@@ -8,6 +8,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.engine.validation import ProfileValidationError
+
 log = logging.getLogger("adaptive_retirement")
 
 
@@ -43,6 +45,12 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ApiError)
     def _api_error(_: Request, exc: ApiError) -> JSONResponse:
         return envelope(exc.status, exc.code, exc.message, exc.field_paths, exc.retryable)
+
+    @app.exception_handler(ProfileValidationError)
+    def _engine_profile(_: Request, exc: ProfileValidationError) -> JSONResponse:
+        # Raised by Developer B's engine for inputs it cannot plan; exc.path is canonical.
+        message = str(exc).split(": ", 1)[-1]
+        return envelope(422, "INVALID_PROFILE", message, [exc.path])
 
     @app.exception_handler(RequestValidationError)
     def _validation(_: Request, exc: RequestValidationError) -> JSONResponse:

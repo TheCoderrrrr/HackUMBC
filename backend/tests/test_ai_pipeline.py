@@ -32,7 +32,7 @@ def test_no_api_key_uses_rules_fallback_and_templates(morgan):
     body = evaluate(make_client(model=None), morgan)
     d = body["decision_summary"]
     assert d["source"] == "rules_fallback"
-    assert d["fallback_reason"] == "ai_unavailable"
+    assert d["fallback_reason"] == "AI_UNAVAILABLE"
     assert d["model_id"] is None
     assert d["ordered_priorities"] == BALANCED
     assert body["explanation"]["source"] == "template"
@@ -43,7 +43,7 @@ def test_valid_ai_decision_is_used(morgan):
     body = evaluate(make_client(model), morgan)
     d = body["decision_summary"]
     assert d["source"] == "ai" and d["model_id"] == "fake-flash" and d["fallback_reason"] is None
-    assert d["rationale"][1]["evidence_paths"] == ["debt.highest_debt_apr"]
+    assert d["rationale"][1]["evidence_paths"] == ["financial_state.highest_debt_apr"]
     assert body["explanation"]["source"] == "ai"
     assert model.calls == [RecommendationOut, ExplanationOut]
 
@@ -64,7 +64,7 @@ def test_timeout_falls_back_honestly(morgan):
     model = FakeModel(recommend=AITimeout())
     body = evaluate(make_client(model), morgan)
     assert body["decision_summary"]["source"] == "rules_fallback"
-    assert body["decision_summary"]["fallback_reason"] == "timeout"
+    assert body["decision_summary"]["fallback_reason"] == "TIMEOUT"
     assert body["explanation"]["source"] == "template"
     assert model.calls == [RecommendationOut]  # no explanation call after a failed decision
 
@@ -72,7 +72,7 @@ def test_timeout_falls_back_honestly(morgan):
 def test_provider_error_falls_back(morgan):
     model = FakeModel(recommend=RuntimeError("503 from provider"))
     body = evaluate(make_client(model), morgan)
-    assert body["decision_summary"]["fallback_reason"] == "provider_error"
+    assert body["decision_summary"]["fallback_reason"] == "PROVIDER_ERROR"
     assert body["explanation"]["source"] == "template"
     assert model.calls == [RecommendationOut]
 
@@ -89,7 +89,7 @@ def test_invalid_orders_are_rejected(morgan, order):
     body = evaluate(make_client(model), morgan)
     d = body["decision_summary"]
     assert d["source"] == "rules_fallback"
-    assert d["fallback_reason"].startswith("invalid_proposal")
+    assert d["fallback_reason"] == "INVALID_PRIORITY_ORDER"
     assert d["ordered_priorities"] == BALANCED
     assert body["explanation"]["source"] == "template"
     assert model.calls == [RecommendationOut]
@@ -102,7 +102,7 @@ def test_unknown_evidence_path_is_rejected(morgan):
     body = evaluate(make_client(model), morgan)
     d = body["decision_summary"]
     assert d["source"] == "rules_fallback"
-    assert "evidence" in d["fallback_reason"]
+    assert d["fallback_reason"] == "INVALID_EVIDENCE"
     assert body["explanation"]["source"] == "template"
     assert model.calls == [RecommendationOut]
 
@@ -112,28 +112,37 @@ def test_blocked_profile_skips_ai(morgan):
     model = FakeModel()
     body = evaluate(make_client(model), morgan)
     assert model.calls == []
-    assert body["decision_summary"]["fallback_reason"] == "blocked_input: MISSING_REQUIRED_INPUT"
+    assert body["decision_summary"]["fallback_reason"] == "BLOCKED_FINANCIAL_INPUT"
     assert body["explanation"]["source"] == "template"
 
 
-# --- Documented Morgan cash-security exception ---------------------------------
+# --- Morgan cash-security exception (off in the live API) ------------------------
 
 
-def test_cash_security_variant_can_use_documented_exception(morgan):
+def test_live_api_rejects_non_default_order_even_for_cash_security_variant(morgan):
+    # The documented exception is shown through C's saved artifact, not live calls.
     morgan["id"] = "morgan-cash-security"
     morgan["planning_preference"] = "cash_security"
     model = FakeModel(recommend=recommendation(BALANCED))
     d = evaluate(make_client(model), morgan)["decision_summary"]
-    assert d["source"] == "ai" and d["ordered_priorities"] == BALANCED
+    assert d["source"] == "rules_fallback" and d["fallback_reason"] == "INVALID_PRIORITY_ORDER"
+    assert d["ordered_priorities"] == CASH_SECURITY
     prompt = model.prompts[RecommendationOut]
-    assert json.dumps(BALANCED) in prompt and json.dumps(CASH_SECURITY) in prompt
+    assert json.dumps(CASH_SECURITY) in prompt and json.dumps(BALANCED) not in prompt
 
 
-def test_cash_security_variant_still_accepts_default(morgan):
-    morgan["id"] = "morgan-cash-security"
-    morgan["planning_preference"] = "cash_security"
-    d = evaluate(make_client(FakeModel()), morgan)["decision_summary"]
-    assert d["source"] == "ai" and d["ordered_priorities"] == CASH_SECURITY
+def test_numeric_rationale_is_rejected_by_engine(morgan):
+    out = recommendation(BALANCED)
+    out.rationale[1].summary = "The card APR of 25 percent is expensive."
+    d = evaluate(make_client(FakeModel(recommend=out)), morgan)["decision_summary"]
+    assert d["source"] == "rules_fallback" and d["fallback_reason"] == "UNSUPPORTED_RATIONALE_CLAIM"
+
+
+def test_prompt_lists_engine_evidence_keys(morgan):
+    model = FakeModel()
+    evaluate(make_client(model), morgan)
+    prompt = model.prompts[RecommendationOut]
+    assert '"financial_state.highest_debt_apr"' in prompt and '"debt_burden"' in prompt
 
 
 def test_standard_profile_prompt_lists_only_default(morgan):
@@ -266,3 +275,23 @@ def test_previous_decision_cannot_compare_another_profile(morgan, profiles):
     first = evaluate(client, morgan)
     body = evaluate(client, profiles["jordan"], previous_decision_id=first["decision_summary"]["decision_id"])
     assert "PREVIOUS_DECISION_NOT_FOUND" in body["warnings"]
+
+
+def test_recommendation_schema_only_allows_engine_keys():
+    from app.ai.prompts import recommendation_schema
+    schema = recommendation_schema(["financial_state.highest_debt_apr", "debt_burden"])
+    good = {"ordered_priorities": BALANCED, "rationale": [
+        {"priority": "starter_reserve", "summary": "s", "evidence_paths": ["debt_burden"], "tradeoff": "t"}]}
+    schema.model_validate(good)
+    bad = json.loads(json.dumps(good))
+    bad["rationale"][0]["evidence_paths"] = ["high_interest_debt_cents"]  # missing financial_state. prefix
+    with pytest.raises(Exception):
+        schema.model_validate(bad)
+    enum = json.dumps(schema.model_json_schema())
+    assert '"financial_state.highest_debt_apr"' in enum and '"enum"' in enum
+
+
+def test_prompt_shows_flat_evidence_keys(morgan):
+    model = FakeModel()
+    evaluate(make_client(model), morgan)
+    assert '"financial_state.high_interest_debt_cents":' in model.prompts[RecommendationOut]
