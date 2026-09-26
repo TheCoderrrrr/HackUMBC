@@ -1,12 +1,13 @@
 """Prepare fixtures/decisions.json by calling the model for each saved item.
 
 Fixture preparation for the offline bundle (BACKEND.md section 13). Uses A's
-Gemini client, prompts and prose rules, and B's decision validator; C's
-evaluator binds each explanation to its artifact's exact input hash. Records
+model client (AI_PROVIDER in backend/.env; GPT-6 Luna by default), prompts,
+Explanation facts and prose rules, and B's decision validator; C's evaluator
+binds each explanation to its artifact's exact input hash. Records
 are written without review marks: Developers A and B review them and set
 "reviewers": ["A", "B"] before `scripts.export_demo` will accept them.
 
-Run from backend with GEMINI_API_KEY in backend/.env:
+Run from backend with the provider's key (OPENAI_API_KEY by default) in backend/.env:
 
     python -m scripts.prepare_decisions --output fixtures/decisions.json
 """
@@ -20,17 +21,17 @@ from pathlib import Path
 from typing import Any, Callable
 
 from app.ai.client import AIRateLimited
-from app.ai.pipeline import situation_flags, valid_prose
+from app.ai.pipeline import explanation_facts, valid_prose
 from app.ai.prompts import (
     PROMPT_VERSION, SYSTEM, ExplanationOut, explanation_prompt, recommendation_prompt, recommendation_schema,
 )
 from app.engine.assumptions import MODEL_ASSUMPTIONS
 from app.engine.canonical import profile_hash
 from app.engine.evaluate import evaluate
-from app.engine.policy import PREFERENCE_ORDER, default_priorities, validate_decision
+from app.engine.policy import default_priorities, validate_decision
 from app.engine.state import derive_state, recommendation_context
-from app.engine_port import evidence_paths
-from app.schemas import FinancialProfile, Scenario
+from app.engine_port import evidence_paths, permitted_orders
+from app.schemas import Evaluation, FinancialProfile, Scenario
 from scripts.export_demo import (
     PROFILE_IDS, STANDARD_IDS, VARIANT_ID, _artifact_specs, _default_opening_rate,
 )
@@ -54,12 +55,6 @@ def load_profiles(profiles_path: Path) -> dict[str, FinancialProfile]:
     if set(profiles) != set(PROFILE_IDS):
         raise PrepareError(f"expected profiles {PROFILE_IDS}, found {sorted(profiles)}")
     return profiles
-
-
-def permitted_orders(profile: dict[str, Any]) -> list[list[str]]:
-    """Every documented order, preference default first: the same list the live prompt offers."""
-    default = list(default_priorities(profile["planning_preference"]))
-    return [default] + [list(o) for o in PREFERENCE_ORDER.values() if list(o) != default]
 
 
 def required_order(profile: dict[str, Any]) -> list[str]:
@@ -87,7 +82,8 @@ def _recommend(model, profile: dict[str, Any], attempts: int, sleep: Callable[[f
     # Same prompt and evidence-key schema as A's live pipeline.
     context = recommendation_context(profile, state)
     keys = evidence_paths(context)
-    prompt = recommendation_prompt(profile["planning_preference"], permitted_orders(profile), context, keys)
+    orders = permitted_orders(FinancialProfile.model_validate(profile))  # A's live list, default first
+    prompt = recommendation_prompt(profile["planning_preference"], orders, context, keys)
     schema = recommendation_schema(keys)
     problem = None
     for _ in range(attempts):
@@ -108,27 +104,15 @@ def _recommend(model, profile: dict[str, Any], attempts: int, sleep: Callable[[f
     raise PrepareError(f"{profile['id']}: no acceptable recommendation after {attempts} attempts ({problem})")
 
 
-def _explain(model, profile: dict[str, Any], core: dict[str, Any], decision: dict[str, Any], attempts: int,
-             sleep: Callable[[float], None]) -> dict[str, Any]:
-    """Mirror A's live `explanation_facts` for an initial plan, without identifiers.
+def saved_explanation_facts(profile: FinancialProfile, evaluation: Evaluation) -> dict[str, Any]:
+    """A's live Explanation facts for an initial plan, so saved prompts match live ones."""
+    state = derive_state(profile.model_dump(mode="json"))
+    return explanation_facts(profile, state, evaluation, evaluation.decision_summary, [], initial=True)
 
-    Kept as a copy until A adds `explanation_facts` to the names guarded for C.
-    """
-    plan = core["plan"]
-    primary = next(a for a in plan["actions"] if a["id"] == plan["primary_action_id"])
-    facts = {
-        "planning_preference": profile["planning_preference"],
-        "situation": situation_flags(FinancialProfile.model_validate(profile), derive_state(profile)),
-        "ordered_priorities": decision["ordered_priorities"],
-        "rationale": [{"priority": r["priority"], "summary": r["summary"], "tradeoff": r["tradeoff"]}
-                      for r in decision["rationale"]],
-        "primary_action": {"category": primary["category"], "status": primary["status"]},
-        "actions": [{"category": a["category"], "status": a["status"], "reason_codes": a["reason_codes"]}
-                    for a in plan["actions"]],
-        "reason_codes": [r["code"] for r in plan["reasons"]],
-        "is_initial_plan": True,
-        "changes": [],
-    }
+
+def _explain(model, profile: FinancialProfile, evaluation: Evaluation, attempts: int,
+             sleep: Callable[[float], None]) -> dict[str, Any]:
+    facts = saved_explanation_facts(profile, evaluation)
     problem = None
     for _ in range(attempts):
         result, problem = _generate(model, explanation_prompt(facts), ExplanationOut, sleep)
@@ -138,7 +122,7 @@ def _explain(model, profile: dict[str, Any], core: dict[str, Any], decision: dic
         if valid_prose(out):
             return {"state_summary": out.state_summary, "narrative": out.narrative, "source": "ai", "changes": []}
         problem = "prose contained numbers or exceeded length limits"
-    raise PrepareError(f"{profile['id']}: no acceptable explanation after {attempts} attempts ({problem})")
+    raise PrepareError(f"{profile.id}: no acceptable explanation after {attempts} attempts ({problem})")
 
 
 def prepare(model, profiles_path: Path, *, attempts: int = 3,
@@ -164,10 +148,9 @@ def prepare(model, profiles_path: Path, *, attempts: int = 3,
     rates = {pid: _default_opening_rate(profiles[pid], MODEL_ASSUMPTIONS, decisions[pid]) for pid in STANDARD_IDS}
     explanations: dict[str, Any] = {}
     for profile_id, preset_id, _filename, scenario in _artifact_specs(profiles, rates, Scenario):
-        core = evaluate(profiles[profile_id], scenario, decisions[profile_id]).model_dump(mode="json")
-        explanation = _explain(model, profiles[profile_id].model_dump(mode="json"), core,
-                               decisions[profile_id], attempts, sleep)
-        explanations[core["input_hash"]] = {
+        evaluation = evaluate(profiles[profile_id], scenario, decisions[profile_id])
+        explanation = _explain(model, profiles[profile_id], evaluation, attempts, sleep)
+        explanations[evaluation.input_hash] = {
             "artifact": f"{profile_id}/{preset_id}",  # for reviewers; the exporter keys on the hash
             "explanation": explanation,
             "reviewers": [],
@@ -186,6 +169,21 @@ def prepare(model, profiles_path: Path, *, attempts: int = 3,
     return {"decisions": records, "explanations": explanations, "fallback_cases": fallback_cases}
 
 
+def model_from_settings():
+    """A's client for AI_PROVIDER in backend/.env, or an error message saying what is missing."""
+    from app.ai.client import build_model
+    from app.config import load_settings
+
+    settings = load_settings()
+    model = build_model(settings)
+    if model is not None:
+        return model
+    if not settings.ai_enabled:
+        return "AI_ENABLED is false in backend/.env; saved decisions need the model"
+    key = "OPENAI_API_KEY" if settings.ai_provider == "openai" else "GEMINI_API_KEY"
+    return f"{key} is not set in backend/.env (AI_PROVIDER={settings.ai_provider})"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--profiles", type=Path, default=Path("fixtures/profiles.json"))
@@ -196,13 +194,9 @@ def main() -> int:
     if args.output.exists() and not args.force:
         parser.exit(1, f"{args.output} exists; pass --force to replace it (this discards review marks)\n")
 
-    from app.ai.client import GeminiModel
-    from app.config import load_settings
-
-    settings = load_settings()
-    if not settings.gemini_api_key:
-        parser.exit(1, "GEMINI_API_KEY is not set in backend/.env\n")
-    model = GeminiModel(settings.gemini_api_key, settings.ai_model, settings.ai_thinking_level)
+    model = model_from_settings()
+    if isinstance(model, str):
+        parser.exit(1, model + "\n")
     try:
         fixture = prepare(model, args.profiles, attempts=args.attempts)
     except PrepareError as exc:
