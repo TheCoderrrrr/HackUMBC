@@ -259,7 +259,7 @@ def test_gemini_call_skips_provider_when_deadline_passed():
     model = GeminiModel(api_key="test-key-not-used", model_id="gemini-test")
     model._client = None  # any provider call would crash with AttributeError
     with pytest.raises(AITimeout):
-        model._call("s", "p", ExplanationOut, deadline=time.monotonic() - 1)
+        model._guarded_call("s", "p", ExplanationOut, deadline=time.monotonic() - 1)
     with pytest.raises(AITimeout):
         model.generate("s", "p", ExplanationOut, timeout_s=0.01)
 
