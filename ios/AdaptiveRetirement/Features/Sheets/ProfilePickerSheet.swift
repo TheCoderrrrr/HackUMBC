@@ -47,7 +47,7 @@ private struct ProfileOptionRow: View {
 
                     VStack(alignment: .leading, spacing: 3) {
                         Text(profile.name)
-                            .font(.geist(19, .semibold, relativeTo: .title3))
+                            .font(.geist(19, .medium, relativeTo: .title3))
                             .foregroundStyle(Palette.textPrimary)
                         EmphasizedText("**\(profile.age)** · Retiring at **\(profile.retirementAge)**",
                                        size: 13, style: .footnote)
@@ -87,7 +87,7 @@ private struct SelectionIndicator: View {
             Circle().fill(isSelected ? Palette.indigo : Palette.raised)
             if isSelected {
                 Image(systemName: "checkmark")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.white)
                     .transition(.scale(scale: 0.6).combined(with: .opacity))
             }

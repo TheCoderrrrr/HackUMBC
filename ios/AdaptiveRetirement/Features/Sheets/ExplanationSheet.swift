@@ -11,7 +11,7 @@ struct ExplanationSheet: View {
         SheetScaffold(title: "Why this plan?") {
             VStack(alignment: .leading, spacing: 0) {
                 Text(profile.explanationHeadline)
-                    .font(.geist(25, .semibold, relativeTo: .title2))
+                    .font(.geist(25, .regular, relativeTo: .title2))
                     .foregroundStyle(Palette.textPrimary)
                     .lineSpacing(1)
                     .fixedSize(horizontal: false, vertical: true)
@@ -62,7 +62,7 @@ private struct PriorityStep: View {
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
             Text("\(number)")
-                .font(.geist(13, .semibold, relativeTo: .footnote))
+                .font(.geist(13, .medium, relativeTo: .footnote))
                 .foregroundStyle(Palette.lavender)
                 .frame(width: 27, height: 27)
                 .background(Circle().fill(Palette.raised))
@@ -70,7 +70,7 @@ private struct PriorityStep: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
-                    .font(.geist(17, .semibold, relativeTo: .headline))
+                    .font(.geist(17, .medium, relativeTo: .headline))
                     .foregroundStyle(Palette.textPrimary)
                 EmphasizedText(detail, size: 14, style: .subheadline, lineSpacing: 3)
             }

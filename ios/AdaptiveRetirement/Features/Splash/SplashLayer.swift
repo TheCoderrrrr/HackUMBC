@@ -28,7 +28,7 @@ struct SplashWordmark: View {
                 .accessibilityHidden(true)
 
             Text("Adaptive")
-                .font(.geist(46, .semibold, relativeTo: .largeTitle))
+                .font(.geist(46, .regular, relativeTo: .largeTitle))
                 .tracking(-1.38)
                 .foregroundStyle(Color.white)
                 .allowsHitTesting(false)

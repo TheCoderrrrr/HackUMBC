@@ -31,7 +31,7 @@ struct PlanView: View {
         .safeAreaInset(edge: .top, spacing: 0) {
             ScreenHeader {
                 Text("Your plan")
-                    .font(.geist(32, .bold, relativeTo: .largeTitle))
+                    .font(.geist(32, .regular, relativeTo: .largeTitle))
                     .tracking(-0.7)
                     .foregroundStyle(Palette.textPrimary)
                     .accessibilityAddTraits(.isHeader)
@@ -57,14 +57,14 @@ struct PlanView: View {
 
             HStack(alignment: .center) {
                 Text(OverviewCopy.percent(profile.adaptiveEmployeeRate))
-                    .font(.geist(45, .semibold, relativeTo: .largeTitle))
+                    .font(.geist(45, .regular, relativeTo: .largeTitle))
                     .tracking(-0.7)
                     .monospacedDigit()
                     .foregroundStyle(Palette.textPrimary)
                 Spacer(minLength: Space.m)
                 VStack(alignment: .trailing, spacing: Space.xs) {
-                    (Text(Money.whole(profile.employeeMonthlyCents)).font(.geist(20, .semibold, relativeTo: .title3))
-                     + Text(" / month").font(.geist(20, .medium, relativeTo: .title3)))
+                    (Text(Money.whole(profile.employeeMonthlyCents)).font(.geist(20, .medium, relativeTo: .title3))
+                     + Text(" / month").font(.geist(20, .regular, relativeTo: .title3)))
                         .monospacedDigit()
                         .foregroundStyle(Palette.textPrimary)
                     Text("Your employee contribution")
@@ -85,7 +85,7 @@ struct PlanView: View {
                         .font(.geist(13, .medium, relativeTo: .footnote))
                 } icon: {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 12, weight: .medium))
                 }
                 .labelStyle(TightLabelStyle(spacing: 7))
                 .foregroundStyle(Palette.lavender)
@@ -128,12 +128,12 @@ struct PlanView: View {
 
             HStack {
                 Text(Money.whole(debt.balanceCents))
-                    .font(.geist(29, .semibold, relativeTo: .title))
+                    .font(.geist(29, .regular, relativeTo: .title))
                     .tracking(-0.7)
                     .monospacedDigit()
                     .foregroundStyle(Palette.textPrimary)
                 Spacer()
-                (Text(OverviewCopy.percent(debt.apr)).font(.geist(12, .semibold, relativeTo: .caption))
+                (Text(OverviewCopy.percent(debt.apr)).font(.geist(12, .medium, relativeTo: .caption))
                  + Text(" APR").font(.geist(12, .medium, relativeTo: .caption)))
                     .foregroundStyle(Palette.textSecondary)
                     .padding(.horizontal, 9)
@@ -173,7 +173,7 @@ struct PlanView: View {
                     .tracking(-0.7)
                 Spacer()
                 Text(Money.whole(profile.emergencyCashCents))
-                    .font(.geist(18, .semibold, relativeTo: .headline))
+                    .font(.geist(18, .medium, relativeTo: .headline))
                     .monospacedDigit()
                     .foregroundStyle(Palette.textSecondary)
             }
@@ -189,11 +189,11 @@ struct PlanView: View {
             PlanRow(title: PlanCopy.target("Starter target", months: profile.starterTargetMonths),
                     value: starterFunded ? Text("Funded") : Text(Money.whole(profile.monthlyLivingCents * Int64(profile.starterTargetMonths))),
                     valueColor: starterFunded ? Palette.lavender : Palette.textPrimary,
-                    valueWeight: starterFunded ? .medium : .semibold)
+                    valueWeight: starterFunded ? .regular : .medium)
             PlanRow(title: PlanCopy.target("Full target", months: profile.fullTargetMonths),
                     value: fullFunded ? Text("Funded") : Text(Money.whole(fullTargetCents)),
                     valueColor: fullFunded ? Palette.lavender : Palette.textPrimary,
-                    valueWeight: fullFunded ? .medium : .semibold)
+                    valueWeight: fullFunded ? .regular : .medium)
         }
     }
 
@@ -231,7 +231,7 @@ struct PlanView: View {
 
 // MARK: - Pieces
 
-/// 21 pt SemiBold section title with a trailing **Why?** link.
+/// 21 pt Medium section title with a trailing **Why?** link.
 private struct PlanSectionHeader: View {
     let title: String
     let why: () -> Void
@@ -239,7 +239,7 @@ private struct PlanSectionHeader: View {
     var body: some View {
         HStack {
             Text(title)
-                .font(.geist(21, .semibold, relativeTo: .title3))
+                .font(.geist(21, .medium, relativeTo: .title3))
                 .foregroundStyle(Palette.textPrimary)
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: Space.m)
@@ -259,14 +259,14 @@ private struct PlanRow: View {
     let title: Text
     let value: Text
     var valueColor: Color = Palette.textPrimary
-    var valueWeight: GeistWeight = .semibold
+    var valueWeight: GeistWeight = .medium
 
     init(title: String, value: String) {
         self.title = Text(title)
         self.value = Text(value)
     }
 
-    init(title: Text, value: Text, valueColor: Color = Palette.textPrimary, valueWeight: GeistWeight = .semibold) {
+    init(title: Text, value: Text, valueColor: Color = Palette.textPrimary, valueWeight: GeistWeight = .medium) {
         self.title = title
         self.value = value
         self.valueColor = valueColor

@@ -18,7 +18,7 @@ struct ProfileStep: View {
 
             SetupPill {
                 Text(profile.name)
-                    .font(.geist(28, .semibold, relativeTo: .title))
+                    .font(.geist(28, .regular, relativeTo: .title))
                     .foregroundStyle(Palette.textPrimary)
             }
             .padding(.top, Space.xxl)
@@ -108,7 +108,7 @@ struct AccountsStep: View {
                 .foregroundStyle(SetupStyle.secondaryText)
             Spacer(minLength: Space.m)
             Text(value)
-                .font(.geist(18, .semibold, relativeTo: .body))
+                .font(.geist(18, .medium, relativeTo: .body))
                 .foregroundStyle(Palette.textPrimary)
                 .monospacedDigit()
         }
@@ -221,7 +221,7 @@ struct ResultStep: View {
 
             SetupPill {
                 Text(result.amount)
-                    .font(.geist(40, .semibold, relativeTo: .largeTitle))
+                    .font(.geist(40, .regular, relativeTo: .largeTitle))
                     .foregroundStyle(Palette.textPrimary)
                     .monospacedDigit()
                     .minimumScaleFactor(0.6)

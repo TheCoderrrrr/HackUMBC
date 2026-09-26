@@ -13,7 +13,7 @@ struct SnapshotSheet: View {
                     AvatarView(profile: profile, size: 38)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(profile.name)
-                            .font(.geist(19, .semibold, relativeTo: .title3))
+                            .font(.geist(19, .medium, relativeTo: .title3))
                             .foregroundStyle(Palette.textPrimary)
                         EmphasizedText("**\(profile.age)** · Retiring at **\(profile.retirementAge)**",
                                        size: 13, style: .footnote)

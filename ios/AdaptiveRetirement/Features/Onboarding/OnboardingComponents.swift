@@ -11,11 +11,11 @@ enum SetupStyle {
     /// Secondary text sits directly on the moving field (no frost), so it runs brighter.
     static let secondaryText = Color.white.opacity(0.74)
 
-    static let heading = Font.geist(26, .bold, relativeTo: .title)
+    static let heading = Font.geist(26, .regular, relativeTo: .title)
     static let instruction = Font.geist(16, .regular, relativeTo: .body)
-    static let navTitle = Font.geist(17, .semibold, relativeTo: .headline)
+    static let navTitle = Font.geist(17, .medium, relativeTo: .headline)
     static let progress = Font.geist(13, .medium, relativeTo: .footnote)
-    static let rowTitle = Font.geist(17, .semibold, relativeTo: .headline)
+    static let rowTitle = Font.geist(17, .medium, relativeTo: .headline)
     static let rowDetail = Font.geist(13, .regular, relativeTo: .footnote)
     static let secondaryAction = Font.geist(15, .medium, relativeTo: .subheadline)
 }

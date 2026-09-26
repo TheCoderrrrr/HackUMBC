@@ -11,7 +11,7 @@ struct AccountPreviewSheet: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: Space.s) {
                 Text("Connect your accounts.")
-                    .font(.geist(32, .bold, relativeTo: .largeTitle))
+                    .font(.geist(32, .regular, relativeTo: .largeTitle))
                     .foregroundStyle(Palette.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
