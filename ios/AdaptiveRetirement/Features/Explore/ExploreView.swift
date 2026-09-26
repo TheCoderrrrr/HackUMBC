@@ -118,7 +118,7 @@ struct ExploreView: View {
 
             VStack(alignment: .trailing, spacing: 0) {
                 Text(ExploreTimeline.label(forMonth: selectedMonth))
-                    .font(.geist(24, .semibold, relativeTo: .title2))
+                    .font(.numeral(24, .semibold, relativeTo: .title2))
                     .monospacedDigit()
                     .foregroundStyle(Palette.textPrimary)
                     .contentTransition(.numericText(value: Double(selectedMonth)))

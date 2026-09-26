@@ -20,6 +20,16 @@ struct ProjectionChart: View {
     var adaptiveName = "Adaptive plan"
     var comparisonName = "Current plan"
     var lineWidth: CGFloat = 1.3
+    /// When set, the chart is scrubbable: tap to place the playhead, or press and drag to scrub.
+    /// Clears itself after `selectionHold` without a touch.
+    var selection: Binding<Double?>? = nil
+    /// Haptic ticks across the scrub range (e.g. years to retirement). 0 disables.
+    var selectionSteps = 0
+    var selectionHold: Duration = .seconds(3)
+
+    @GestureState private var touching = false
+
+    private var playhead: Double? { selection?.wrappedValue ?? marker }
 
     var body: some View {
         VStack(spacing: Space.s) {
@@ -44,6 +54,14 @@ struct ProjectionChart: View {
                 .chartForegroundStyleScale(domain: seriesNames, range: strokes)
                 .chartOverlay { proxy in markerOverlay(proxy) }
             }
+            .overlay { if selection != nil { scrubSurface } }
+            .sensoryFeedback(.selection, trigger: step)
+            .task(id: HoldKey(value: selection?.wrappedValue, touching: touching)) {
+                guard let selection, selection.wrappedValue != nil, !touching else { return }
+                try? await Task.sleep(for: selectionHold)
+                guard !Task.isCancelled else { return }
+                withAnimation(Motion.reveal) { selection.wrappedValue = nil }
+            }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(accessibilitySummary)
 
@@ -58,6 +76,41 @@ struct ProjectionChart: View {
                 }
                 .accessibilityHidden(true)
             }
+        }
+    }
+
+    // MARK: Scrubbing
+
+    private struct HoldKey: Equatable {
+        let value: Double?
+        let touching: Bool
+    }
+
+    private var step: Int {
+        guard selectionSteps > 0, let value = selection?.wrappedValue else { return -1 }
+        return Int((value * Double(selectionSteps)).rounded())
+    }
+
+    /// A quick tap drops the playhead; a short press then drag scrubs. The press delay leaves
+    /// vertical swipes to the enclosing scroll view.
+    private var scrubSurface: some View {
+        GeometryReader { geo in
+            let place = { (x: CGFloat) in
+                selection?.wrappedValue = min(max(Double(x / max(geo.size.width, 1)), 0), 1)
+            }
+            let scrub = LongPressGesture(minimumDuration: 0.12, maximumDistance: 12)
+                .sequenced(before: DragGesture(minimumDistance: 0))
+                .updating($touching) { value, state, _ in
+                    if case .second(true, _) = value { state = true }
+                }
+                .onChanged { value in
+                    if case .second(true, let drag?) = value { place(drag.location.x) }
+                }
+            let tap = SpatialTapGesture().onEnded { place($0.location.x) }
+
+            Color.clear
+                .contentShape(Rectangle())
+                .gesture(scrub.exclusively(before: tap))
         }
     }
 
@@ -102,10 +155,17 @@ struct ProjectionChart: View {
 
     @ViewBuilder
     private func markerOverlay(_ proxy: ChartProxy) -> some View {
-        if let marker, let x = proxy.position(forX: min(max(marker, 0), 1)),
-           let y = proxy.position(forY: Self.sample(adaptive, at: marker)) {
+        if let playhead, let x = proxy.position(forX: min(max(playhead, 0), 1)),
+           let y = proxy.position(forY: Self.sample(adaptive, at: playhead)) {
             GeometryReader { geo in
                 ZStack(alignment: .topLeading) {
+                    if selection?.wrappedValue != nil {
+                        // Recede everything past the playhead.
+                        Rectangle()
+                            .fill(Palette.page.opacity(0.55))
+                            .frame(width: max(geo.size.width - x, 0), height: geo.size.height)
+                            .offset(x: x)
+                    }
                     Rectangle()
                         .fill(Palette.textPrimary.opacity(0.35))
                         .frame(width: 1, height: geo.size.height)
@@ -114,6 +174,8 @@ struct ProjectionChart: View {
                         .fill(Palette.lavender)
                         .overlay(Circle().strokeBorder(Palette.page, lineWidth: 2))
                         .frame(width: 10, height: 10)
+                        .background(Circle().fill(Palette.lavender.opacity(touching ? 0.22 : 0)).frame(width: 26, height: 26))
+                        .animation(Motion.select, value: touching)
                         .position(x: x, y: y)
                 }
             }

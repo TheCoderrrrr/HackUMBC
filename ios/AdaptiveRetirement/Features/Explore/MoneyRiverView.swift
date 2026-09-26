@@ -44,7 +44,7 @@ private struct DestinationColumn: View {
                 .font(.geist(12, .regular, relativeTo: .caption))
                 .foregroundStyle(Palette.textSecondary)
             Text(destination.value)
-                .font(.geist(18, .semibold, relativeTo: .headline))
+                .font(.numeral(18, .semibold, relativeTo: .headline))
                 .monospacedDigit()
                 .foregroundStyle(Palette.textPrimary)
                 .contentTransition(.opacity)

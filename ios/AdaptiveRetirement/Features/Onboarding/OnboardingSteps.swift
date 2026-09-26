@@ -107,7 +107,7 @@ struct AccountsStep: View {
                 .foregroundStyle(Palette.textSecondary)
             Spacer(minLength: Space.m)
             Text(value)
-                .font(.geist(18, .semibold, relativeTo: .body))
+                .font(.numeral(18, .semibold, relativeTo: .body))
                 .foregroundStyle(Palette.textPrimary)
                 .monospacedDigit()
         }
@@ -218,7 +218,7 @@ struct ResultStep: View {
                     .setupSlot(Slot.resultIcon)
                     .padding(.bottom, 44 - Space.m)
                 Text(result.amount)
-                    .font(.geist(48, .semibold, relativeTo: .largeTitle))
+                    .font(.numeral(48, .semibold, relativeTo: .largeTitle))
                     .foregroundStyle(Palette.textPrimary)
                     .monospacedDigit()
                     .minimumScaleFactor(0.6)
