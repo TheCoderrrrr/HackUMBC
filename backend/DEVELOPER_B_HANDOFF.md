@@ -46,7 +46,7 @@ Evidence paths refer to the returned recommendation context: for example, `plann
 - `cash_security`: starter reserve, full reserve, high-APR debt.
 - `debt_reduction`: high-APR debt, starter reserve, full reserve.
 
-Only the documented synthetic Morgan cash-security variant may use the balanced order as a non-default AI choice. This requires explicit trusted opt-in and matching fixture facts; a profile name or ID alone cannot enable it. Live arbitrary profiles use their preference default.
+The `planning_preference` table is the rules fallback, not the only legal AI output. Any of the three documented orders is a valid Recommendation choice as long as starter reserve precedes full reserve. Python still rejects incomplete, duplicate, unknown, or full-before-starter permutations. The Morgan cash-security demo can therefore save starter → high-APR debt → full reserve without a fixture-hardcoded exception.
 
 Model proposals contain only `ordered_priorities` and `rationale`. Each rationale contains `priority`, `summary`, `evidence_paths`, and `tradeoff`. Model/prompt identifiers are trusted caller metadata, not model-authored fields. Python supplies the decision ID, source, fallback reason, and constraint checks. Do not send a full `DecisionSummary` back as a raw model proposal during saved-decision replay; extract its proposal fields and pass its provenance separately.
 
@@ -120,7 +120,7 @@ resources_cents = living_expenses_cents
                 + total_cash_added_cents
 ```
 
-Stop an infeasible strategy and emit the blocked projection shape from `BACKEND.md`. Preserve other feasible strategies. Propagate allocator warnings, including negative amortization and custom liquidity delays, into the evaluation; `Plan` itself has no warnings field. The opt-in `allow_morgan_exception=True` is needed for validation, planning, and every allocated month of the reviewed Morgan variant.
+Stop an infeasible strategy and emit the blocked projection shape from `BACKEND.md`. Preserve other feasible strategies. Propagate allocator warnings, including negative amortization and custom liquidity delays, into the evaluation; `Plan` itself has no warnings field. A reviewed Morgan cash-security decision that uses a non-default documented order validates and allocates like any other accepted proposal.
 
 ## Local verification
 

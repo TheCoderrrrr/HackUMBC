@@ -33,50 +33,11 @@ def default_priorities(preference: str) -> tuple[str, str, str]:
     return PREFERENCE_ORDER[preference]
 
 
-def _is_morgan_exception(profile: Mapping[str, object]) -> bool:
-    """Pin the one allowed AI variation to the documented synthetic financial facts."""
-    debts = profile["debts"]
-    match = profile["employer_match"]
-    return (
-        profile.get("source") == "demo"
-        and profile.get("planning_preference") == "cash_security"
-        and profile["age"] == 35
-        and profile["retirement_age"] == 67
-        and profile["annual_gross_salary_cents"] == 8_400_000
-        and profile["monthly_take_home_cents"] == 480_000
-        and profile["monthly_living_expenses_cents"] == 360_000
-        and decimal(profile["employee_contribution_rate"]) == Decimal("0.08")
-        and profile["emergency_cash_cents"] == 360_000
-        and profile["contribution_tax_treatment"] == "traditional"
-        and decimal(profile["estimated_marginal_income_tax_rate"]) == Decimal("0.22")
-        and profile["annual_employee_limit_cents"] == 2_450_000
-        and profile["retirement_balance_cents"] == 3_500_000
-        and match["status"] == "confirmed"
-        and match["fully_vested"] is True
-        and len(match["tiers"]) == 1
-        and decimal(match["tiers"][0]["employee_rate_from"]) == 0
-        and decimal(match["tiers"][0]["employee_rate_to"]) == Decimal("0.05")
-        and decimal(match["tiers"][0]["match_per_employee_dollar"]) == 1
-        and len(debts) == 1
-        and debts[0]["type"] == "credit_card"
-        and debts[0]["balance_cents"] == 1_800_000
-        and decimal(debts[0]["apr"]) == Decimal("0.25")
-        and debts[0]["minimum_payment_cents"] == 40_000
-    )
-
-
-def _valid_order(
-    profile: Mapping[str, object], order: object, allow_morgan_exception: bool
-) -> bool:
+def _valid_order(order: object) -> bool:
+    """Accept any documented preference permutation; starter must precede full reserve."""
     if not isinstance(order, (list, tuple)) or len(order) != 3 or not all(isinstance(x, str) for x in order):
         return False
-    if set(order) != set(PRIORITIES) or order.index("starter_reserve") > order.index("full_reserve"):
-        return False
-    default = default_priorities(profile.get("planning_preference", "balanced"))
-    return tuple(order) == default or (
-        allow_morgan_exception and _is_morgan_exception(profile)
-        and tuple(order) == PRIORITIES
-    )
+    return tuple(order) in PREFERENCE_ORDER.values()
 
 
 def _evidence_values(profile: Mapping[str, object], state: Mapping[str, object]) -> dict[str, object]:
@@ -138,12 +99,11 @@ def _fallback_rationale(order: tuple[str, str, str]) -> list[dict[str, object]]:
 
 def _proposal_problem(
     profile: Mapping[str, object], state: Mapping[str, object], proposal: object,
-    allow_morgan_exception: bool,
 ) -> str | None:
     if not isinstance(proposal, Mapping) or set(proposal) != {"ordered_priorities", "rationale"}:
         return "INVALID_PROPOSAL_FIELDS"
     order = proposal["ordered_priorities"]
-    if not _valid_order(profile, order, allow_morgan_exception):
+    if not _valid_order(order):
         return "INVALID_PRIORITY_ORDER"
     rationale = proposal["rationale"]
     if not isinstance(rationale, list) or len(rationale) != 3:
@@ -171,7 +131,6 @@ def _proposal_problem(
 def validate_decision(
     profile: Mapping[str, object], state: Mapping[str, object], proposal: object,
     *, model_id: str | None = None, prompt_version: str = "1",
-    allow_morgan_exception: bool = False,
 ) -> dict[str, object]:
     """Accept only a supported recommendation, otherwise return a rules decision.
 
@@ -185,7 +144,7 @@ def validate_decision(
     problem = "BLOCKED_FINANCIAL_INPUT" if blocked else (
         "NO_AI_PROPOSAL" if proposal is None else
         "MISSING_MODEL_ID" if not isinstance(model_id, str) or not model_id.strip() else
-        _proposal_problem(profile, state, proposal, allow_morgan_exception)
+        _proposal_problem(profile, state, proposal)
     )
     accepted = problem is None
     order = tuple(proposal["ordered_priorities"]) if accepted else default_priorities(
@@ -194,7 +153,7 @@ def validate_decision(
     checks = [
         {"code": "EXACT_PRIORITY_MEMBERSHIP", "passed": set(order) == set(PRIORITIES)},
         {"code": "STARTER_BEFORE_FULL_RESERVE", "passed": order.index("starter_reserve") < order.index("full_reserve")},
-        {"code": "SUPPORTED_PREFERENCE_ORDER", "passed": _valid_order(profile, order, allow_morgan_exception)},
+        {"code": "SUPPORTED_PREFERENCE_ORDER", "passed": _valid_order(order)},
         {"code": "EVIDENCE_VALIDATED", "passed": accepted or proposal is None or blocked},
         {"code": "ESSENTIALS_AND_MATCH_PROTECTED", "passed": True},
     ]
@@ -324,7 +283,6 @@ def allocate_month(
     profile: Mapping[str, object], state: Mapping[str, object], decision: Mapping[str, object],
     *, month: Mapping[str, object] | None = None, strategy: str = "adaptive",
     employee_contribution_rate: float | None = None,
-    allow_morgan_exception: bool = False,
 ) -> dict[str, object]:
     """Allocate a modeled month under adaptive, current, or custom strategy.
 
@@ -340,9 +298,7 @@ def allocate_month(
     canonical = derive_state(profile)
     if dict(state) != canonical:
         raise ValueError("Financial state does not match the current profile")
-    if not isinstance(decision, Mapping) or not _valid_order(
-        profile, decision.get("ordered_priorities"), allow_morgan_exception
-    ):
+    if not isinstance(decision, Mapping) or not _valid_order(decision.get("ordered_priorities")):
         raise ValueError("Unsupported decision order")
     if strategy not in {"adaptive", "current", "custom"}:
         raise ValueError("Unsupported strategy")
@@ -527,12 +483,9 @@ def allocate_month(
 
 def build_plan(
     profile: Mapping[str, object], state: Mapping[str, object], decision: Mapping[str, object],
-    *, allow_morgan_exception: bool = False,
 ) -> dict[str, object]:
     """Express the first adaptive month as public actions and grounded reasons."""
-    allocation = allocate_month(
-        profile, state, decision, allow_morgan_exception=allow_morgan_exception
-    )
+    allocation = allocate_month(profile, state, decision)
     actions: list[dict[str, object]] = []
     reasons: list[dict[str, object]] = []
 

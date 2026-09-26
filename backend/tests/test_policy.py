@@ -4,7 +4,7 @@ from copy import deepcopy
 
 import pytest
 
-from app.engine.policy import allocate_month, default_priorities, validate_decision
+from app.engine.policy import PREFERENCE_ORDER, allocate_month, default_priorities, validate_decision
 from app.engine.state import derive_state
 
 
@@ -65,7 +65,7 @@ def test_established_profiles_keep_original_employee_rate(profiles, name):
     ("cash_security", ["starter_reserve", "full_reserve", "high_apr_debt"]),
     ("debt_reduction", ["high_apr_debt", "starter_reserve", "full_reserve"]),
 ])
-def test_preference_orders_accept_only_grounded_default(morgan, preference, expected):
+def test_preference_defaults_are_accepted_as_ai(morgan, preference, expected):
     morgan["planning_preference"] = preference
     state = derive_state(morgan)
     accepted = validate_decision(morgan, state, proposal(morgan), model_id="test-model", prompt_version="test-v1")
@@ -77,22 +77,32 @@ def test_preference_orders_accept_only_grounded_default(morgan, preference, expe
     assert all(check["passed"] for check in accepted["constraint_checks"])
 
 
-def test_morgan_exception_requires_opt_in_and_exact_financial_facts(morgan):
-    morgan["planning_preference"] = "cash_security"
-    special = proposal(morgan, ["starter_reserve", "high_apr_debt", "full_reserve"])
+@pytest.mark.parametrize("order", list(PREFERENCE_ORDER.values()))
+def test_any_documented_preference_order_is_a_valid_ai_choice(morgan, order):
     state = derive_state(morgan)
-    rejected = validate_decision(morgan, state, special, model_id="m")
-    assert rejected["source"] == "rules_fallback"
-    assert rejected["fallback_reason"] == "INVALID_PRIORITY_ORDER"
-    accepted = validate_decision(morgan, state, special, model_id="m", allow_morgan_exception=True)
+    accepted = validate_decision(
+        morgan, state, proposal(morgan, order), model_id="test-model", prompt_version="test-v1",
+    )
     assert accepted["source"] == "ai"
-    allocated = allocate_month(morgan, state, accepted, allow_morgan_exception=True)
-    assert allocated["debts"][0]["extra_payment_cents"] == 96380
+    assert accepted["ordered_priorities"] == list(order)
+    assert accepted["fallback_reason"] is None
+
+
+def test_cash_security_may_choose_debt_before_full_reserve(morgan):
+    morgan["planning_preference"] = "cash_security"
     morgan["emergency_cash_cents"] += 1
-    different = validate_decision(morgan, derive_state(morgan), special,
-                                  model_id="m", allow_morgan_exception=True)
-    assert different["source"] == "rules_fallback"
-    assert different["ordered_priorities"] == list(default_priorities("cash_security"))
+    special = proposal(morgan, ["starter_reserve", "high_apr_debt", "full_reserve"])
+    accepted = validate_decision(morgan, derive_state(morgan), special, model_id="m")
+    assert accepted["source"] == "ai"
+    assert accepted["ordered_priorities"] == ["starter_reserve", "high_apr_debt", "full_reserve"]
+    morgan["emergency_cash_cents"] -= 1
+    original = validate_decision(
+        morgan, derive_state(morgan),
+        proposal(morgan, ["starter_reserve", "high_apr_debt", "full_reserve"]),
+        model_id="m",
+    )
+    allocated = allocate_month(morgan, derive_state(morgan), original)
+    assert allocated["debts"][0]["extra_payment_cents"] == 96380
 
 
 @pytest.mark.parametrize("change", [
