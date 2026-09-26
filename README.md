@@ -33,13 +33,7 @@ Two 35-year-olds retiring in the same year get the same fund, even if one has si
 flowchart TD
     profileInput["Demo profile or Plaid Sandbox + confirmed inputs"] --> stateNode["Calculated financial state"]
 
-    subgraph agentBox["Bounded AI layer"]
-        stateAgent["Financial State Agent"]
-        recAgent["Recommendation Agent"]
-    end
-
-    stateNode --> stateAgent
-    stateAgent --> recAgent
+    stateNode --> recAgent["Recommendation Agent"]
     recAgent --> validator["Python validation"]
     validator --> allocator["Cash allocator"]
     allocator --> simulation["Deterministic monthly simulation"]
@@ -97,8 +91,7 @@ flowchart LR
 |---|---|
 | **Profile intake** | Loads a synthetic demo profile, or imports debts and balances from Plaid Sandbox for the user to confirm. |
 | **Financial state** | Python computes take-home cost of contributions, allocatable budget, emergency months, match capture, high-interest debt, and glide-path equity. |
-| **State interpretation** | The Financial State Agent interprets liquidity, debt burden, savings capacity, and horizon. It cannot compute or overwrite indicators. |
-| **Priority selection** | The Recommendation Agent orders starter reserve, high-APR debt, and full reserve, with evidence-linked rationale. |
+| **Priority selection** | The Recommendation Agent reads the computed liquidity, debt burden, savings capacity, and horizon, then orders starter reserve, high-APR debt, and full reserve with evidence-linked rationale. It cannot compute or overwrite indicators. |
 | **Validation** | Python rejects unknown, duplicate, or out-of-order priorities and falls back to a rules order. |
 | **Cash allocation** | A monthly waterfall funds every recommendation from one shared budget. |
 | **Simulation** | Current, Adaptive, and Custom strategies are projected month by month to retirement. |
@@ -128,7 +121,7 @@ In short: **Adaptive Retirement is not a robo-advisor. It is an explainable cash
 | **Every dollar is funded** | Recommendations always fit take-home pay; money is conserved to the cent every month. |
 | **Explainable decisions** | Every plan section has a "Why?" with the selected order, tradeoffs, evidence, and Python-computed constraint checks. |
 | **Honest comparisons** | Retirement balance is shown next to debt interest and liquidity, so a lower balance is not automatically "worse." |
-| **Outage-proof demo** | Nine engine-generated scenarios are bundled in the app, so the phone demo works in airplane mode. |
+| **Outage-proof demo** | Ten engine-generated artifacts are bundled in the app, so the phone demo works in airplane mode. |
 
 ---
 
@@ -139,7 +132,7 @@ In short: **Adaptive Retirement is not a robo-advisor. It is an explainable cash
 3. Switch to **Morgan**: same allocation, preserve the match, accelerate the 25% APR card.
 4. Open **Why?** and compare debt, cash, and retirement assets side by side.
 5. Run the **retire two years later** preset or a live scenario.
-6. Show the AI-selected priority order and structured decision summary, and explain that Python computes every amount.
+6. Show Morgan's **cash-security** variant: the AI puts the full reserve before extra debt, and the plan shows the debt-interest tradeoff. Explain that Python computes every amount.
 
 The strongest moment is the chain:
 
@@ -239,14 +232,11 @@ AI is useful where judgment matters, and fenced off where money is computed.
 ```mermaid
 sequenceDiagram
     participant P as Python engine
-    participant S as Financial State Agent
     participant R as Recommendation Agent
     participant V as Python validator
     participant E as Explanation Agent
 
-    P->>S: Computed indicators (liquidity, debt burden, capacity, horizon)
-    S-->>P: Interpretation, no new numbers
-    P->>R: State + explicit planning preference
+    P->>R: Computed indicators + explicit planning preference
     R-->>V: Proposed priority order + rationale
     V->>V: Check membership, order, evidence paths
     V-->>P: Validated order, or rules fallback
@@ -262,7 +252,7 @@ sequenceDiagram
 | Explain the plan and what changed | Change the equity allocation |
 | Respect an explicit planning preference | Infer preferences from names or demographics |
 
-The whole AI pipeline has a four-second budget. On timeout, provider failure, or an invalid proposal, the app shows an honest **Rules fallback** label instead of pretending the AI ran.
+There are two single-shot AI calls with structured output, sharing a four-second budget. On timeout, provider failure, or an invalid proposal, the app shows an honest **Rules fallback** label instead of pretending the AI ran.
 
 ---
 
@@ -273,7 +263,7 @@ The whole AI pipeline has a four-second budget. On timeout, provider failure, or
 | Frontend | Swift, SwiftUI, Swift Charts, URLSession, iOS 17+ |
 | Backend | Python 3.12, FastAPI, Pydantic, Uvicorn |
 | Financial engine | Pure Python with `Decimal` cents and deterministic monthly simulation |
-| AI | Pinned, configurable LLM with structured output, called only from the backend |
+| AI | Anthropic or OpenAI Python SDK, two structured single-shot calls, backend only |
 | Data | Synthetic fixtures; Plaid Sandbox Liabilities as a stretch |
 | Testing | pytest, Swift decoding tests, written device checklist |
 | Hosting | A teammate's Mac + Cloudflare quick tunnel |
@@ -407,7 +397,7 @@ MVP:
 - Bounded AI priority ordering with validation and rules fallback.
 - AI explanations grounded in validated facts, with template fallback.
 - Current vs. Adaptive vs. Custom monthly projections.
-- Nine bundled offline scenarios.
+- Ten bundled offline artifacts: three presets per profile plus a Morgan cash-security variant.
 - Physical-iPhone demo.
 
 Stretch:
