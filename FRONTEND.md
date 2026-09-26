@@ -536,14 +536,15 @@ Resources/Demo/
   casey-original.json
   casey-retire-plus-two.json
   casey-contribution-plus-one.json
+  morgan-cash-security.json
 ~~~
 
-Each artifact wraps profile_id, profile_hash, schema/model/policy versions, exact scenario, and evaluation. Manifest maps profile/preset IDs to filenames.
+Each artifact wraps profile_id, profile_hash, schema/model/policy versions, exact scenario, and evaluation. `profiles.json` includes the separate `morgan-cash-security` variant. The manifest maps profile/preset IDs to filenames, lists `jordan`, `morgan`, and `casey` in `default_profile_ids`, and marks the tenth artifact as a demonstration with `base_profile_id: "morgan"`. Show only the three default IDs in the normal customer picker. The Morgan demonstration uses its saved variant profile and evaluation together; label its AI text as saved content.
 
 Behavior:
 
 - Load bundled profiles without a network prerequisite.
-- Offline profile switching and all nine presets remain available.
+- Offline profile switching, all nine standard presets, and the separate Morgan demonstration remain available.
 - Disable arbitrary submission with **Reconnect for a custom scenario**.
 - Never interpolate between presets.
 - Preserve the last successful live result in memory and label it.
@@ -633,7 +634,7 @@ Commit shared scheme and dependency lockfile. Exclude DerivedData, user-specific
 Required checks:
 
 - Install and launch on the demo iPhone, including without debugger.
-- Decode all examples and all nine artifacts.
+- Decode all examples and all ten artifacts, including the Morgan demonstration.
 - Switch profiles during a request without stale results.
 - Preserve submitted scenario labels when draft controls change.
 - Test timeouts and backend shutdown.

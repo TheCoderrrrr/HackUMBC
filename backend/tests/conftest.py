@@ -1,8 +1,7 @@
-"""Shared fixtures: canonical engine profiles and a scripted model for API tests."""
 from __future__ import annotations
 
+import copy
 import json
-from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -15,9 +14,9 @@ from app.config import Settings
 from app.main import create_app
 
 GOOD_RATIONALE = {
-    "starter_reserve": ("Keep a month of expenses on hand.", ["liquidity.emergency_months"], "Slower debt payoff."),
-    "high_apr_debt": ("The card charges a high rate.", ["debt.highest_debt_apr"], "Less cash cushion for now."),
-    "full_reserve": ("Build a larger cushion later.", ["liquidity.full_reserve_funded"], "Delays extra saving."),
+    "starter_reserve": ("Keep a starter cushion on hand.", ["financial_state.emergency_months"], "Slower debt payoff."),
+    "high_apr_debt": ("The card charges a high rate.", ["financial_state.highest_debt_apr"], "Less cash cushion for now."),
+    "full_reserve": ("Build a larger cushion later.", ["financial_state.full_reserve_target_cents"], "Delays extra saving."),
 }
 
 
@@ -49,6 +48,8 @@ class FakeModel:
         self.systems: list[str] = []
 
     def generate(self, system, prompt, schema, timeout_s):
+        # The pipeline narrows RecommendationOut per request; record the base schema.
+        schema = RecommendationOut if issubclass(schema, RecommendationOut) else schema
         self.calls.append(schema)
         self.timeouts.append(timeout_s)
         self.prompts[schema] = prompt
@@ -80,10 +81,11 @@ def make_client(model=None, **overrides) -> TestClient:
 
 @pytest.fixture(scope="session")
 def profiles():
+    """Canonical profiles from Developer B's fixtures (shared by engine and API tests)."""
     path = Path(__file__).parents[1] / "fixtures" / "profiles.json"
     return {profile["id"]: profile for profile in json.loads(path.read_text(encoding="utf-8"))}
 
 
 @pytest.fixture
 def morgan(profiles):
-    return deepcopy(profiles["morgan"])
+    return copy.deepcopy(profiles["morgan"])
