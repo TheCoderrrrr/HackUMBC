@@ -8,14 +8,15 @@ struct ProfileStep: View {
     let profile: Profile
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SetupPrompt(heading: "Your profile", instruction: "Try a sample financial life.")
-                .padding(.top, 25)
+        VStack(spacing: 0) {
+            Spacer(minLength: Space.l)
+
+            SetupPrompt(heading: "Your profile")
 
             VStack(spacing: 0) {
                 Color.clear
                     .frame(width: 112, height: 112)
-                    .setupSlot(Slot.avatar(for: .profile))
+                    .setupSlot(Slot.profileAvatar)
                 Text(profile.name)
                     .font(.geist(24, .semibold, relativeTo: .title2))
                     .foregroundStyle(Palette.textPrimary)
@@ -26,7 +27,7 @@ struct ProfileStep: View {
                     .padding(.top, Space.s)
             }
             .frame(maxWidth: .infinity)
-            .padding(.top, 52)
+            .padding(.top, 40)
             .accessibilityElement(children: .combine)
 
             Spacer(minLength: Space.l)
@@ -45,12 +46,11 @@ struct AccountsStep: View {
     let profile: Profile
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SetupPrompt(heading: "Bring it together.", instruction: "Your accounts, in one place.")
-                .padding(.top, 25)
+        VStack(spacing: 0) {
+            SetupPrompt(heading: "Bring it together.")
 
             connection
-                .padding(.top, 64)
+                .padding(.top, 48)
 
             VStack(spacing: Space.xs) {
                 row("Retirement", Money.whole(profile.retirementBalanceCents))
@@ -60,8 +60,6 @@ struct AccountsStep: View {
                 }
             }
             .padding(.top, 34)
-
-            Spacer(minLength: 0)
         }
     }
 
@@ -69,7 +67,7 @@ struct AccountsStep: View {
     private var connection: some View {
         HStack(alignment: .top, spacing: 0) {
             endpoint(caption: profile.name) {
-                Color.clear.setupSlot(Slot.avatar(for: .accounts))
+                Color.clear.setupSlot(Slot.accountsAvatar)
             }
             HStack(spacing: 9) {
                 ForEach(0..<8, id: \.self) { _ in
@@ -124,9 +122,8 @@ struct FocusStep: View {
     let select: (Focus) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SetupPrompt(heading: "What comes first?", instruction: "Choose what you’d like to explore.")
-                .padding(.top, 25)
+        VStack(spacing: 0) {
+            SetupPrompt(heading: "What comes first?")
 
             VStack(spacing: Space.m) {
                 ForEach(Focus.allCases) { focus in
@@ -139,9 +136,7 @@ struct FocusStep: View {
                     )
                 }
             }
-            .padding(.top, 56)
-
-            Spacer(minLength: 0)
+            .padding(.top, 40)
         }
     }
 }
@@ -208,9 +203,8 @@ struct ResultStep: View {
 
     var body: some View {
         let result = focus.result(for: profile)
-        VStack(alignment: .leading, spacing: 0) {
-            SetupPrompt(heading: focus.resultHeading, instruction: focus.resultInstruction)
-                .padding(.top, 25)
+        VStack(spacing: 0) {
+            SetupPrompt(heading: focus.resultHeading)
 
             VStack(spacing: Space.m) {
                 Color.clear
@@ -232,10 +226,8 @@ struct ResultStep: View {
             }
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)
-            .padding(.top, 64)
+            .padding(.top, 40)
             .accessibilityElement(children: .combine)
-
-            Spacer(minLength: 0)
         }
     }
 }

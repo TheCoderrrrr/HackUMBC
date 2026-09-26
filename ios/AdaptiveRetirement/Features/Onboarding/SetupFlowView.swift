@@ -57,8 +57,8 @@ struct SetupFlowView: View {
     }
 }
 
-/// Setup glass tuned to the Figma frost: the field is already diffuse, so a light
-/// material plus the 68% charcoal keeps the indigo haze instead of greying it out.
+/// Setup glass: a whisper of material plus 40% charcoal, so the moving field
+/// stays visible behind the setup content.
 /// Reduce Transparency falls back to the shared opaque surface.
 private struct SetupFrost: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -68,8 +68,8 @@ private struct SetupFrost: View {
             FrostedSetupSurface()
         } else {
             ZStack {
-                Rectangle().fill(.ultraThinMaterial).opacity(0.35)
-                Palette.page.opacity(0.6)
+                Rectangle().fill(.ultraThinMaterial).opacity(0.15)
+                Palette.page.opacity(0.4)
             }
             .ignoresSafeArea()
             .allowsHitTesting(false)
@@ -88,14 +88,12 @@ struct OnboardingFlow: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
-
-            ZStack(alignment: .top) {
+            ZStack {
                 stepContent
                     .id(step)
                     .transition(transition(for: step))
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             actions
         }
@@ -105,30 +103,6 @@ struct OnboardingFlow: View {
                 continuityLayer(slots: slots, proxy: proxy)
             }
         }
-    }
-
-    // MARK: Header
-
-    private var header: some View {
-        HStack {
-            Text("Adaptive")
-                .font(SetupStyle.navTitle)
-                .foregroundStyle(Palette.textPrimary)
-            Spacer()
-            ZStack(alignment: .trailing) {
-                Text("\(step.rawValue + 1) / \(OnboardingStep.allCases.count)")
-                    .font(SetupStyle.progress)
-                    .foregroundStyle(Palette.textSecondary)
-                    .monospacedDigit()
-                    .opacity(step < .focus ? 1 : 0)
-                    .accessibilityLabel("Step \(step.rawValue + 1) of \(OnboardingStep.allCases.count)")
-                    .accessibilityHidden(step >= .focus)
-                Color.clear
-                    .frame(width: 44, height: 44)
-                    .setupSlot(Slot.headerAvatar)
-            }
-        }
-        .frame(height: 64)
     }
 
     // MARK: Steps
@@ -224,12 +198,11 @@ struct OnboardingFlow: View {
     /// keep one identity while each step's layout fades around them.
     @ViewBuilder
     private func continuityLayer(slots: [String: Anchor<CGRect>], proxy: GeometryProxy) -> some View {
-        let avatarSlot = Slot.avatar(for: step)
-        if let anchor = slots[avatarSlot] {
+        if let avatarSlot = Slot.avatar(for: step), let anchor = slots[avatarSlot] {
             SetupAvatar(profile: store.profile)
                 .place(in: proxy[anchor], baseSize: SetupAvatar.baseSize)
                 // Reduce Motion: crossfade between positions instead of travelling.
-                .id(reduceMotion ? avatarSlot : Slot.headerAvatar)
+                .id(reduceMotion ? avatarSlot : "avatar")
                 .transition(.opacity)
                 .allowsHitTesting(false)
                 .accessibilityElement()
@@ -248,13 +221,15 @@ struct OnboardingFlow: View {
 }
 
 enum Slot {
-    static let headerAvatar = "avatar.header"
+    static let profileAvatar = "avatar.profile"
+    static let accountsAvatar = "avatar.accounts"
 
-    static func avatar(for step: OnboardingStep) -> String {
+    /// The avatar appears on the first two steps and fades out after.
+    static func avatar(for step: OnboardingStep) -> String? {
         switch step {
-        case .profile: "avatar.profile"
-        case .accounts: "avatar.accounts"
-        case .focus, .result: headerAvatar
+        case .profile: profileAvatar
+        case .accounts: accountsAvatar
+        case .focus, .result: nil
         }
     }
 

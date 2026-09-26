@@ -9,7 +9,7 @@ enum SetupStyle {
     static let disc = Color(hex: 0x28292F)
     static let divider = Color(hex: 0x2D2E35)
 
-    static let heading = Font.geist(32, .bold, relativeTo: .largeTitle)
+    static let heading = Font.geist(26, .bold, relativeTo: .title)
     static let instruction = Font.geist(16, .regular, relativeTo: .body)
     static let navTitle = Font.geist(17, .semibold, relativeTo: .headline)
     static let progress = Font.geist(13, .medium, relativeTo: .footnote)
@@ -54,14 +54,6 @@ extension Focus {
         case .debt: "Your next step."
         case .cash: "Your cash buffer."
         case .retirement: "Your retirement."
-        }
-    }
-
-    var resultInstruction: String {
-        switch self {
-        case .debt: "Keep the match. Tackle expensive debt."
-        case .cash: "Give yourself more breathing room."
-        case .retirement: "Keep your employer match."
         }
     }
 
@@ -152,19 +144,14 @@ extension View {
 
 struct SetupPrompt: View {
     let heading: String
-    let instruction: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Space.s) {
-            Text(heading)
-                .font(SetupStyle.heading)
-                .foregroundStyle(Palette.textPrimary)
-                .accessibilityAddTraits(.isHeader)
-            Text(instruction)
-                .font(SetupStyle.instruction)
-                .foregroundStyle(Palette.textSecondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .fixedSize(horizontal: false, vertical: true)
+        Text(heading)
+            .font(SetupStyle.heading)
+            .foregroundStyle(Palette.textPrimary)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityAddTraits(.isHeader)
     }
 }

@@ -45,11 +45,11 @@ float fbm(float2 p) {
 
 // Domain warp shared by the colour field and the contours, so lines and glow morph together.
 float2 warp(float2 p, float t) {
-    float2 q = float2(fbm(p * 1.6 + float2(0.0, t * 0.035)),
-                      fbm(p * 1.6 + float2(5.2, -t * 0.03)));
-    float2 r = float2(fbm(p * 1.2 + 3.0 * q + float2(1.7, 9.2) + t * 0.018),
-                      fbm(p * 1.2 + 3.0 * q + float2(8.3, 2.8) - t * 0.015));
-    return p + 0.16 * (r - 0.5);
+    float2 q = float2(fbm(p * 1.6 + float2(0.0, t * 0.07)),
+                      fbm(p * 1.6 + float2(5.2, -t * 0.06)));
+    float2 r = float2(fbm(p * 1.2 + 3.0 * q + float2(1.7, 9.2) + t * 0.04),
+                      fbm(p * 1.2 + 3.0 * q + float2(8.3, 2.8) - t * 0.035));
+    return p + 0.22 * (r - 0.5);
 }
 
 // Low-frequency, two-octave noise for contours so rings stay smooth and organic.
@@ -98,21 +98,21 @@ float blob(float2 p, float2 c, float r) {
     float2 w = warp(p, t);
 
     // Slow palette drift: indigo ↔ ultramarine ↔ violet, lavender ↔ periwinkle ↔ lilac.
-    float h1 = 0.5 + 0.5 * sin(t * 0.045);
-    float h2 = 0.5 + 0.5 * sin(t * 0.037 + 2.1);
+    float h1 = 0.5 + 0.5 * sin(t * 0.12);
+    float h2 = 0.5 + 0.5 * sin(t * 0.095 + 2.1);
     half3 indigo   = mix(mix(srgb(73, 89, 204), srgb(52, 86, 214), h1), srgb(98, 76, 214), h2 * 0.55);
     half3 lavender = mix(mix(srgb(169, 171, 255), srgb(150, 182, 255), h2), srgb(196, 170, 255), h1 * 0.45);
     half3 deep     = mix(srgb(40, 46, 140), srgb(62, 40, 138), h1);
     half3 charcoal = srgb(16, 17, 20);
 
     // Drifting fields.
-    float2 c1 = float2(-0.07 + 0.06 * sin(t * 0.11), 0.07 + 0.06 * cos(t * 0.083));
-    float2 c2 = float2(0.08 + 0.05 * cos(t * 0.097 + 1.3), -0.07 + 0.05 * sin(t * 0.12));
-    float2 c3 = float2(0.02 + 0.08 * sin(t * 0.061 + 2.4), 0.22 + 0.04 * cos(t * 0.074));
-    float2 c4 = float2(-0.03 + 0.06 * cos(t * 0.052 + 4.0), -0.25 + 0.04 * sin(t * 0.066));
+    float2 c1 = float2(-0.07 + 0.13 * sin(t * 0.19), 0.07 + 0.12 * cos(t * 0.15));
+    float2 c2 = float2(0.08 + 0.12 * cos(t * 0.17 + 1.3), -0.07 + 0.11 * sin(t * 0.21));
+    float2 c3 = float2(0.02 + 0.14 * sin(t * 0.11 + 2.4), 0.22 + 0.08 * cos(t * 0.13));
+    float2 c4 = float2(-0.03 + 0.12 * cos(t * 0.09 + 4.0), -0.25 + 0.08 * sin(t * 0.12));
 
-    float g1 = blob(w, c1, 0.34 + 0.02 * sin(t * 0.17));
-    float g2 = blob(w, c2, 0.22 + 0.015 * cos(t * 0.13));
+    float g1 = blob(w, c1, 0.34 + 0.04 * sin(t * 0.25));
+    float g2 = blob(w, c2, 0.22 + 0.03 * cos(t * 0.2));
     float g3 = blob(w, c3, 0.26);
     float g4 = blob(w, c4, 0.24);
 
