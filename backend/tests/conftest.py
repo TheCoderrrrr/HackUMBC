@@ -14,9 +14,9 @@ from app.config import Settings
 from app.main import create_app
 
 GOOD_RATIONALE = {
-    "starter_reserve": ("Keep a month of expenses on hand.", ["liquidity.emergency_months"], "Slower debt payoff."),
-    "high_apr_debt": ("The card charges a high rate.", ["debt.highest_debt_apr"], "Less cash cushion for now."),
-    "full_reserve": ("Build a larger cushion later.", ["liquidity.full_reserve_funded"], "Delays extra saving."),
+    "starter_reserve": ("Keep a starter cushion on hand.", ["financial_state.emergency_months"], "Slower debt payoff."),
+    "high_apr_debt": ("The card charges a high rate.", ["financial_state.highest_debt_apr"], "Less cash cushion for now."),
+    "full_reserve": ("Build a larger cushion later.", ["financial_state.full_reserve_target_cents"], "Delays extra saving."),
 }
 
 
@@ -48,6 +48,8 @@ class FakeModel:
         self.systems: list[str] = []
 
     def generate(self, system, prompt, schema, timeout_s):
+        # The pipeline narrows RecommendationOut per request; record the base schema.
+        schema = RecommendationOut if issubclass(schema, RecommendationOut) else schema
         self.calls.append(schema)
         self.timeouts.append(timeout_s)
         self.prompts[schema] = prompt

@@ -17,9 +17,9 @@ import time
 
 from app import engine_port as engine
 from app.ai.client import AITimeout, StructuredModel
-from app.ai.prompts import SYSTEM, ExplanationOut, RecommendationOut, explanation_prompt, recommendation_prompt
+from app.ai.prompts import SYSTEM, ExplanationOut, explanation_prompt, recommendation_prompt, recommendation_schema
 from app.config import Settings
-from app.decisions import DecisionSnapshot, DecisionStore, diff, new_decision_id, snapshot_fields
+from app.decisions import DecisionSnapshot, DecisionStore, diff, snapshot_fields
 from app.schemas import (
     AIExplanation,
     Change,
@@ -58,6 +58,11 @@ def valid_prose(out: ExplanationOut) -> bool:
     return True
 
 
+# Text values safe to show the model. Others (e.g. plan.primary_action_id) can embed
+# debt IDs, so only their direction is described.
+_SAFE_TEXT_FIELDS = {"planning_preference", "decision.ordered_priorities"}
+
+
 def describe_change(change: Change) -> dict[str, str]:
     """A number-free description of a change, so the model can explain direction without amounts."""
     before, after = change.before, change.after
@@ -65,22 +70,22 @@ def describe_change(change: Change) -> dict[str, str]:
         direction = "increased" if after > before else "decreased"
     elif before is None:
         direction = "was added"
-    elif isinstance(after, str) and isinstance(before, str):
+    elif isinstance(after, str) and isinstance(before, str) and change.field_path in _SAFE_TEXT_FIELDS:
         direction = f"changed from {before} to {after}"
     else:
         direction = "changed"
     return {"field": change.field_path, "change": direction}
 
 
-def situation_flags(indicators: dict) -> dict[str, bool]:
-    """Qualitative state for the Explanation Agent, derived from Python-computed indicators."""
-    apr = indicators.get("debt.highest_debt_apr")
-    capture = indicators.get("match.capture_fraction")
+def situation_flags(profile: FinancialProfile, state: dict) -> dict[str, bool]:
+    """Qualitative state for the Explanation Agent, derived from Python-computed state."""
+    cash = profile.emergency_cash_cents
+    capture = state["match_capture_fraction"]
     return {
-        "starter_reserve_funded": bool(indicators.get("liquidity.starter_reserve_funded")),
-        "full_reserve_funded": bool(indicators.get("liquidity.full_reserve_funded")),
-        "has_high_interest_debt": bool(indicators.get("debt.high_interest_debt_cents")),
-        "has_any_debt": apr is not None,
+        "starter_reserve_funded": cash >= state["starter_reserve_target_cents"],
+        "full_reserve_funded": cash >= state["full_reserve_target_cents"],
+        "has_high_interest_debt": state["high_interest_debt_cents"] > 0,
+        "has_any_debt": state["highest_debt_apr"] is not None,
         "captures_full_employer_match": capture is not None and capture >= 1,
     }
 
@@ -97,15 +102,14 @@ class EvaluationPipeline:
 
         proposal, fallback_reason = None, None
         if blocked:
-            fallback_reason = f"blocked_input: {blocked}"
+            fallback_reason = None  # B's engine labels it BLOCKED_FINANCIAL_INPUT
         elif self.model is None:
-            fallback_reason = "ai_unavailable"
+            fallback_reason = "AI_UNAVAILABLE"
         else:
             proposal, fallback_reason = self._recommend(profile, state, deadline)
 
         decision = engine.validate_decision(
             profile, state, proposal,
-            decision_id=new_decision_id(),
             prompt_version=self.settings.ai_prompt_version,
             fallback_reason=fallback_reason,
         )
@@ -122,7 +126,7 @@ class EvaluationPipeline:
 
         explanation = None
         if decision.source == "ai" and self.model is not None:
-            flags = situation_flags(engine.agent_indicators(profile, state))
+            flags = situation_flags(profile, state)
             explanation = self._explain(profile, core, decision, changes, flags,
                                         initial=previous is None, deadline=deadline)
         if explanation is None:
@@ -136,15 +140,16 @@ class EvaluationPipeline:
 
     def _recommend(self, profile, state, deadline) -> tuple[RecommendationProposal | None, str | None]:
         indicators = engine.agent_indicators(profile, state)
-        prompt = recommendation_prompt(profile.planning_preference, engine.permitted_orders(profile), indicators)
+        keys = engine.evidence_paths(indicators)
+        prompt = recommendation_prompt(profile.planning_preference, engine.permitted_orders(profile), indicators, keys)
         started = self.clock()
         try:
-            out, served_model = self.model.generate(SYSTEM, prompt, RecommendationOut, deadline - self.clock())
+            out, served_model = self.model.generate(SYSTEM, prompt, recommendation_schema(keys), deadline - self.clock())
         except AITimeout:
-            return None, "timeout"
+            return None, "TIMEOUT"
         except Exception as exc:  # provider, network or malformed output
             log.warning("recommendation call failed: %s", type(exc).__name__)
-            return None, "provider_error"
+            return None, "PROVIDER_ERROR"
         finally:
             log.info("recommendation latency_ms=%d", int((self.clock() - started) * 1000))
         return RecommendationProposal(
@@ -160,7 +165,8 @@ class EvaluationPipeline:
             "situation": flags,
             "ordered_priorities": decision.ordered_priorities,
             "rationale": [{"priority": r.priority, "summary": r.summary, "tradeoff": r.tradeoff} for r in decision.rationale],
-            "primary_action": core.plan.primary_action_id,
+            "primary_action": next(({"category": a.category, "status": a.status} for a in core.plan.actions
+                                    if a.id == core.plan.primary_action_id), None),
             "actions": [{"category": a.category, "status": a.status, "reason_codes": a.reason_codes} for a in core.plan.actions],
             "reason_codes": [r.code for r in core.plan.reasons],
             "is_initial_plan": initial,
