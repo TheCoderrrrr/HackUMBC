@@ -129,7 +129,9 @@ struct HeaderAvatarButton: View {
                 Label("Restart onboarding", systemImage: "arrow.counterclockwise")
             }
         } label: {
-            AvatarView(profile: store.profile, size: 44)
+            AvatarView(profile: store.profile, size: 40)
+                .padding(3)
+                .glassSurface(Circle(), interactive: true)
         }
         .accessibilityLabel("\(store.profile.name), account menu")
     }
@@ -151,7 +153,7 @@ struct PressableStyle: ButtonStyle {
     }
 }
 
-/// The one primary action per screen: indigo capsule, Medium label.
+/// The one primary action per screen: indigo-tinted Liquid Glass capsule, Medium label.
 struct PrimaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
 
@@ -160,7 +162,22 @@ struct PrimaryButtonStyle: ButtonStyle {
             .font(TypeScale.button)
             .foregroundStyle(Color.white)
             .frame(maxWidth: .infinity, minHeight: 54)
-            .background {
+            .modifier(PrimaryFill(isPressed: configuration.isPressed))
+            .opacity(isEnabled ? 1 : 0.45)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .animation(Motion.press, value: configuration.isPressed)
+    }
+}
+
+private struct PrimaryFill: ViewModifier {
+    let isPressed: Bool
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *), !reduceTransparency {
+            content.glassEffect(.regular.tint(Palette.indigo).interactive(), in: Capsule())
+        } else {
+            content.background {
                 Capsule()
                     .fill(Palette.indigo)
                     .overlay {
@@ -172,11 +189,9 @@ struct PrimaryButtonStyle: ButtonStyle {
                                 lineWidth: 0.75
                             )
                     }
-                    .brightness(configuration.isPressed ? -0.06 : 0)
+                    .brightness(isPressed ? -0.06 : 0)
             }
-            .opacity(isEnabled ? 1 : 0.45)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(Motion.press, value: configuration.isPressed)
+        }
     }
 }
 
@@ -191,8 +206,7 @@ struct SecondaryButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity, minHeight: 50)
             .background {
                 if bordered {
-                    Capsule().strokeBorder(Palette.hairlineStrong, lineWidth: 1)
-                        .background(Capsule().fill(Color.white.opacity(configuration.isPressed ? 0.06 : 0.02)))
+                    Capsule().fill(.clear).glassCapsule()
                 }
             }
             .opacity(configuration.isPressed ? 0.7 : 1)
@@ -326,9 +340,9 @@ struct DataModeBadge: View {
                 .font(TypeScale.caption)
                 .foregroundStyle(Palette.textSecondary)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(Capsule().strokeBorder(Palette.hairlineStrong, lineWidth: 0.75))
+        .padding(.horizontal, 11)
+        .padding(.vertical, 6)
+        .glassCapsule(interactive: false)
         .accessibilityElement(children: .combine)
     }
 }
@@ -431,5 +445,123 @@ struct WordRoll: View {
         .animation(reduceMotion ? .easeInOut(duration: 0.15) : animation, value: text)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(text)
+    }
+}
+
+// MARK: - Liquid Glass
+
+/// Liquid Glass for cards, pills and chips. iOS 26 uses the system glass; earlier
+/// systems get a thin material with a lit hairline edge, and Reduce Transparency
+/// gets an opaque raised fill.
+struct GlassSurface<S: InsettableShape>: ViewModifier {
+    let shape: S
+    var tint: Color? = nil
+    var interactive = false
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    func body(content: Content) -> some View {
+        if reduceTransparency {
+            content.background(shape.fill(Palette.sheet).overlay(shape.strokeBorder(Palette.hairlineStrong, lineWidth: 0.75)))
+        } else if #available(iOS 26.0, *) {
+            content.glassEffect(glass, in: shape)
+        } else {
+            content.background {
+                shape.fill(.ultraThinMaterial)
+                    .overlay(shape.fill((tint ?? .clear).opacity(0.14)))
+                    .overlay(
+                        shape.strokeBorder(
+                            LinearGradient(colors: [Color.white.opacity(0.22), Color.white.opacity(0.04)],
+                                           startPoint: .topLeading, endPoint: .bottomTrailing),
+                            lineWidth: 0.75)
+                    )
+                    .environment(\.colorScheme, .dark)
+            }
+        }
+    }
+
+    @available(iOS 26.0, *)
+    private var glass: Glass {
+        var glass = Glass.regular
+        if let tint { glass = glass.tint(tint.opacity(0.22)) }
+        if interactive { glass = glass.interactive() }
+        return glass
+    }
+}
+
+extension View {
+    /// Liquid Glass in an arbitrary shape.
+    func glassSurface(_ shape: some InsettableShape, tint: Color? = nil, interactive: Bool = false) -> some View {
+        modifier(GlassSurface(shape: shape, tint: tint, interactive: interactive))
+    }
+
+    /// Liquid Glass card with continuous corners.
+    func glassCard(cornerRadius: CGFloat = 26, tint: Color? = nil) -> some View {
+        glassSurface(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous), tint: tint)
+    }
+
+    /// Liquid Glass capsule, interactive by default (chips, pills, small buttons).
+    func glassCapsule(tint: Color? = nil, interactive: Bool = true) -> some View {
+        glassSurface(Capsule(), tint: tint, interactive: interactive)
+    }
+}
+
+/// Groups neighbouring glass shapes so they blend and morph together on iOS 26.
+struct GlassGroup<Content: View>: View {
+    var spacing: CGFloat = Space.m
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer(spacing: spacing) { content }
+        } else {
+            content
+        }
+    }
+}
+
+/// Soft brand light behind the main tabs, so glass has colour to bend.
+/// Static radial fields — no animation, hidden from VoiceOver.
+struct AmbientGlow: View {
+    var body: some View {
+        GeometryReader { proxy in
+            let w = proxy.size.width
+            ZStack {
+                Palette.page
+                RadialGradient(colors: [Palette.indigo.opacity(0.42), .clear],
+                               center: .center, startRadius: 0, endRadius: w * 0.75)
+                    .frame(width: w * 1.5, height: w * 1.5)
+                    .position(x: w * 0.95, y: w * 0.05)
+                RadialGradient(colors: [Palette.lavender.opacity(0.16), .clear],
+                               center: .center, startRadius: 0, endRadius: w * 0.6)
+                    .frame(width: w * 1.2, height: w * 1.2)
+                    .position(x: w * 0.05, y: proxy.size.height * 0.52)
+                RadialGradient(colors: [Palette.copper.opacity(0.12), .clear],
+                               center: .center, startRadius: 0, endRadius: w * 0.55)
+                    .frame(width: w * 1.1, height: w * 1.1)
+                    .position(x: w * 0.9, y: proxy.size.height * 0.95)
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+// MARK: - Icons
+
+/// A tinted SF Symbol in a small glass tile — leads section headers and rows.
+struct IconBadge: View {
+    let systemName: String
+    var tint: Color = Palette.lavender
+    var size: CGFloat = 32
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: size * 0.44, weight: .semibold))
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(tint)
+            .frame(width: size, height: size)
+            .glassSurface(RoundedRectangle(cornerRadius: size * 0.32, style: .continuous), tint: tint)
+            .accessibilityHidden(true)
     }
 }

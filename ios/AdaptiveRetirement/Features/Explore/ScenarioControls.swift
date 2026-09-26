@@ -167,7 +167,9 @@ struct ScenarioControls: View {
                 .transition(.opacity)
             }
 
-            Button("Compare scenario") { comparedDraft = draft }
+            Button { comparedDraft = draft } label: {
+                Label("Compare scenario", systemImage: "square.split.2x1")
+            }
                 .buttonStyle(PrimaryButtonStyle())
                 .padding(.top, 22)
 
@@ -188,6 +190,7 @@ struct ScenarioControls: View {
                 .padding(.top, 18)
                 .accessibilityAddTraits(.isHeader)
 
+            GlassGroup(spacing: Space.s) {
             HStack(spacing: Space.s) {
                 PresetChip(isSelected: draft.preset == .original) {
                     Text("Original plan").font(.geist(12, .medium, relativeTo: .caption))
@@ -202,6 +205,7 @@ struct ScenarioControls: View {
                         + Text("+1").font(.geist(12, .medium, relativeTo: .caption))
                         + Text(" pt").font(.geist(12, .medium, relativeTo: .caption))
                 } action: { apply(.ratePlusOne) }
+            }
             }
         }
         .animation(Motion.reveal, value: draft.policy)
@@ -253,14 +257,7 @@ private struct PresetChip<Label: View>: View {
                 .foregroundStyle(isSelected ? Palette.lavender : Palette.textSecondary)
                 .padding(.horizontal, 14)
                 .frame(minHeight: 36)
-                .background {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Palette.raised)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .strokeBorder(Palette.lavender.opacity(isSelected ? 0.55 : 0), lineWidth: 1)
-                        }
-                }
+                .glassCapsule(tint: isSelected ? Palette.lavender : nil)
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
         }
@@ -280,6 +277,12 @@ struct OutcomeRows: View {
         "Debt-free timing & total interest",
         "Emergency-reserve milestones",
         "Cash & debt at retirement"
+    ]
+    private let symbols = [
+        "Retirement-account balance": "building.columns.fill",
+        "Debt-free timing & total interest": "creditcard.fill",
+        "Emergency-reserve milestones": "umbrella.fill",
+        "Cash & debt at retirement": "banknote.fill"
     ]
 
     var body: some View {
@@ -304,7 +307,8 @@ struct OutcomeRows: View {
                     }
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
-                        HStack {
+                        HStack(spacing: Space.m) {
+                            IconBadge(systemName: symbols[outcome] ?? "circle", size: 28)
                             Text(outcome)
                                 .font(.geist(15, .regular, relativeTo: .callout))
                                 .foregroundStyle(Palette.textSecondary)
@@ -314,11 +318,12 @@ struct OutcomeRows: View {
                                 .foregroundStyle(Palette.textCaption)
                                 .rotationEffect(.degrees(isOpen ? 90 : 0))
                         }
-                        .frame(minHeight: 39)
+                        .frame(minHeight: 44)
                         if isOpen {
                             Text("Shown after a live calculation.")
                                 .font(.geist(12, .regular, relativeTo: .caption))
                                 .foregroundStyle(Palette.textCaption)
+                                .padding(.leading, 40)
                                 .padding(.bottom, Space.s)
                                 .transition(.opacity)
                         }
