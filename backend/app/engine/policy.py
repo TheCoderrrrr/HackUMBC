@@ -16,7 +16,7 @@ from typing import Mapping
 from .assumptions import MODEL_ASSUMPTIONS
 from .money import (
     cents, contribution_cash_cost_cents, decimal, employee_contribution_cents,
-    employer_match_cents, full_match_employee_rate, match_rate, monthly_debt_interest_cents,
+    employer_match_cents, full_match_employee_rate, monthly_debt_interest_cents,
     monthly_gross_cents,
 )
 from .state import derive_state, recommendation_context

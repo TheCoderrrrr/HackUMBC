@@ -46,8 +46,6 @@ DEFAULT_ORDER = {
     "cash_security": ["starter_reserve", "full_reserve", "high_apr_debt"],
     "debt_reduction": ["high_apr_debt", "starter_reserve", "full_reserve"],
 }
-# The one documented non-default ordering (BACKEND.md section 12).
-ORDER_EXCEPTIONS = {"morgan-cash-security": ["starter_reserve", "high_apr_debt", "full_reserve"]}
 
 GLIDE = [(30, 0.90), (20, 0.80), (10, 0.65), (0, 0.50)]
 HIGH_APR = Decimal("0.10")
@@ -64,7 +62,8 @@ def load_demo_profiles() -> list[FinancialProfile]:
     """Prefer Developer B's fixtures once they exist; fall back to the placeholder copy."""
     path = _B_FIXTURES if _B_FIXTURES.exists() else _A_PLACEHOLDER
     data = json.loads(path.read_text(encoding="utf-8"))
-    return [FinancialProfile.model_validate(p) for p in data["profiles"]]
+    items = data if isinstance(data, list) else data["profiles"]
+    return [FinancialProfile.model_validate(p) for p in items]
 
 
 def _match_rate(profile: FinancialProfile, rate: Decimal) -> Decimal:
@@ -147,11 +146,8 @@ def default_order(preference: str) -> list[str]:
 
 
 def permitted_orders(profile: FinancialProfile) -> list[list[str]]:
-    orders = [default_order(profile.planning_preference)]
-    extra = ORDER_EXCEPTIONS.get(profile.id)
-    if extra and extra not in orders:
-        orders.append(list(extra))
-    return orders
+    default = default_order(profile.planning_preference)
+    return [default] + [list(o) for o in DEFAULT_ORDER.values() if o != default]
 
 
 def agent_indicators(profile: FinancialProfile, state: FinancialState) -> dict[str, float | int | None]:

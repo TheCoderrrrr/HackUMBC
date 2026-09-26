@@ -4,7 +4,7 @@ from copy import deepcopy
 
 import pytest
 
-from app.engine.policy import MONTH_KEYS, allocate_month, default_priorities, validate_decision
+from app.engine.policy import MONTH_KEYS, allocate_month, validate_decision
 from app.engine.state import derive_state
 
 
