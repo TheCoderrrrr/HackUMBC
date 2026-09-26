@@ -26,7 +26,6 @@ from app.ai.client import AIRateLimited, AITimeout, StructuredModel
 from app.ai.prompts import SYSTEM, ExplanationOut, explanation_prompt, recommendation_prompt, recommendation_schema
 from app.config import Settings
 from app.decisions import DecisionSnapshot, DecisionStore, diff, snapshot_fields
-from app.errors import ApiError
 from app.schemas import (
     AIExplanation,
     Change,
@@ -140,8 +139,7 @@ class EvaluationPipeline:
             warnings=[],
         )
         decision = self._decide(req)
-        self._check_scenario(req, decision, request)
-        core = engine.evaluate(req.profile, req.state, request.scenario, decision)
+        core = engine.evaluate(req.profile, request.scenario, decision)  # C's evaluator; 422 if infeasible
         previous = self._previous(req, request.previous_decision_id)
         current_fields = snapshot_fields(req.profile, core, decision)
         changes = diff(previous.fields, current_fields) if previous else []
@@ -168,11 +166,6 @@ class EvaluationPipeline:
             req.profile, req.state, proposal,
             prompt_version=self.settings.ai_prompt_version, fallback_reason=reason,
         )
-
-    def _check_scenario(self, req: _Request, decision: DecisionSummary, request: EvaluateRequest) -> None:
-        problem = engine.scenario_problem(req.profile, req.state, decision, request.scenario)
-        if problem:
-            raise ApiError(422, "INFEASIBLE_SCENARIO", problem, ["scenario.employee_contribution_rate"])
 
     def _previous(self, req: _Request, decision_id: str | None):
         if not decision_id:

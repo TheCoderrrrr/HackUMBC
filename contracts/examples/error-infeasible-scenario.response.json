@@ -1,7 +1,7 @@
 {
   "error": {
     "code": "INFEASIBLE_SCENARIO",
-    "message": "Custom employee contribution rate exceeds the original annual employee cap",
+    "message": "This scenario is short $1,458.34 in month 1. Choose a lower contribution rate or a different retirement age.",
     "field_paths": [
       "scenario.employee_contribution_rate"
     ],

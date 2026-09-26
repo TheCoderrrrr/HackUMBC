@@ -111,7 +111,7 @@ def test_unaffordable_custom_election_is_infeasible(morgan):
     err = res.json()["error"]
     assert err["code"] == "INFEASIBLE_SCENARIO"
     assert err["field_paths"] == ["scenario.employee_contribution_rate"]
-    assert "more per month" in err["message"]
+    assert "short $" in err["message"]
 
 
 def test_custom_election_above_annual_cap_is_infeasible(morgan):

@@ -13,6 +13,7 @@ from .conftest import GOOD_EXPLANATION, FakeModel, make_client, recommendation
 
 BALANCED = ["starter_reserve", "high_apr_debt", "full_reserve"]
 CASH_SECURITY = ["starter_reserve", "full_reserve", "high_apr_debt"]
+DEBT_REDUCTION = ["high_apr_debt", "starter_reserve", "full_reserve"]
 
 
 def evaluate(client, profile, **extra):
@@ -80,7 +81,7 @@ def test_provider_error_falls_back(morgan):
 @pytest.mark.parametrize("order", [
     ["full_reserve", "starter_reserve", "high_apr_debt"],    # full before starter
     ["starter_reserve", "starter_reserve", "full_reserve"],  # duplicate
-    CASH_SECURITY,                                           # valid shape, not permitted for balanced
+    ["starter_reserve", "high_apr_debt"],                    # incomplete
 ])
 def test_invalid_orders_are_rejected(morgan, order):
     rationale = recommendation(BALANCED).model_dump()["rationale"]
@@ -116,19 +117,25 @@ def test_blocked_profile_skips_ai(morgan):
     assert body["explanation"]["source"] == "template"
 
 
-# --- Morgan cash-security exception (off in the live API) ------------------------
+# --- Documented preference orders are bounded AI choices -----------------------
 
 
-def test_live_api_rejects_non_default_order_even_for_cash_security_variant(morgan):
-    # The documented exception is shown through C's saved artifact, not live calls.
-    morgan["id"] = "morgan-cash-security"
+@pytest.mark.parametrize("order", [BALANCED, CASH_SECURITY, DEBT_REDUCTION])
+def test_any_documented_order_is_accepted(morgan, order):
+    d = evaluate(make_client(FakeModel(recommend=recommendation(order))), morgan)["decision_summary"]
+    assert d["source"] == "ai" and d["ordered_priorities"] == order
+
+
+def test_cash_security_can_choose_debt_before_full_reserve(morgan):
     morgan["planning_preference"] = "cash_security"
     model = FakeModel(recommend=recommendation(BALANCED))
     d = evaluate(make_client(model), morgan)["decision_summary"]
-    assert d["source"] == "rules_fallback" and d["fallback_reason"] == "INVALID_PRIORITY_ORDER"
-    assert d["ordered_priorities"] == CASH_SECURITY
+    assert d["source"] == "ai" and d["ordered_priorities"] == BALANCED
     prompt = model.prompts[RecommendationOut]
-    assert json.dumps(CASH_SECURITY) in prompt and json.dumps(BALANCED) not in prompt
+    listed = [json.dumps(o) for o in (CASH_SECURITY, BALANCED, DEBT_REDUCTION)]
+    assert all(o in prompt for o in listed)
+    assert prompt.index(listed[0]) < prompt.index(listed[1])
+    assert "The first is the policy default." in prompt
 
 
 def test_numeric_rationale_is_rejected_by_engine(morgan):
@@ -143,13 +150,6 @@ def test_prompt_lists_engine_evidence_keys(morgan):
     evaluate(make_client(model), morgan)
     prompt = model.prompts[RecommendationOut]
     assert '"financial_state.highest_debt_apr"' in prompt and '"debt_burden"' in prompt
-
-
-def test_standard_profile_prompt_lists_only_default(morgan):
-    model = FakeModel()
-    evaluate(make_client(model), morgan)
-    prompt = model.prompts[RecommendationOut]
-    assert json.dumps(BALANCED) in prompt and "Use it; Python rejects other orders." in prompt
 
 
 # --- Explanation ------------------------------------------------------------------
