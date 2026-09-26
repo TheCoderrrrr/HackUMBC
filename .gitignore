@@ -1,3 +1,10 @@
+# Xcode
+DerivedData/
+build/
+xcuserdata/
+*.xcuserstate
+.DS_Store
+
 # Local Python tooling and generated caches
 .venv/
 .tools/
