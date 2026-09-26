@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "INVALID_PROFILE",
+    "message": "Confirm the minimum payment for this debt.",
+    "field_paths": [
+      "debts.0.minimum_payment_cents"
+    ],
+    "retryable": false
+  }
+}

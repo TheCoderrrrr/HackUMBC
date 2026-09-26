@@ -120,10 +120,11 @@ def evaluate(profile: FinancialProfile, scenario: Scenario | None, decision: Dec
 
 
 def template_explanation(
-    profile: FinancialProfile, core: EvaluationCore, decision: DecisionSummary, changes: list[Change]
+    profile: FinancialProfile, state: State, core: EvaluationCore, decision: DecisionSummary,
+    changes: list[Change],
 ) -> AIExplanation:
     raw = _explanations.template_explanation(
-        _dump(profile), derive_state(profile), decision.model_dump(mode="json"),
+        _dump(profile), state, decision.model_dump(mode="json"),
         core.plan.model_dump(mode="json"), changes=[c.model_dump() for c in changes],
     )
     return AIExplanation.model_validate(raw)

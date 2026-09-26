@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "PLAID_DISABLED",
+    "message": "Plaid Sandbox is not enabled on this server.",
+    "field_paths": [],
+    "retryable": false
+  }
+}

@@ -135,7 +135,23 @@ def test_cash_security_can_choose_debt_before_full_reserve(morgan):
     listed = [json.dumps(o) for o in (CASH_SECURITY, BALANCED, DEBT_REDUCTION)]
     assert all(o in prompt for o in listed)
     assert prompt.index(listed[0]) < prompt.index(listed[1])
-    assert "The first is the policy default." in prompt
+    assert f"Its default order is {listed[0]}" in prompt
+    assert "Python rejects any order not listed." in prompt
+
+
+def test_multi_order_prompt_asks_model_to_weigh_high_interest_debt(morgan):
+    morgan["planning_preference"] = "cash_security"
+    model = FakeModel()
+    evaluate(make_client(model), morgan)
+    prompt = model.prompts[RecommendationOut]
+    assert "Decide on the financial evidence" in prompt
+    assert "pay the debt before the full reserve even if the preference favors cash" in prompt
+
+
+def test_decisions_record_the_code_prompt_version(morgan):
+    from app.ai.prompts import PROMPT_VERSION
+    d = evaluate(make_client(FakeModel()), morgan)["decision_summary"]
+    assert d["prompt_version"] == PROMPT_VERSION == "2"
 
 
 def test_numeric_rationale_is_rejected_by_engine(morgan):
