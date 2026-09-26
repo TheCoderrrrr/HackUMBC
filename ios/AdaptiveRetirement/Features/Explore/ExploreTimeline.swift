@@ -53,9 +53,6 @@ struct ExploreTimeline {
     private let contextByPhase: [(from: Int, text: String)]
     private let exactMonthContext: [Int: String]
 
-    /// Months over which the river glides into the next dated state, ending on it.
-    static let transitionMonths = 4.0
-
     // MARK: Lookups
 
     func destinations(at month: Int) -> [RiverDestination] {
@@ -69,13 +66,9 @@ struct ExploreTimeline {
 
     func milestone(at month: Int) -> Milestone? { milestones.first { $0.month == month } }
 
-    /// The next place Play should stop: the next milestone, or the end.
-    func nextStop(after month: Double) -> Int {
-        let current = Int(month.rounded(.down))
-        return milestones.map(\.month).first { $0 > current } ?? lastMonth
-    }
-
-    /// The keyframe pair bracketing `month` and the eased 0…1 progress between them.
+    /// The keyframe pair bracketing `month` and the 0…1 progress between them. The river is
+    /// always in motion across the whole span, arriving exactly on each dated state; a half-
+    /// smoothstep ease softens the turn at each milestone without ever stopping.
     func segment(at month: Double) -> (from: RiverKeyframe, to: RiverKeyframe, t: Double) {
         guard let index = keyframes.lastIndex(where: { Double($0.month) <= month }) else {
             return (keyframes[0], keyframes[0], 0)
@@ -83,10 +76,9 @@ struct ExploreTimeline {
         let from = keyframes[index]
         guard index + 1 < keyframes.count else { return (from, from, 0) }
         let to = keyframes[index + 1]
-        let start = Double(to.month) - Self.transitionMonths
-        guard month > start else { return (from, from, 0) }
-        let raw = min(max((month - start) / Self.transitionMonths, 0), 1)
-        return (from, to, raw * raw * (3 - 2 * raw))
+        let span = Double(max(to.month - from.month, 1))
+        let raw = min(max((month - Double(from.month)) / span, 0), 1)
+        return (from, to, 0.5 * raw + 0.5 * raw * raw * (3 - 2 * raw))
     }
 
     // MARK: Calendar

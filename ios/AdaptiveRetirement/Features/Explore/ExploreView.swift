@@ -117,13 +117,10 @@ struct ExploreView: View {
             Spacer(minLength: Space.l)
 
             VStack(alignment: .trailing, spacing: 0) {
-                Text(ExploreTimeline.label(forMonth: selectedMonth))
+                WordRoll(text: ExploreTimeline.label(forMonth: selectedMonth))
                     .font(.numeral(24, .semibold, relativeTo: .title2))
-                    .monospacedDigit()
                     .foregroundStyle(Palette.textPrimary)
-                    .contentTransition(.numericText(value: Double(selectedMonth)))
-                    .animation(reduceMotion ? nil : Motion.select, value: selectedMonth)
-                Text(timeline.context(at: selectedMonth))
+                WordRoll(text: timeline.context(at: selectedMonth))
                     .font(.geist(12, .regular, relativeTo: .caption))
                     .foregroundStyle(Palette.textSecondary)
             }
@@ -205,31 +202,40 @@ struct ExploreView: View {
 
     private var atEnd: Bool { selectedMonth >= timeline.lastMonth }
     private var playSymbol: String { isPlaying ? "pause.fill" : (atEnd ? "arrow.counterclockwise" : "play.fill") }
-    private var playLabel: String { isPlaying ? "Pause" : (atEnd ? "Replay from the opening month" : "Play to the next milestone") }
+    private var playLabel: String { isPlaying ? "Pause" : (atEnd ? "Replay from the opening month" : "Play the timeline") }
 
     private func togglePlayback() {
         userInteracted()
         if isPlaying { pause(); return }
         if atEnd { seek(to: 0); return }
-        play(to: timeline.nextStop(after: month))
+        play(to: timeline.lastMonth)
     }
 
-    /// Advances month by month to `target`, then stops. Reduce Motion jumps with a brief crossfade.
+    /// Seconds of playback per month of timeline.
+    private static let secondsPerMonth = 0.11
+
+    /// Sweeps continuously to `target`, a frame at a time, so the river and playhead never
+    /// stop at milestones. Reduce Motion jumps with a brief crossfade.
     private func play(to target: Int) {
         guard !reduceMotion else {
             seek(to: target)
             return
         }
         isPlaying = true
+        let startMonth = month
+        let distance = Double(target) - startMonth
         playTask = Task { @MainActor in
-            var current = Int(month.rounded(.down))
-            while current < target {
-                try? await Task.sleep(for: .milliseconds(85))
-                guard !Task.isCancelled else { return }
-                current += 1
-                withAnimation(.linear(duration: 0.085)) { month = Double(current) }
+            let clock = ContinuousClock()
+            let start = clock.now
+            while !Task.isCancelled {
+                let elapsed = start.duration(to: clock.now)
+                let seconds = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18
+                let next = min(startMonth + seconds / Self.secondsPerMonth, Double(target))
+                month = next
+                if next >= Double(target) || distance <= 0 { break }
+                try? await Task.sleep(for: .milliseconds(16))
             }
-            isPlaying = false
+            if !Task.isCancelled { isPlaying = false }
         }
     }
 

@@ -389,3 +389,32 @@ struct HeroAmount: View {
         .accessibilityLabel(Money.exact(cents))
     }
 }
+
+/// Text that changes word by word: each word keeps its own slot, and only words that differ
+/// roll — the old word lifts out as the new one rises in. Unchanged words stay put, so
+/// "Feb 2027" → "Mar 2027" moves just the month. Set font and colour on the view as usual.
+struct WordRoll: View {
+    let text: String
+    var animation: Animation = .spring(response: 0.32, dampingFraction: 0.9)
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var words: [String] { text.split(separator: " ").map(String.init) }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(words.enumerated()), id: \.offset) { index, word in
+                ZStack {
+                    Text(index < words.count - 1 ? word + " " : word)
+                        .id(word)
+                        .transition(reduceMotion ? .opacity : .asymmetric(
+                            insertion: .offset(y: 9).combined(with: .opacity),
+                            removal: .offset(y: -9).combined(with: .opacity)))
+                }
+            }
+        }
+        .animation(reduceMotion ? .easeInOut(duration: 0.15) : animation, value: text)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(text)
+    }
+}
