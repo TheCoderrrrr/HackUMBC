@@ -252,37 +252,27 @@ BACKEND.md · FRONTEND.md             full specifications
 
 What's still to build between Developer A (Neil) and Developer C (Eric). Everything else each side asked for is on `main` (see `what_we_needed/`).
 
-**Team decision:** the reasoning model is OpenAI **GPT-6 Luna** (`gpt-6-luna`). It supports Structured Outputs on the Responses and Chat Completions APIs, and tier 1 allows 500 requests per minute, so the Gemini free-tier rate limits go away. Today the backend only speaks Gemini. `backend/.env` already has `AI_PROVIDER`, `AI_MODEL`, `OPENAI_API_KEY` and `AI_REASONING_EFFORT` in place, but nothing reads them yet.
+**Team decision:** the reasoning model is OpenAI **GPT-6 Luna** (`gpt-6-luna`), with Structured Outputs. Tier 1 allows 500 requests per minute, so the Gemini free-tier rate limits go away. Neil's PR #12 made it the default provider (`AI_PROVIDER=openai`); Gemini remains available with `AI_PROVIDER=gemini`.
 
 ### Neil (Developer A)
 
-1. **Add the OpenAI client.**
-   - `OpenAIModel` in `app/ai/client.py` implements `StructuredModel.generate(system, prompt, schema, timeout_s)` and returns `(parsed, served_model)`.
-   - Use the `openai` SDK's structured parse helper with the Pydantic schema. `recommendation_schema`'s evidence-key enum must survive strict-schema conversion.
-   - Raise `AITimeout` when the deadline runs out, and `AIRateLimited(retry_after_s)` on HTTP 429.
-2. **Wire the configuration.**
-   - `app/config.py` reads `AI_PROVIDER` (`openai` | `gemini`), `OPENAI_API_KEY` and `AI_REASONING_EFFORT`, and `ai_available` checks the key for the selected provider.
-   - `app/main.py` builds the client for that provider.
-   - Pin `openai` in `requirements.txt` and add the new keys to `.env.example`.
-3. **Measure live latency** with `AI_REASONING_EFFORT=low` (or `none`) against the 4-second budget for both calls.
-4. **Guard the names C relies on** in `tests/test_public_interface.py`:
-   - `app.schemas.Evaluation`
-   - `app.engine_port.permitted_orders`
-   - `app.ai.pipeline.explanation_facts`
-   - the new OpenAI client class and its constructor
-5. **Review `backend/fixtures/decisions.json`** once Eric generates it (model and prompt provenance, structure), then add `"A"` to each record's `reviewers`.
+1. **Urgent: revoke the Gemini key committed in `backend/.env.example`** (PR #12). Deleting the line isn't enough, because the key stays in git history. Revoke it in Google AI Studio, remove it from `.env.example`, and keep real keys only in the git-ignored `backend/.env`.
+2. **Measure live latency** with `AI_REASONING_EFFORT=low` (or `none`) against the 4-second budget for both calls.
+3. **Review `backend/fixtures/decisions.json`** once Eric generates it (model and prompt provenance, structure), then add `"A"` to each record's `reviewers`.
+
+Done in PR #12: the OpenAI client (`OpenAIModel`, `build_model`), provider configuration, the `openai` pin, and guards for every name C relies on (`Evaluation`, `permitted_orders`, `explanation_facts`, `OpenAIModel`, `build_model`).
 
 ### Eric (Developer C)
 
-1. **After Neil's items 1–2:** make `scripts/prepare_decisions.py` `main()` build the client for `AI_PROVIDER` instead of always `GeminiModel`.
-2. **After Neil's item 4:** import `explanation_facts` in `prepare_decisions.py` instead of the local copy.
-3. **Generate the saved content:**
-   - Put the key in `backend/.env`.
+1. **Generate the saved content:**
+   - Put the OpenAI key in `backend/.env` (`OPENAI_API_KEY=`) and make sure the OpenAI account has billing enabled.
    - From `backend`, run `python -m scripts.prepare_decisions`, then `python -m scripts.export_demo --draft`.
    - Send `decisions.json` to Neil and Kevin, and `fixtures/draft/` to Kevin (audit) and the frontend developer (placeholder).
-4. **After both review marks:** run `python -m scripts.export_demo` twice, compare the bytes, commit, and hand the twelve files to the frontend for `Resources/Demo/`.
+2. **After both review marks:** run `python -m scripts.export_demo` twice, compare the bytes, commit, and hand the twelve files to the frontend for `Resources/Demo/`.
 
-**Order matters:** finish Neil's items 1–2 before Eric generates. The model ID and prompt version are part of every saved hash, so generating on Gemini and switching later means regenerating and re-reviewing.
+Done: `prepare_decisions` builds the model with Neil's `build_model` (the provider in `backend/.env`) and uses his `permitted_orders` and `explanation_facts`, so saved prompts match the live API's exactly.
+
+**Order matters:** the model ID and prompt version are part of every saved hash. Changing the provider, model or prompt version after generating means regenerating and re-reviewing.
 
 ---
 
