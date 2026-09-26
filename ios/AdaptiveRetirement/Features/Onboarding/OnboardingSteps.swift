@@ -108,7 +108,7 @@ struct AccountsStep: View {
                 .foregroundStyle(SetupStyle.secondaryText)
             Spacer(minLength: Space.m)
             Text(value)
-                .font(.geist(18, .medium, relativeTo: .body))
+                .font(.numeral(18, .medium, relativeTo: .body))
                 .foregroundStyle(Palette.textPrimary)
                 .monospacedDigit()
         }
@@ -221,7 +221,7 @@ struct ResultStep: View {
 
             SetupPill {
                 Text(result.amount)
-                    .font(.geist(40, .regular, relativeTo: .largeTitle))
+                    .font(.numeral(40, .regular, relativeTo: .largeTitle))
                     .foregroundStyle(Palette.textPrimary)
                     .monospacedDigit()
                     .minimumScaleFactor(0.6)

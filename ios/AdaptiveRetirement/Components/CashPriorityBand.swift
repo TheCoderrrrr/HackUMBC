@@ -57,21 +57,10 @@ struct CashPriorityBand: View {
     }
 
     private func segment(_ item: CashPriority) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
-        return ZStack {
-            shape
-                .fill(LinearGradient(colors: item.kind.bandGradient, startPoint: .top, endPoint: .bottom))
-                .fillGrain()
-            Ribs()
-                .stroke(LinearGradient(stops: [
-                    .init(color: .white.opacity(0.16), location: 0),
-                    .init(color: .white.opacity(0.025), location: 0.7),
-                    .init(color: .white.opacity(0), location: 1)
-                ], startPoint: .top, endPoint: .bottom), lineWidth: 0.5)
-                .clipShape(shape)
-            shape.strokeBorder(Color.white.opacity(0.13), lineWidth: 0.6)
+        ZStack {
+            BandFill(colors: item.kind.bandGradient, cornerRadius: height >= 48 ? 12 : 8)
             Text(shareLabel(item))
-                .font(.geist(13, .medium, relativeTo: .footnote))
+                .font(.numeral(13, .medium, relativeTo: .footnote))
                 .monospacedDigit()
                 .foregroundStyle(Color(hex: 0xFAF9FF))
                 .lineLimit(1)
@@ -82,6 +71,29 @@ struct CashPriorityBand: View {
 
     private var accessibilitySummary: String {
         funded.map { "\($0.title) \(shareLabel($0))" }.joined(separator: ", ")
+    }
+}
+
+/// The band's material: top-lit gradient with duotone grain, fading ribs and a hairline edge.
+struct BandFill: View {
+    let colors: [Color]
+    var cornerRadius: CGFloat = 8
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        ZStack {
+            shape
+                .fill(LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom))
+                .fillGrain()
+            Ribs()
+                .stroke(LinearGradient(stops: [
+                    .init(color: .white.opacity(0.16), location: 0),
+                    .init(color: .white.opacity(0.025), location: 0.7),
+                    .init(color: .white.opacity(0), location: 1)
+                ], startPoint: .top, endPoint: .bottom), lineWidth: 0.5)
+                .clipShape(shape)
+            shape.strokeBorder(Color.white.opacity(0.13), lineWidth: 0.6)
+        }
     }
 }
 
@@ -120,7 +132,7 @@ struct CashPriorityRow: View {
                 .foregroundStyle(Palette.textSecondary)
             Spacer(minLength: Space.m)
             Text(Money.exact(priority.amountCents))
-                .font(.geist(16, .medium, relativeTo: .body))
+                .font(.numeral(16, .medium, relativeTo: .body))
                 .monospacedDigit()
                 .foregroundStyle(funded ? priority.kind.accent : Palette.textSecondary)
         }

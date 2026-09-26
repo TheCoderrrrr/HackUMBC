@@ -66,13 +66,24 @@ extension Font {
     static func geistMono(_ size: CGFloat, relativeTo style: Font.TextStyle = .body) -> Font {
         .custom("GeistMono-Regular", size: size, relativeTo: style)
     }
+
+    /// Figures — balances, amounts, percentages, ages — in Geist Mono: evenly set, engineered
+    /// digits that keep Geist's proportions. Pair with slight negative tracking at display sizes.
+    static func numeral(_ size: CGFloat, _ weight: GeistWeight = .medium, relativeTo style: Font.TextStyle = .body) -> Font {
+        let face = switch weight {
+        case .thin, .ultraLight, .light: "Light"
+        case .regular: "Regular"
+        case .medium: "Medium"
+        }
+        return .custom("GeistMono-\(face)", size: size, relativeTo: style)
+    }
 }
 
 /// The type scale. Display text sits at Regular, headings at Medium, body at Light/Regular — thinner strokes read as calmer and more trustworthy.
 enum TypeScale {
     /// Hero balance numerals ($35,000).
-    static let hero = Font.geist(46, .light, relativeTo: .largeTitle)
-    static let heroCents = Font.geist(22, .light, relativeTo: .title2)
+    static let hero = Font.numeral(44, .light, relativeTo: .largeTitle)
+    static let heroCents = Font.numeral(20, .light, relativeTo: .title2)
     /// Splash wordmark.
     static let wordmark = Font.geist(46, .regular, relativeTo: .largeTitle)
     /// Screen titles (Plan, Explore, onboarding headings).
@@ -81,8 +92,8 @@ enum TypeScale {
     /// Section headings.
     static let headline = Font.geist(17, .medium, relativeTo: .headline)
     /// Key amounts in rows.
-    static let amount = Font.geist(17, .regular, relativeTo: .body)
-    static let amountLarge = Font.geist(28, .light, relativeTo: .title)
+    static let amount = Font.numeral(16, .regular, relativeTo: .body)
+    static let amountLarge = Font.numeral(26, .light, relativeTo: .title)
     static let body = Font.geist(16, .light, relativeTo: .body)
     static let bodyRegular = Font.geist(16, .regular, relativeTo: .body)
     static let callout = Font.geist(15, .light, relativeTo: .callout)
@@ -98,7 +109,8 @@ enum FontRegistry {
     /// Registers bundled Geist faces once at launch.
     static func registerAll() {
         let names = ["Geist-Thin", "Geist-UltraLight", "Geist-Light", "Geist-Regular",
-                     "Geist-Medium", "GeistMono-Regular"]
+                     "Geist-Medium",
+                     "GeistMono-Light", "GeistMono-Regular", "GeistMono-Medium"]
         for name in names {
             guard let url = Bundle.main.url(forResource: name, withExtension: "ttf") else { continue }
             CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)

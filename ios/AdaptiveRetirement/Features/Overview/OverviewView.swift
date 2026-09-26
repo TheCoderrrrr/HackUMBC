@@ -4,6 +4,8 @@ import SwiftUI
 /// planned contributions, then the next step as an open section.
 struct OverviewView: View {
     @EnvironmentObject private var store: AppStore
+    /// 0…1 playhead on the projection while scrubbing.
+    @State private var scrub: Double?
 
     private var profile: Profile { store.profile }
 
@@ -37,53 +39,86 @@ struct OverviewView: View {
 
     // MARK: Sections
 
+    /// Whole years from today to the scrubbed point, or nil when not scrubbing.
+    private var scrubYears: Int? {
+        scrub.map { Int(($0 * Double(profile.yearsToRetirement)).rounded()) }
+    }
+
     private var balanceSummary: some View {
-        VStack(alignment: .leading, spacing: Space.s) {
-            Text("Retirement savings")
+        let years = scrubYears
+        return VStack(alignment: .leading, spacing: Space.s) {
+            Text(years.map { "Projected at age \(profile.age + $0)" } ?? "Retirement savings")
                 .font(.geist(18, .medium, relativeTo: .headline))
-                .foregroundStyle(Palette.textPrimary)
-            BalanceAmount(cents: profile.retirementBalanceCents)
-            Text("As of \(OverviewCopy.asOf)")
+                .foregroundStyle(years == nil ? Palette.textPrimary : Palette.lavender)
+                .contentTransition(.opacity)
+            BalanceAmount(cents: years.map { OverviewCopy.projectedCents(for: profile, years: $0) }
+                          ?? profile.retirementBalanceCents)
+            Text(years.map { "\(Disclosure.illustrative) · \(String(OverviewCopy.asOfYear + $0))" }
+                 ?? "As of \(OverviewCopy.asOf)")
                 .font(.geist(12, .regular, relativeTo: .caption))
                 .foregroundStyle(Palette.textCaption)
+                .contentTransition(.opacity)
         }
+        .animation(Motion.select, value: years)
         .padding(.horizontal, Space.xl)
         .padding(.top, Space.m)
         .padding(.bottom, Space.s)
     }
 
-    /// "To age 67" link, the full-width chart, and its horizon labels. The whole block opens Explore.
+    /// "To age 67" link (opens Explore), then the full-width chart — tap or press-and-drag to scrub.
     private var projection: some View {
-        Button {
-            store.tab = .explore
-        } label: {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("To age \(profile.retirementAge)")
-                    .font(.geist(13, .medium, relativeTo: .footnote))
-                    .foregroundStyle(Palette.lavender)
-                    .frame(height: 44)
-                    .padding(.horizontal, Space.xl)
-
-                ProjectionChart(adaptive: IllustrativeProjection.overview(), adaptiveName: "Retirement savings")
-                    .frame(height: 204)
-
-                HStack {
-                    Text("Today")
-                    Spacer()
-                    Text(verbatim: "\(OverviewCopy.retirementYear(for: profile)) · Age \(profile.retirementAge)")
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                store.tab = .explore
+            } label: {
+                HStack(spacing: 5) {
+                    Text("To age \(profile.retirementAge)")
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
                 }
-                .font(.geist(12, .regular, relativeTo: .caption))
-                .foregroundStyle(Palette.textCaption)
-                .padding(.horizontal, Space.xl)
-                .padding(.top, Space.s)
-                .frame(minHeight: 44, alignment: .top)
+                .font(.geist(13, .medium, relativeTo: .footnote))
+                .foregroundStyle(Palette.lavender)
+                .frame(height: 44)
+                .contentShape(Rectangle())
             }
-            .contentShape(Rectangle())
+            .buttonStyle(PressableStyle())
+            .padding(.horizontal, Space.xl)
+            .accessibilityHint("Opens Explore")
+
+            ProjectionChart(adaptive: IllustrativeProjection.overview(),
+                            adaptiveName: "Retirement savings",
+                            selection: $scrub,
+                            selectionSteps: profile.yearsToRetirement)
+                .frame(height: 204)
+                .accessibilityLabel("\(Disclosure.illustrative) from today to age \(profile.retirementAge)")
+                .accessibilityValue(scrubYears.map { "Age \(profile.age + $0), \(Money.whole(OverviewCopy.projectedCents(for: profile, years: $0)))" } ?? "")
+                .accessibilityAdjustableAction { direction in
+                    let n = Double(max(profile.yearsToRetirement, 1))
+                    let current = (scrub ?? 0) * n
+                    scrub = min(max((current + (direction == .increment ? 1 : -1)) / n, 0), 1)
+                }
+
+            HStack {
+                Text("Today")
+                Spacer()
+                Text(verbatim: "\(OverviewCopy.retirementYear(for: profile)) · Age \(profile.retirementAge)")
+            }
+            .font(.geist(12, .regular, relativeTo: .caption))
+            .foregroundStyle(Palette.textCaption)
+            .padding(.horizontal, Space.xl)
+            .padding(.top, Space.s)
+            .frame(minHeight: 44, alignment: .top)
+            .accessibilityHidden(true)
         }
-        .buttonStyle(PressableStyle(scale: 1, dim: 0.8))
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(Disclosure.illustrative) from today to age \(profile.retirementAge)")
-        .accessibilityHint("Opens Explore")
+        .onChange(of: profile.id) { scrub = nil }
+        #if DEBUG
+        // `-scrub 0.5` opens with the playhead placed, for screenshots.
+        .onAppear {
+            if UserDefaults.standard.object(forKey: "scrub") != nil {
+                scrub = UserDefaults.standard.double(forKey: "scrub")
+            }
+        }
+        #endif
     }
 
     private var contributions: some View {
@@ -167,7 +202,7 @@ struct OverviewView: View {
                     Text("Emergency savings")
                         .font(.geist(16, .regular, relativeTo: .body))
                         .foregroundStyle(Palette.textPrimary)
-                    (Text(Money.whole(profile.emergencyCashCents)).font(.geist(12, .medium, relativeTo: .caption))
+                    (Text(Money.whole(profile.emergencyCashCents)).font(.numeral(12, .medium, relativeTo: .caption))
                      + Text(" set aside").font(.geist(12, .regular, relativeTo: .caption)))
                         .foregroundStyle(Palette.textSecondary)
                         .monospacedDigit()
@@ -252,7 +287,7 @@ private struct ProfileSwitcher: View {
     }
 }
 
-/// "$35,000" Regular with raised Regular cents, per the Overview design.
+/// "$35,000" in Geist Mono with raised cents, per the Overview design.
 private struct BalanceAmount: View {
     let cents: Int64
 
@@ -260,12 +295,13 @@ private struct BalanceAmount: View {
         let parts = Money.split(cents)
         HStack(alignment: .top, spacing: 0) {
             Text(parts.dollars)
-                .font(.geist(46, .regular, relativeTo: .largeTitle))
-                .tracking(-1.38)
+                .font(.numeral(42, .medium, relativeTo: .largeTitle))
+                .tracking(-2.4)
             Text(".\(parts.cents)")
-                .font(.geist(24, .regular, relativeTo: .title2))
-                .tracking(-0.48)
-                .padding(.top, 3)
+                .font(.numeral(20, .regular, relativeTo: .title2))
+                .tracking(-0.8)
+                .foregroundStyle(Palette.textSecondary)
+                .padding(.top, 5)
         }
         .monospacedDigit()
         .foregroundStyle(Palette.textPrimary)
@@ -288,7 +324,7 @@ private struct ContributionColumn: View {
                 .font(.geist(13, .regular, relativeTo: .footnote))
                 .foregroundStyle(Palette.textSecondary)
             Text(Money.exact(cents))
-                .font(.geist(25, .regular, relativeTo: .title2))
+                .font(.numeral(25, .medium, relativeTo: .title2))
                 .tracking(-0.5)
                 .monospacedDigit()
                 .foregroundStyle(Palette.textPrimary)
@@ -310,8 +346,8 @@ struct MonthsLabel: View {
     var color: Color = Palette.textPrimary
 
     var body: some View {
-        (Text(OverviewCopy.monthsCount(months)).font(.geist(size, .medium, relativeTo: .headline))
-         + Text(months == 1 ? " month" : " months").font(.geist(size, .regular, relativeTo: .headline)))
+        (Text(OverviewCopy.monthsCount(months)).font(.numeral(size, .medium, relativeTo: .headline))
+         + Text(months == 1 ? " month" : " months").font(.geist(size, .medium, relativeTo: .headline)))
             .monospacedDigit()
             .foregroundStyle(color)
     }
@@ -326,6 +362,27 @@ enum OverviewCopy {
     static let asOfYear = 2026
 
     static func retirementYear(for profile: Profile) -> Int { asOfYear + profile.yearsToRetirement }
+
+    /// Illustrative balance `years` from today, read off the drawn curve so the number matches
+    /// where the playhead sits. The curve runs from today's balance to a nominal future value at
+    /// retirement: monthly compounding of the saved balance plus employee and employer
+    /// contributions at the allocation-weighted ModelAssumptions return. Display only.
+    static func projectedCents(for profile: Profile, years: Int) -> Int64 {
+        let n = max(profile.yearsToRetirement, 1)
+        let a = ModelAssumptions.illustrative
+        let annual = profile.equityWeight * a.annualEquityReturn + (1 - profile.equityWeight) * a.annualBondReturn
+        let r = annual / 12, months = Double(n * 12)
+        let start = Double(profile.retirementBalanceCents)
+        let monthly = Double(profile.employeeMonthlyCents + profile.employerMonthlyCents)
+        let growth = pow(1 + r, months)
+        let end = start * growth + (r > 0 ? monthly * (growth - 1) / r : monthly * months)
+
+        let curve = IllustrativeProjection.overview()
+        let c0 = curve.first ?? 0, c1 = curve.last ?? 1
+        let t = (ProjectionChart.sample(curve, at: Double(years) / Double(n)) - c0) / max(c1 - c0, 0.0001)
+        let value = start + (end - start) * t
+        return years == 0 ? profile.retirementBalanceCents : Int64((value / 10_000).rounded()) * 10_000
+    }
 
     static func percent(_ rate: Double) -> String {
         rate.formatted(.percent.precision(.fractionLength(0...1)))

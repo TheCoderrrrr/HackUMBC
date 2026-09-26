@@ -77,7 +77,7 @@ struct InputRow: View {
 
     private var valueText: AttributedString {
         var result = AttributedString(value)
-        result.font = .geist(16, .medium, relativeTo: .body)
+        result.font = .numeral(15, .medium, relativeTo: .body)
         if let unit {
             var suffix = AttributedString(" \(unit)")
             suffix.font = .geist(16, .regular, relativeTo: .body)
