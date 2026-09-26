@@ -8,8 +8,6 @@ struct ExploreView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var month: Double = ExploreView.initialMonth
-    @State private var isPlaying = false
-    @State private var playTask: Task<Void, Never>?
     @State private var draft = ScenarioDraft.original(for: .morgan)
 
     private var timeline: ExploreTimeline { .illustrative(for: store.profile) }
@@ -36,7 +34,9 @@ struct ExploreView: View {
                         .padding(.top, 19)
                         .padding(.bottom, 20)
                     OutcomeRows()
-                    Button("Modeling assumptions") { store.sheet = .assumptions }
+                    Button { store.sheet = .assumptions } label: {
+                        Label("Modeling assumptions", systemImage: "slider.horizontal.3")
+                    }
                         .font(.geist(15, .medium, relativeTo: .callout))
                         .foregroundStyle(Palette.lavender)
                         .buttonStyle(PressableStyle())
@@ -52,7 +52,7 @@ struct ExploreView: View {
         .scrollIndicators(.hidden)
         .scrollDisabled(showsHint)
         .defaultScrollAnchor(Self.debugScrollAnchor)
-        .background(Palette.page.ignoresSafeArea())
+        .background(AmbientGlow())
         .safeAreaInset(edge: .top, spacing: 0) {
             ScreenHeader(title: "Explore") { HeaderAvatarButton() }
         }
@@ -63,7 +63,6 @@ struct ExploreView: View {
         .animation(Motion.respecting(reduceMotion, Motion.smartFast), value: showsHint)
         .onChange(of: store.profile.id) { _, _ in resetForProfile() }
         .onAppear { draft = .original(for: store.profile) }
-        .onDisappear(perform: pause)
     }
 
     // MARK: River and playhead
@@ -78,7 +77,10 @@ struct ExploreView: View {
             TimelineScrubber(timeline: timeline, month: $month,
                              onInteract: userInteracted,
                              onSeek: { seek(to: $0) })
-                .padding(.top, Space.l)
+                .padding(.horizontal, 14)
+                .padding(.vertical, Space.m)
+                .glassCard(cornerRadius: 22)
+                .padding(.top, Space.m)
 
             Group {
                 if showsHint {
@@ -99,24 +101,13 @@ struct ExploreView: View {
         }
     }
 
+    /// The playhead's date and what the plan is doing then.
     private var transport: some View {
-        HStack(alignment: .center) {
-            Button(action: togglePlayback) {
-                Image(systemName: playSymbol)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Palette.lavender)
-                    .contentTransition(.symbolEffect(.replace))
-                    .frame(width: 30, height: 30)
-            }
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.circle)
-            .controlSize(.regular)
-            .tint(Palette.textSecondary)
-            .accessibilityLabel(playLabel)
-
-            Spacer(minLength: Space.l)
-
-            VStack(alignment: .trailing, spacing: 0) {
+        HStack(alignment: .center, spacing: Space.m) {
+            IconBadge(systemName: contextSymbol, size: 40)
+                .contentTransition(.symbolEffect(.replace))
+                .animation(reduceMotion ? nil : Motion.select, value: contextSymbol)
+            VStack(alignment: .leading, spacing: 0) {
                 Text(ExploreTimeline.label(forMonth: selectedMonth))
                     .font(.geist(24, .semibold, relativeTo: .title2))
                     .monospacedDigit()
@@ -129,9 +120,23 @@ struct ExploreView: View {
             }
             .lineLimit(1)
             .minimumScaleFactor(0.8)
-            .accessibilityElement(children: .combine)
+            Spacer(minLength: 0)
         }
         .frame(minHeight: 52)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// The latest milestone at or before the playhead picks the readout's icon.
+    private var contextSymbol: String {
+        timeline.milestones.last { $0.month <= selectedMonth }.map(Self.symbol(for:)) ?? "calendar"
+    }
+
+    static func symbol(for milestone: Milestone) -> String {
+        let title = milestone.title.lowercased()
+        if title.contains("debt") { return "checkmark.seal.fill" }
+        if title.contains("reserve") { return "umbrella.fill" }
+        if title.contains("retire") || title.contains("contribution") { return "arrow.up.forward" }
+        return "flag.fill"
     }
 
     @ViewBuilder
@@ -142,26 +147,44 @@ struct ExploreView: View {
                 .foregroundStyle(Palette.textSecondary)
                 .frame(minHeight: 40, alignment: .topLeading)
         } else {
-            HStack(alignment: .top, spacing: Space.m) {
+            GlassGroup(spacing: Space.s) {
+            HStack(alignment: .top, spacing: Space.s) {
                 ForEach(timeline.milestones) { milestone in
+                    let isSelected = selectedMonth == milestone.month
                     Button {
                         userInteracted()
                         seek(to: milestone.month)
                     } label: {
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text(ExploreTimeline.label(forMonth: milestone.month))
-                                .font(.geist(13, .medium, relativeTo: .footnote))
-                                .foregroundStyle(selectedMonth == milestone.month ? Palette.lavender : Palette.textPrimary)
-                            Text(milestone.title)
-                                .font(.geist(11, .regular, relativeTo: .caption2))
-                                .foregroundStyle(Palette.textSecondary)
+                        HStack(alignment: .top, spacing: Space.s) {
+                            Image(systemName: Self.symbol(for: milestone))
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(Palette.lavender)
+                                .frame(width: 18)
+                                .padding(.top, 1)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(ExploreTimeline.label(forMonth: milestone.month))
+                                    .font(.geist(13, .medium, relativeTo: .footnote))
+                                    .foregroundStyle(isSelected ? Palette.lavender : Palette.textPrimary)
+                                Text(milestone.title)
+                                    .font(.geist(11, .regular, relativeTo: .caption2))
+                                    .foregroundStyle(Palette.textSecondary)
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            Spacer(minLength: 0)
                         }
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .padding(.horizontal, Space.m)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .topLeading)
+                        .glassSurface(RoundedRectangle(cornerRadius: 16, style: .continuous),
+                                      tint: isSelected ? Palette.lavender : nil, interactive: true)
+                        .animation(Motion.select, value: isSelected)
                     }
                     .buttonStyle(PressableStyle())
                     .accessibilityLabel("\(ExploreTimeline.spokenLabel(forMonth: milestone.month)), \(milestone.title)")
                     .accessibilityHint("Moves the playhead to this date.")
                 }
+            }
             }
         }
     }
@@ -201,47 +224,10 @@ struct ExploreView: View {
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
-    // MARK: Playback
+    // MARK: Scrubbing
 
-    private var atEnd: Bool { selectedMonth >= timeline.lastMonth }
-    private var playSymbol: String { isPlaying ? "pause.fill" : (atEnd ? "arrow.counterclockwise" : "play.fill") }
-    private var playLabel: String { isPlaying ? "Pause" : (atEnd ? "Replay from the opening month" : "Play to the next milestone") }
-
-    private func togglePlayback() {
-        userInteracted()
-        if isPlaying { pause(); return }
-        if atEnd { seek(to: 0); return }
-        play(to: timeline.nextStop(after: month))
-    }
-
-    /// Advances month by month to `target`, then stops. Reduce Motion jumps with a brief crossfade.
-    private func play(to target: Int) {
-        guard !reduceMotion else {
-            seek(to: target)
-            return
-        }
-        isPlaying = true
-        playTask = Task { @MainActor in
-            var current = Int(month.rounded(.down))
-            while current < target {
-                try? await Task.sleep(for: .milliseconds(85))
-                guard !Task.isCancelled else { return }
-                current += 1
-                withAnimation(.linear(duration: 0.085)) { month = Double(current) }
-            }
-            isPlaying = false
-        }
-    }
-
-    private func pause() {
-        playTask?.cancel()
-        playTask = nil
-        isPlaying = false
-    }
-
-    /// Any direct interaction pauses playback and retires the first-use hint.
+    /// Any direct interaction retires the first-use hint.
     private func userInteracted() {
-        pause()
         if store.showsPlayheadHint { store.showsPlayheadHint = false }
     }
 
@@ -251,7 +237,6 @@ struct ExploreView: View {
     }
 
     private func resetForProfile() {
-        pause()
         month = 0
         draft = .original(for: store.profile)
     }

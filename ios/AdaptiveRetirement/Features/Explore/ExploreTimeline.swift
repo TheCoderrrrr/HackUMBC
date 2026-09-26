@@ -69,12 +69,6 @@ struct ExploreTimeline {
 
     func milestone(at month: Int) -> Milestone? { milestones.first { $0.month == month } }
 
-    /// The next place Play should stop: the next milestone, or the end.
-    func nextStop(after month: Double) -> Int {
-        let current = Int(month.rounded(.down))
-        return milestones.map(\.month).first { $0 > current } ?? lastMonth
-    }
-
     /// The keyframe pair bracketing `month` and the eased 0…1 progress between them.
     func segment(at month: Double) -> (from: RiverKeyframe, to: RiverKeyframe, t: Double) {
         guard let index = keyframes.lastIndex(where: { Double($0.month) <= month }) else {

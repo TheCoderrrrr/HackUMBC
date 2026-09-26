@@ -6,13 +6,18 @@ import SwiftUI
 struct TimelineScrubber: View {
     let timeline: ExploreTimeline
     @Binding var month: Double
-    /// Called when the user starts interacting (pauses playback, dismisses the hint).
+    /// Called when the user starts interacting (dismisses the hint).
     var onInteract: () -> Void = {}
     /// Called for a discrete seek so the parent can animate it.
     var onSeek: (Int) -> Void
 
     @State private var isDragging = false
 
+    private static let trackLabels: [(title: String, symbol: String, tint: Color)] = [
+        ("Retirement", "building.columns.fill", Palette.lavender),
+        ("Debt", "creditcard.fill", Palette.peach),
+        ("Reserves", "umbrella.fill", Palette.textSecondary)
+    ]
     private static let trackTops: [CGFloat] = [28, 54, 80]
     private static let trackHeight: CGFloat = 18
     private static let height: CGFloat = 108
@@ -21,16 +26,22 @@ struct TimelineScrubber: View {
         HStack(alignment: .top, spacing: Space.m) {
             VStack(alignment: .leading, spacing: 0) {
                 Color.clear.frame(height: 25)
-                ForEach(["Retirement", "Debt", "Reserves"], id: \.self) { label in
-                    Text(label)
-                        .font(.geist(11, .regular, relativeTo: .caption2))
-                        .foregroundStyle(Palette.textSecondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .frame(height: 26, alignment: .leading)
+                ForEach(Self.trackLabels, id: \.title) { track in
+                    HStack(spacing: 5) {
+                        Image(systemName: track.symbol)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(track.tint)
+                            .frame(width: 13)
+                        Text(track.title)
+                            .font(.geist(11, .regular, relativeTo: .caption2))
+                            .foregroundStyle(Palette.textSecondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .frame(height: 26, alignment: .leading)
                 }
             }
-            .frame(width: 62, alignment: .leading)
+            .frame(width: 74, alignment: .leading)
             .accessibilityHidden(true)
 
             GeometryReader { proxy in
@@ -64,7 +75,7 @@ struct TimelineScrubber: View {
 
             // Track wells.
             ForEach(Self.trackTops, id: \.self) { top in
-                bar(from: 0, to: last, top: top, width: width, fill: Palette.sheet)
+                bar(from: 0, to: last, top: top, width: width, fill: Color.white.opacity(0.06))
             }
 
             // Retirement: baseline all the way, brighter after the increase.

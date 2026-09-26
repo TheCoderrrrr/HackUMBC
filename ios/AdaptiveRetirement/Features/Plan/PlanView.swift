@@ -9,25 +9,21 @@ struct PlanView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                contributions
-                separator
-                cashPriorities
+            VStack(alignment: .leading, spacing: Space.m) {
+                contributions.planCard()
+                cashPriorities.planCard()
                 ForEach(profile.debts) { debt in
-                    separator
-                    debtSection(debt)
+                    debtSection(debt).planCard(tint: Palette.copper)
                 }
-                separator
-                emergency
-                separator
-                allocation
+                emergency.planCard()
+                allocation.planCard()
             }
-            .padding(.horizontal, Space.xl)
-            .padding(.top, 29)
+            .padding(.horizontal, Space.l)
+            .padding(.top, Space.l)
             .padding(.bottom, 28)
         }
         .scrollIndicators(.hidden)
-        .background(Palette.page.ignoresSafeArea())
+        .background(AmbientGlow())
         .safeAreaInset(edge: .top, spacing: 0) {
             ScreenHeader {
                 Text("Your plan")
@@ -42,17 +38,11 @@ struct PlanView: View {
         .animation(Motion.reveal, value: profile.id)
     }
 
-    private var separator: some View {
-        Hairline()
-            .padding(.top, 25)
-            .padding(.bottom, 20)
-    }
-
     // MARK: Retirement contributions
 
     private var contributions: some View {
         VStack(alignment: .leading, spacing: 0) {
-            PlanSectionHeader(title: "Retirement contributions") { store.sheet = .explanation }
+            PlanSectionHeader(title: "Retirement contributions", symbol: "building.columns.fill") { store.sheet = .explanation }
                 .padding(.bottom, 7)
 
             HStack(alignment: .center) {
@@ -84,8 +74,8 @@ struct PlanView: View {
                     Text("Full employer match preserved")
                         .font(.geist(13, .medium, relativeTo: .footnote))
                 } icon: {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 12, weight: .semibold))
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 13, weight: .semibold))
                 }
                 .labelStyle(TightLabelStyle(spacing: 7))
                 .foregroundStyle(Palette.lavender)
@@ -98,7 +88,7 @@ struct PlanView: View {
 
     private var cashPriorities: some View {
         VStack(alignment: .leading, spacing: 0) {
-            PlanSectionHeader(title: "Monthly cash priorities") { store.sheet = .explanation }
+            PlanSectionHeader(title: "Monthly cash priorities", symbol: "arrow.triangle.branch") { store.sheet = .explanation }
             Text("After essentials and debt minimums")
                 .font(.geist(13, .regular, relativeTo: .footnote))
                 .foregroundStyle(Palette.textSecondary)
@@ -124,7 +114,7 @@ struct PlanView: View {
 
     private func debtSection(_ debt: Debt) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            PlanSectionHeader(title: PlanCopy.debtTitle(debt)) { store.sheet = .explanation }
+            PlanSectionHeader(title: PlanCopy.debtTitle(debt), symbol: "creditcard.fill", tint: Palette.peach) { store.sheet = .explanation }
 
             HStack {
                 Text(Money.whole(debt.balanceCents))
@@ -136,9 +126,9 @@ struct PlanView: View {
                 (Text(OverviewCopy.percent(debt.apr)).font(.geist(12, .semibold, relativeTo: .caption))
                  + Text(" APR").font(.geist(12, .medium, relativeTo: .caption)))
                     .foregroundStyle(Palette.textSecondary)
-                    .padding(.horizontal, 9)
+                    .padding(.horizontal, 10)
                     .frame(minHeight: 26)
-                    .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Palette.raised))
+                    .glassCapsule(tint: Palette.copper, interactive: false)
             }
             .frame(minHeight: 46)
             .accessibilityElement(children: .combine)
@@ -166,7 +156,7 @@ struct PlanView: View {
         let fullFunded = profile.emergencyMonths >= Double(profile.fullTargetMonths)
 
         return VStack(alignment: .leading, spacing: 0) {
-            PlanSectionHeader(title: "Emergency savings") { store.sheet = .explanation }
+            PlanSectionHeader(title: "Emergency savings", symbol: "umbrella.fill", tint: Palette.positive) { store.sheet = .explanation }
 
             HStack {
                 MonthsLabel(months: profile.emergencyMonths, size: 28)
@@ -202,7 +192,7 @@ struct PlanView: View {
     private var allocation: some View {
         let stocks = profile.equityWeight
         return VStack(alignment: .leading, spacing: 0) {
-            PlanSectionHeader(title: "Target-date foundation") { store.sheet = .explanation }
+            PlanSectionHeader(title: "Target-date foundation", symbol: "chart.pie.fill") { store.sheet = .explanation }
                 .padding(.bottom, 9)
 
             SplitBar(fraction: stocks, height: 8, leading: Palette.lavender, trailing: Palette.textSecondary)
@@ -231,26 +221,48 @@ struct PlanView: View {
 
 // MARK: - Pieces
 
-/// 21 pt SemiBold section title with a trailing **Why?** link.
+/// Icon badge, 19 pt SemiBold section title, and a trailing glass **Why?** pill.
 private struct PlanSectionHeader: View {
     let title: String
+    let symbol: String
+    var tint: Color = Palette.lavender
     let why: () -> Void
 
     var body: some View {
-        HStack {
+        HStack(spacing: Space.m) {
+            IconBadge(systemName: symbol, tint: tint)
             Text(title)
-                .font(.geist(21, .semibold, relativeTo: .title3))
+                .font(.geist(19, .semibold, relativeTo: .title3))
                 .foregroundStyle(Palette.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
                 .accessibilityAddTraits(.isHeader)
-            Spacer(minLength: Space.m)
-            Button("Why?", action: why)
-                .font(.geist(15, .medium, relativeTo: .subheadline))
-                .foregroundStyle(Palette.lavender)
-                .buttonStyle(PressableStyle())
-                .frame(minWidth: 44, minHeight: 44, alignment: .trailing)
-                .accessibilityLabel("Why? \(title)")
+            Spacer(minLength: Space.s)
+            Button(action: why) {
+                Text("Why?")
+                    .font(.geist(13, .medium, relativeTo: .subheadline))
+                    .foregroundStyle(Palette.lavender)
+                    .padding(.horizontal, 12)
+                    .frame(minHeight: 30)
+                    .glassCapsule()
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PressableStyle())
+            .accessibilityLabel("Why? \(title)")
         }
         .frame(minHeight: 44)
+    }
+}
+
+private extension View {
+    /// A Plan section on a glass card.
+    func planCard(tint: Color? = nil) -> some View {
+        padding(.horizontal, 18)
+            .padding(.top, Space.m)
+            .padding(.bottom, 18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .glassCard(tint: tint)
     }
 }
 

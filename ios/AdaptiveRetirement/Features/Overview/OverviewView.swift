@@ -12,19 +12,20 @@ struct OverviewView: View {
             VStack(alignment: .leading, spacing: 0) {
                 balanceSummary
                 projection
-                Hairline()
-                contributions
-                Hairline()
-                nextStep
-                Hairline()
-                supportingDetails
+                VStack(spacing: Space.m) {
+                    contributions
+                    nextStep
+                    supportingDetails
+                }
+                .padding(.horizontal, Space.l)
+                .padding(.bottom, Space.xl)
                 footer
             }
             .padding(.top, Space.xs)
             .padding(.bottom, Space.xl)
         }
         .scrollIndicators(.hidden)
-        .background(Palette.page.ignoresSafeArea())
+        .background(AmbientGlow())
         .safeAreaInset(edge: .top, spacing: 0) {
             ScreenHeader {
                 ProfileSwitcher()
@@ -58,10 +59,19 @@ struct OverviewView: View {
             store.tab = .explore
         } label: {
             VStack(alignment: .leading, spacing: 0) {
-                Text("To age \(profile.retirementAge)")
-                    .font(.geist(13, .medium, relativeTo: .footnote))
-                    .foregroundStyle(Palette.lavender)
-                    .frame(height: 44)
+                HStack(spacing: 6) {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("To age \(profile.retirementAge)")
+                        .font(.geist(13, .medium, relativeTo: .footnote))
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .bold))
+                }
+                .foregroundStyle(Palette.lavender)
+                .padding(.horizontal, 12)
+                .frame(height: 30)
+                .glassCapsule(tint: Palette.lavender, interactive: false)
+                .frame(height: 44)
                     .padding(.horizontal, Space.xl)
 
                 ProjectionChart(adaptive: IllustrativeProjection.overview(), adaptiveName: "Retirement savings")
@@ -91,7 +101,8 @@ struct OverviewView: View {
             store.tab = .plan
         } label: {
             VStack(alignment: .leading, spacing: Space.l) {
-                HStack {
+                HStack(spacing: Space.m) {
+                    IconBadge(systemName: "arrow.down.to.line.compact")
                     Text("Planned monthly contributions")
                         .font(.geist(17, .medium, relativeTo: .headline))
                         .foregroundStyle(Palette.textPrimary)
@@ -101,18 +112,17 @@ struct OverviewView: View {
                         .foregroundStyle(Palette.textCaption)
                 }
                 HStack(alignment: .top, spacing: Space.xl) {
-                    ContributionColumn(title: "You",
+                    ContributionColumn(title: "You", symbol: "person.fill",
                                        cents: profile.employeeMonthlyCents,
                                        caption: "\(OverviewCopy.percent(profile.adaptiveEmployeeRate)) of salary")
-                    ContributionColumn(title: "Employer",
+                    ContributionColumn(title: "Employer", symbol: "building.2.fill",
                                        cents: profile.employerMonthlyCents,
                                        caption: profile.matchCaptured ? "Full match" : "Partial match")
                 }
             }
-            .padding(.horizontal, Space.xl)
-            .padding(.top, 20)
-            .padding(.bottom, Space.xl)
+            .padding(20)
             .contentShape(Rectangle())
+            .glassCard()
         }
         .buttonStyle(PressableStyle(scale: 1, dim: 0.8))
         .accessibilityHint("Opens your plan")
@@ -120,10 +130,13 @@ struct OverviewView: View {
 
     private var nextStep: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Your next step")
-                .font(.geist(18, .medium, relativeTo: .headline))
-                .foregroundStyle(Palette.textPrimary)
-                .padding(.bottom, Space.m)
+            HStack(spacing: Space.m) {
+                IconBadge(systemName: "flag.checkered", tint: Palette.peach)
+                Text("Your next step")
+                    .font(.geist(18, .medium, relativeTo: .headline))
+                    .foregroundStyle(Palette.textPrimary)
+            }
+            .padding(.bottom, Space.m)
 
             VStack(alignment: .leading, spacing: Space.xs) {
                 Text(OverviewCopy.nextStepHeadline(for: profile))
@@ -142,27 +155,33 @@ struct OverviewView: View {
             Button {
                 store.sheet = .explanation
             } label: {
-                HStack {
+                HStack(spacing: Space.s) {
+                    Image(systemName: "questionmark.bubble.fill")
+                        .font(.system(size: 14, weight: .semibold))
                     Text("Why this plan?")
-                        .font(.geist(16, .medium, relativeTo: .body))
-                    Spacer()
+                        .font(.geist(15, .medium, relativeTo: .body))
                     Image(systemName: "arrow.right")
-                        .font(.system(size: 15, weight: .medium))
+                        .font(.system(size: 13, weight: .semibold))
                 }
                 .foregroundStyle(Palette.lavender)
+                .padding(.horizontal, Space.l)
+                .frame(minHeight: 40)
+                .glassCapsule(tint: Palette.lavender)
                 .frame(minHeight: 44)
-                .contentShape(Rectangle())
+                .contentShape(Capsule())
             }
             .buttonStyle(PressableStyle())
+            .padding(.top, Space.xs)
         }
-        .padding(.horizontal, Space.xl)
-        .padding(.top, Space.xl)
-        .padding(.bottom, Space.l)
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassCard(tint: Palette.indigo)
     }
 
     private var supportingDetails: some View {
         VStack(alignment: .leading, spacing: Space.s) {
-            HStack(alignment: .center) {
+            HStack(alignment: .center, spacing: Space.m) {
+                IconBadge(systemName: "umbrella.fill", tint: Palette.positive)
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Emergency savings")
                         .font(.geist(16, .regular, relativeTo: .body))
@@ -181,7 +200,9 @@ struct OverviewView: View {
             Button {
                 store.sheet = .snapshot
             } label: {
-                HStack {
+                HStack(spacing: Space.s) {
+                    Image(systemName: "doc.text.magnifyingglass")
+                        .font(.system(size: 14, weight: .medium))
                     Text("Financial snapshot")
                         .font(.geist(15, .medium, relativeTo: .subheadline))
                     Spacer()
@@ -194,7 +215,9 @@ struct OverviewView: View {
             }
             .buttonStyle(PressableStyle())
         }
-        .padding(Space.xl)
+        .padding(.horizontal, 20)
+        .padding(.vertical, Space.l)
+        .glassCard()
     }
 
     private var footer: some View {
@@ -202,13 +225,9 @@ struct OverviewView: View {
             Button {
                 store.tab = .plan
             } label: {
-                Text("View your plan")
-                    .font(.geist(17, .medium, relativeTo: .body))
-                    .frame(maxWidth: .infinity)
+                Label("View your plan", systemImage: "list.bullet.rectangle.portrait")
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .tint(Palette.indigo)
+            .buttonStyle(PrimaryButtonStyle())
 
             HStack(alignment: .firstTextBaseline, spacing: Space.s) {
                 DataModeBadge(mode: store.dataMode)
@@ -279,14 +298,19 @@ private struct BalanceAmount: View {
 
 private struct ContributionColumn: View {
     let title: String
+    let symbol: String
     let cents: Int64
     let caption: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.xs) {
-            Text(title)
-                .font(.geist(13, .regular, relativeTo: .footnote))
-                .foregroundStyle(Palette.textSecondary)
+            Label {
+                Text(title).font(.geist(13, .regular, relativeTo: .footnote))
+            } icon: {
+                Image(systemName: symbol).font(.system(size: 11, weight: .semibold))
+            }
+            .labelStyle(.titleAndIcon)
+            .foregroundStyle(Palette.textSecondary)
             Text(Money.exact(cents))
                 .font(.geist(25, .semibold, relativeTo: .title2))
                 .tracking(-0.5)
