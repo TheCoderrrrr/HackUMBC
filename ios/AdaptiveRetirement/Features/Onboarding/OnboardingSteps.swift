@@ -60,8 +60,6 @@ struct AccountsStep: View {
                     row(profile.debts.first?.name ?? "Debt", Money.whole(profile.totalDebtCents))
                 }
             }
-            // Optical inset: the round discs above read narrower than their frames.
-            .padding(.horizontal, Space.s)
             .padding(.top, Space.xl)
 
             Spacer(minLength: 0)
