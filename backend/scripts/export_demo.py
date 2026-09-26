@@ -287,10 +287,11 @@ def validate_bundle(
             if entry["preset_id"] == "contribution-plus-one":
                 actions = eval_dict["plan"]["actions"]
                 employee = next((item for item in actions if item["id"] == "employee-contribution"), None)
-                if employee is None or employee["employee_contribution_rate"] is None or (
+                # The preset rate went through a float, so compare within a tolerance.
+                if employee is None or employee["employee_contribution_rate"] is None or abs(
                     decimal(get(scenario, "employee_contribution_rate"))
-                    != decimal(employee["employee_contribution_rate"]) + Decimal("0.01")
-                ):
+                    - decimal(employee["employee_contribution_rate"]) - Decimal("0.01")
+                ) > Decimal("1e-12"):
                     raise ExportError(f"contribution-plus-one is not based on Adaptive: {filename}")
     return manifest
 

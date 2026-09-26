@@ -1,31 +1,30 @@
 """The only place the API layer touches the financial engine.
 
 Developer A calls these functions. Developer B's engine (app/engine/) supplies
-state, policy, validation and template explanations; it works on plain JSON-style
-dicts, so this module converts to and from the Pydantic contract at the boundary.
-Projections are still a temporary A-owned placeholder (`engine_stub`) until
-Developer C's simulation and evaluator land.
+state, policy, validation and template explanations; Developer C's evaluator
+(app/engine/evaluate.py) supplies projections and the canonical input hash. Both
+work on plain JSON-style dicts, so this module converts to and from the Pydantic
+contract at the boundary.
 """
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
-from app import engine_stub as _pending
 from app.engine import assumptions as _assumptions
 from app.engine import explanations as _explanations
 from app.engine import policy as _policy
 from app.engine import state as _state
+from app.engine.evaluate import evaluate as _evaluate
+from app.engine.monthly import InfeasibleScenario
 from app.engine.validation import ProfileValidationError  # noqa: F401  (re-exported for the API)
+from app.errors import ApiError
 from app.schemas import (
     AIExplanation,
     Change,
     DecisionSummary,
     EvaluationCore,
     FinancialProfile,
-    FinancialState,
-    ModelAssumptions,
-    Plan,
     RecommendationProposal,
     Scenario,
 )
@@ -101,19 +100,22 @@ def validate_decision(
 
 
 def evaluate(profile: FinancialProfile, scenario: Scenario | None, decision: DecisionSummary) -> EvaluationCore:
-    state = derive_state(profile)
-    plan = _policy.build_plan(_dump(profile), state, decision.model_dump(mode="json"))
-    return EvaluationCore(
-        schema_version=_assumptions.SCHEMA_VERSION,
-        model_version=MODEL_VERSION,
-        policy_version=POLICY_VERSION,
-        profile_id=profile.id,
-        input_hash=_pending.input_hash(profile, scenario, decision),
-        financial_state=FinancialState.model_validate(state),
-        plan=Plan.model_validate(plan),
-        assumptions=ModelAssumptions.model_validate(_assumptions.MODEL_ASSUMPTIONS),
-        projections=_pending.pending_projections(profile, scenario),
-        warnings=[_pending.STUB_WARNING],
+    try:
+        evaluation = _evaluate(
+            profile, scenario, decision,
+            schema_version=_assumptions.SCHEMA_VERSION,
+            model_version=MODEL_VERSION,
+            policy_version=POLICY_VERSION,
+        )
+    except InfeasibleScenario as exc:
+        raise ApiError(
+            422, "INFEASIBLE_SCENARIO",
+            f"This scenario is short ${exc.shortfall_cents / 100:,.2f} in month {exc.month}. "
+            "Choose a lower contribution rate or a different retirement age.",
+            ["scenario.employee_contribution_rate"],
+        ) from exc
+    return EvaluationCore.model_validate(
+        evaluation.model_dump(exclude={"decision_summary", "explanation"})
     )
 
 

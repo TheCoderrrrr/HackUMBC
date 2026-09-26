@@ -11,7 +11,7 @@ app uses when the server or AI is down. The code is done and tested on branch
 |---|---|---|
 | 1 | **Gemini API key.** Send it privately, not in the repo or chat history. | Generating the saved AI decisions and explanations |
 | 2 | **Decide on the saved-explanation check** (proposal item 2). The exporter reuses your `AIExplanation` model and `valid_prose` rules. Is that the right check? | Generating: if the rules change, the saved text must be regenerated |
-| 3 | **Decide on the real-engine patch** (proposal item 1, `proposals/neil-real-engine.patch`). The live API still serves stub results until it's applied. | The live demo, not the offline bundle. If you change the prompts instead of applying the patch as is, tell Eric before he generates. |
+| 3 | **Review the real-engine wiring** (proposal item 1): `engine_port.evaluate` now calls C's evaluator. | The live demo. If you change the prompts, tell Eric before he generates. |
 | 4 | **Review `backend/fixtures/decisions.json`** once Eric sends it. Check model/prompt provenance and output structure, then add `"A"` to each record's `reviewers`. | Final export |
 
 ## Kevin (Developer B)

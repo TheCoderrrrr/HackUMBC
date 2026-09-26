@@ -3,60 +3,18 @@
 For Neil (A) and Kevin (B). These are proposals only. Nothing in your files was
 changed on any branch; C's code on `Eric` works with `main` as is.
 
-Status of `Eric` (merged with `main` at `0ff66cb`): 259 of 260 tests pass. The
-one failure, `test_demo_profiles_are_the_three_fixtures`, also fails on `main`.
-With Neil's patch below applied, all 265 pass.
+Status of `Eric` (merged with `main` at `5cec6b6`): 265 of 267 tests pass. The
+two failures in `test_ai_pipeline.py` also fail on `main`; they are item 3 below.
 
 ## For Neil (A)
 
-### 1. Use the real engine in the API: `neil-real-engine.patch`
+### 1. Real engine in the API (done)
 
-`engine_port.py` still imports `engine_stub`, so every live evaluation returns
-the stub plan, empty projections, and a `STUB_ENGINE` warning. The patch adds
-`app/engine_real.py`, which implements every `engine_port` name with B's
-functions and C's evaluator. It holds no financial rules; it only converts
-between your Pydantic models and B/C's dictionaries.
-
-Apply and test from the repository root:
-
-```sh
-git apply proposals/neil-real-engine.patch
-cd backend && python -m pytest -q
-```
-
-What it changes and why:
-
-- **Demo profiles.** B's `fixtures/profiles.json` is a JSON list; the stub
-  expects `{"profiles": [...]}`. This is the test that fails on `main` today.
-- **Errors.** B's `ProfileValidationError` becomes 422 `INVALID_PROFILE` with
-  its field path; an unaffordable custom scenario becomes 422
-  `INFEASIBLE_SCENARIO` with the budget gap (BACKEND.md section 11).
-- **Evidence paths.** B's `validate_decision` only accepts evidence paths from
-  B's `recommendation_context` (`emergency_cash_cents`, `debt_burden`,
-  `savings_capacity`, `financial_state.*`). The stub's `liquidity.*`,
-  `debt.*`, and `match.*` keys would all be rejected, so every live AI
-  decision would fall back. `agent_indicators` now returns B's keys, and
-  `situation_flags` in `pipeline.py` reads them. The test rationale in
-  `conftest.py` uses the new keys.
-- **Fallback reasons.** Your labels are kept (`ai_unavailable`, `timeout`,
-  `provider_error`, `blocked_input: ...`). A proposal B rejects becomes
-  `invalid_proposal: <B's code, lowercase>`, for example
-  `invalid_proposal: invalid_evidence`.
-- **Decision IDs.** Your `new_decision_id()` replaces B's random ID.
-- **Privacy.** B's plan action IDs contain debt IDs (`debt-<id>`). The
-  Explanation prompt received `primary_action_id`, which
-  `test_prompts_exclude_identifying_data` caught once the real engine was
-  connected. The prompt now receives the primary action's category and status.
-- **One profile hash.** `pipeline.profile_hash` is replaced by C's
-  `app.engine.canonical.profile_hash`, so API and offline bundle hashes
-  match.
-- **Tests.** `tests/test_engine_integration.py` checks Morgan's $963.80 card
-  payment through the API, identical API and exporter results (including
-  `input_hash`), the 422 for an unaffordable custom rate, and priority-order
-  enforcement.
-
-If you accept it, `engine_stub.py` and `stub_profiles.json` are no longer used
-and can be deleted.
+Main already took the evidence-key, profile-file and prompt-privacy parts of
+the earlier patch. The remaining piece is now on `Eric`: `engine_port.evaluate`
+calls C's `app.engine.evaluate`, so live evaluations return real projections
+and C's canonical `input_hash`, and an unaffordable custom scenario returns 422
+`INFEASIBLE_SCENARIO`. `engine_stub.py` is deleted. Please review that change.
 
 ### 2. Checking saved explanations
 
@@ -76,16 +34,15 @@ profiles and only the Morgan cash-security variant may show a non-default
 order. Neil's tests enforce that. Your "update 2" lets `validate_decision`
 accept any of the three documented orders for any profile.
 
-Neil's patch follows the written spec: it lists only the default order (plus
-the Morgan variant's exception) in the prompt, and rejects other orders with
-`invalid_proposal: order_not_permitted`. The check sits in the adapter only
-because your validator no longer does it. Please decide which rule is right.
-If it is the spec, it belongs in `policy.validate_decision`, and the adapter
-check can be removed.
+Neil's `engine_port.permitted_orders` follows the written spec and lists only
+the default order in the live prompt, and his tests expect other orders to be
+rejected. Your validator accepts them, so two tests in `test_ai_pipeline.py`
+fail on `main`. Please decide which rule is right; if it is the spec, the check
+belongs in `policy.validate_decision`.
 
 ### 4. Evidence the model sees
 
-With Neil's patch, the Recommendation prompt contains exactly your flattened
+The Recommendation prompt contains exactly your flattened
 `recommendation_context`, the same values your validator accepts as evidence.
 Please confirm nothing there should be withheld from the model.
 
@@ -97,7 +54,7 @@ whichever comes last. Please agree on one version with Neil.
 
 ## What C needs back
 
-- Neil: accept or change items 1 and 2, and send the Gemini API key.
+- Neil: review item 1, accept or change item 2, and send the Gemini API key.
 - Kevin: decide item 3 and confirm item 4.
 - Both: review `backend/fixtures/decisions.json` once C generates it. Neil
   checks model/prompt provenance and structure; Kevin checks orders,

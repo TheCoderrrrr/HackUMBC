@@ -62,7 +62,7 @@ backend/tests/test_policy.py
 ```
 
 **Deliverable:** a tested `derive_state`, `validate_decision`, and `build_plan` implementation that produces a funded first-month adaptive plan.
-#### IM FOCUSING ON THIS WORK VVVVVV
+
 ## Developer C — Simulation, offline artifacts, and reliability
 
 **Owns:** monthly projections and the backend-offline handoff.

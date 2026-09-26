@@ -32,7 +32,7 @@ class ScriptedModel:
 
     def generate(self, system, prompt, schema, timeout_s):
         self.calls += 1
-        if schema is RecommendationOut:
+        if issubclass(schema, RecommendationOut):
             order = json.loads(ORDER.findall(prompt)[-1])
             return RecommendationOut.model_validate({"ordered_priorities": order, "rationale": [
                 {"priority": p, "summary": RATIONALE[p][0], "evidence_paths": RATIONALE[p][1],
@@ -80,7 +80,7 @@ def test_numeric_explanation_is_retried_then_rejected():
 def test_variant_must_choose_its_documented_exception():
     class DefaultOnly(ScriptedModel):
         def generate(self, system, prompt, schema, timeout_s):
-            if schema is RecommendationOut:
+            if issubclass(schema, RecommendationOut):
                 prompt = ORDER.sub(lambda m, first=ORDER.findall(prompt)[0]: first, prompt)
             return super().generate(system, prompt, schema, timeout_s)
 

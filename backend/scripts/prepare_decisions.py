@@ -18,13 +18,14 @@ import json
 from pathlib import Path
 from typing import Any
 
-from app.ai.pipeline import valid_prose
-from app.ai.prompts import SYSTEM, ExplanationOut, RecommendationOut, explanation_prompt, recommendation_prompt
+from app.ai.pipeline import situation_flags, valid_prose
+from app.ai.prompts import SYSTEM, ExplanationOut, explanation_prompt, recommendation_prompt, recommendation_schema
 from app.engine.assumptions import MODEL_ASSUMPTIONS
 from app.engine.canonical import profile_hash
 from app.engine.evaluate import evaluate
 from app.engine.policy import default_priorities, validate_decision
 from app.engine.state import derive_state, recommendation_context
+from app.engine_port import evidence_paths
 from app.schemas import FinancialProfile, Scenario
 from scripts.export_demo import (
     PROFILE_IDS, STANDARD_IDS, VARIANT_ID, _artifact_specs, _default_opening_rate,
@@ -48,13 +49,6 @@ def load_profiles(profiles_path: Path) -> dict[str, FinancialProfile]:
     return profiles
 
 
-def indicators(profile: dict[str, Any], state: dict[str, Any]) -> dict[str, Any]:
-    """B's recommendation context, flattened so its keys are the valid evidence paths."""
-    context = recommendation_context(profile, state)
-    nested = context.pop("financial_state")
-    return {**context, **{f"financial_state.{k}": v for k, v in nested.items()}}
-
-
 def permitted_orders(profile: dict[str, Any]) -> list[list[str]]:
     orders = [list(default_priorities(profile["planning_preference"]))]
     if profile["id"] == VARIANT_ID and VARIANT_ORDER not in orders:
@@ -62,27 +56,19 @@ def permitted_orders(profile: dict[str, Any]) -> list[list[str]]:
     return orders
 
 
-def situation(values: dict[str, Any]) -> dict[str, bool]:
-    cash, capture = values["emergency_cash_cents"], values["financial_state.match_capture_fraction"]
-    return {
-        "starter_reserve_funded": cash >= values["financial_state.starter_reserve_target_cents"],
-        "full_reserve_funded": cash >= values["financial_state.full_reserve_target_cents"],
-        "has_high_interest_debt": bool(values["financial_state.high_interest_debt_cents"]),
-        "has_any_debt": values["financial_state.highest_debt_apr"] is not None,
-        "captures_full_employer_match": capture is not None and capture >= 1,
-    }
-
-
 def _recommend(model, profile: dict[str, Any], prompt_version: str, attempts: int) -> dict[str, Any]:
     state = derive_state(profile)
-    values = indicators(profile, state)
     orders = permitted_orders(profile)
     required = VARIANT_ORDER if profile["id"] == VARIANT_ID else orders[0]
-    prompt = recommendation_prompt(profile["planning_preference"], orders, values)
+    # Same prompt and evidence-key schema as A's live pipeline.
+    context = recommendation_context(profile, state)
+    keys = evidence_paths(context)
+    prompt = recommendation_prompt(profile["planning_preference"], orders, context, keys)
+    schema = recommendation_schema(keys)
     problem = None
     for _ in range(attempts):
         try:
-            out, served = model.generate(SYSTEM, prompt, RecommendationOut, CALL_TIMEOUT_S)
+            out, served = model.generate(SYSTEM, prompt, schema, CALL_TIMEOUT_S)
         except Exception as exc:  # provider or malformed output: retry during preparation
             problem = f"model call failed: {type(exc).__name__}"
             continue
@@ -105,7 +91,7 @@ def _explain(model, profile: dict[str, Any], core: dict[str, Any], decision: dic
     primary = next(a for a in plan["actions"] if a["id"] == plan["primary_action_id"])
     facts = {
         "planning_preference": profile["planning_preference"],
-        "situation": situation(indicators(profile, derive_state(profile))),
+        "situation": situation_flags(FinancialProfile.model_validate(profile), derive_state(profile)),
         "ordered_priorities": decision["ordered_priorities"],
         "rationale": [{"priority": r["priority"], "summary": r["summary"], "tradeoff": r["tradeoff"]}
                       for r in decision["rationale"]],
