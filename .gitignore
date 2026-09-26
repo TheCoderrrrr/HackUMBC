@@ -11,3 +11,6 @@ htmlcov/
 .env
 .env.*
 !.env.example
+
+# Unreviewed draft bundles (scripts.export_demo --draft)
+backend/fixtures/draft/

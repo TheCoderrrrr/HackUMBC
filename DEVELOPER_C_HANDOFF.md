@@ -1,44 +1,34 @@
-# Current status (2026-09-26, second session)
+# Current status (2026-09-26, third session)
 
-Branch `Eric` now contains C's work merged with `main` (`0ff66cb`: A's API,
-schemas and Gemini pipeline; B's engine). Only C-owned files differ from
-`main`. SSH fetch fails on this machine; use
-`git fetch https://github.com/TheCoderrrrr/HackUMBC.git`.
+Branch `Eric` is `main` (`4b041ce`: Neil's prompt v2, Kevin's PR #8) plus the
+changes below. The suite passes 316 tests. SSH fetch fails on this machine; use
+`git fetch https://github.com/TheCoderrrrr/HackUMBC.git`. What the team needs
+from C, and what C needs from them, is in `ERIC_NEEDS.md`,
+`DEVELOPER_A_NEEDS.md` and `backend/DEVELOPER_B_REQUESTS.md`.
 
-Suite: 263 pass. The one failure, `test_demo_profiles_are_the_three_fixtures`,
-also fails on `main`; Neil's proposed patch fixes it (265 pass with it).
+Done this session (C-owned files only):
 
-Done this session:
-
-- Removed `allow_morgan_exception`, which B's "update 2" deleted.
-- `scripts/export_demo.py` checks saved explanations with A's existing rules
-  (`AIExplanation`, `source == "ai"`, no changes, A's `valid_prose`) instead of
-  waiting for `schemas.validate_saved_explanation`. Pending Neil's agreement.
-- `scripts/prepare_decisions.py` generates `fixtures/decisions.json` with A's
-  Gemini client, prompts and prose rules, B's validator, and C's evaluator. It
-  writes records without review marks and refuses to overwrite without
-  `--force`. `tests/test_prepare_decisions.py` runs it with a test-only model
-  through the real exporter (12 files, byte-identical across runs).
-- `proposals/` holds changes to A's and B's files for Neil and Kevin; nothing
-  of theirs was edited. See `proposals/README.md`.
-
-Ownership (from `BACKEND_TEAM_SPLIT.md`): C creates `decisions.json`; A reviews
-model/prompt provenance and structure; B reviews orders, rationale and
-constraint checks. The frontend developer copies the bundle into iOS
-`Resources/Demo/` and decodes it in Swift (`FRONTEND.md` section 7).
+- `prepare_decisions.py` sends the same prompt as the live API: all three
+  documented orders, default first, and `PROMPT_VERSION` from
+  `app.ai.prompts`. Saved standard decisions must still be the preference
+  default (keeps Morgan's $963.80); the Morgan variant must be
+  starter -> debt -> full. After `AIRateLimited` it waits the provider's
+  suggested time (30 s if none, at most 120 s) before retrying.
+- `export_demo.py --draft` skips only the review marks and writes only to the
+  git-ignored `fixtures/draft/`, for Kevin's pre-review audit and the
+  frontend placeholder.
 
 # Next steps
 
-1. Neil sends the Gemini API key. Put it in `backend/.env` as
-   `GEMINI_API_KEY=...` (git-ignored), then from `backend`:
-   `python -m scripts.prepare_decisions`.
-2. Send `fixtures/decisions.json` to Neil and Kevin. After review, each record
-   gets `"reviewers": ["A", "B"]`.
-3. `python -m scripts.export_demo` twice; compare bytes; commit
-   `fixtures/decisions.json` and `fixtures/generated/`.
-4. Give the twelve files to the frontend developer for `Resources/Demo/`.
-5. Neil and Kevin answer `proposals/README.md`. Until Neil applies the real
-   engine patch, the live API still serves the stub.
+1. Get a Gemini key (aistudio.google.com/apikey) into `backend/.env` as
+   `GEMINI_API_KEY=...`. Don't set `AI_PROMPT_VERSION`; the code owns it.
+2. From `backend`: `python -m scripts.prepare_decisions`, then
+   `python -m scripts.export_demo --draft`.
+3. Send `fixtures/decisions.json` to Neil and Kevin, and `fixtures/draft/` to
+   Kevin (audit) and the frontend developer (placeholder).
+4. After both review marks: `python -m scripts.export_demo` twice, compare
+   bytes, commit `fixtures/decisions.json` and `fixtures/generated/`, hand the
+   twelve files to the frontend developer for `Resources/Demo/`.
 
 # Developer C handoff
 
