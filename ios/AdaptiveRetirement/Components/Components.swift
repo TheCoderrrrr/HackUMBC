@@ -332,8 +332,9 @@ struct SheetScaffold<Content: View>: View {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(TypeScale.title2)
+                        .font(.geist(27, .semibold, relativeTo: .title))
                         .foregroundStyle(Palette.textPrimary)
+                        .accessibilityAddTraits(.isHeader)
                     if let subtitle {
                         Text(subtitle)
                             .font(TypeScale.label)
@@ -341,16 +342,17 @@ struct SheetScaffold<Content: View>: View {
                     }
                 }
                 Spacer()
-                GlassCircleButton(systemName: "xmark", accessibilityLabel: "Close") { dismiss() }
+                GlassCircleButton(systemName: "xmark", size: 44, accessibilityLabel: "Close") { dismiss() }
             }
-            .padding(.horizontal, Space.gutter)
-            .padding(.top, Space.xl)
-            .padding(.bottom, Space.l)
+            .padding(.leading, Space.xl)
+            .padding(.trailing, 18)
+            .padding(.top, 26)
+            .padding(.bottom, Space.s)
 
             ScrollView {
                 content
-                    .padding(.horizontal, Space.gutter)
-                    .padding(.bottom, Space.xxl)
+                    .padding(.horizontal, Space.xl)
+                    .padding(.bottom, Space.xl)
             }
             .scrollIndicators(.hidden)
         }

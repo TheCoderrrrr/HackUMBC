@@ -57,11 +57,11 @@ struct MainTabView: View {
         }
         .sheet(item: $store.sheet) { sheet in
             switch sheet {
-            case .profilePicker: ProfilePickerSheet().presentationDetents([.medium])
+            case .profilePicker: ProfilePickerSheet().presentationDetents([.large])
             case .snapshot: SnapshotSheet().presentationDetents([.large])
             case .explanation: ExplanationSheet().presentationDetents([.large])
             case .assumptions: AssumptionsSheet().presentationDetents([.medium, .large])
-            case .accountPreview: AccountPreviewSheet().presentationDetents([.medium])
+            case .accountPreview: AccountPreviewSheet().presentationDetents([.large])
             }
         }
     }
