@@ -34,7 +34,7 @@ struct RetirementComparisonSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Retirement accounts")
-                .font(.geist(20, .semibold, relativeTo: .title3))
+                .font(.geist(20, .medium, relativeTo: .title3))
                 .foregroundStyle(Palette.textPrimary)
                 .accessibilityAddTraits(.isHeader)
             Text("Illustrative preview · not a calculated result")
@@ -113,7 +113,7 @@ struct ScenarioControls: View {
                     .foregroundStyle(Palette.textPrimary)
                 Spacer()
                 Text("\(draft.retirementAge)")
-                    .font(.geist(18, .semibold, relativeTo: .body))
+                    .font(.geist(18, .medium, relativeTo: .body))
                     .monospacedDigit()
                     .foregroundStyle(Palette.textPrimary)
                     .contentTransition(.numericText(value: Double(draft.retirementAge)))
@@ -156,7 +156,7 @@ struct ScenarioControls: View {
                         .foregroundStyle(Palette.textSecondary)
                     Spacer()
                     Text(percent(draft.fixedRate))
-                        .font(.geist(18, .semibold, relativeTo: .body))
+                        .font(.geist(18, .medium, relativeTo: .body))
                         .monospacedDigit()
                         .foregroundStyle(Palette.textPrimary)
                     Stepper("Fixed rate", value: rateBinding, in: 0...20, step: 0.5)
@@ -184,7 +184,7 @@ struct ScenarioControls: View {
             }
 
             Text("Saved scenarios")
-                .font(.geist(21, .semibold, relativeTo: .title3))
+                .font(.geist(21, .medium, relativeTo: .title3))
                 .foregroundStyle(Palette.textPrimary)
                 .frame(minHeight: 44, alignment: .leading)
                 .padding(.top, 18)
@@ -196,12 +196,12 @@ struct ScenarioControls: View {
                 } action: { apply(.original) }
                 PresetChip(isSelected: draft.preset == .retireLater) {
                     Text("Retire ").font(.geist(12, .medium, relativeTo: .caption))
-                        + Text("+2").font(.geist(12, .semibold, relativeTo: .caption))
+                        + Text("+2").font(.geist(12, .medium, relativeTo: .caption))
                         + Text(" years").font(.geist(12, .medium, relativeTo: .caption))
                 } action: { apply(.retireLater) }
                 PresetChip(isSelected: draft.preset == .ratePlusOne) {
                     Text("Rate ").font(.geist(12, .medium, relativeTo: .caption))
-                        + Text("+1").font(.geist(12, .semibold, relativeTo: .caption))
+                        + Text("+1").font(.geist(12, .medium, relativeTo: .caption))
                         + Text(" pt").font(.geist(12, .medium, relativeTo: .caption))
                 } action: { apply(.ratePlusOne) }
             }
@@ -287,7 +287,7 @@ struct OutcomeRows: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Compare the whole picture")
-                .font(.geist(21, .semibold, relativeTo: .title3))
+                .font(.geist(21, .medium, relativeTo: .title3))
                 .foregroundStyle(Palette.textPrimary)
                 .frame(minHeight: 44, alignment: .leading)
                 .accessibilityAddTraits(.isHeader)
@@ -312,7 +312,7 @@ struct OutcomeRows: View {
                                 .foregroundStyle(Palette.textSecondary)
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.system(size: 13, weight: .medium))
                                 .foregroundStyle(Palette.textCaption)
                                 .rotationEffect(.degrees(isOpen ? 90 : 0))
                         }

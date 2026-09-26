@@ -48,13 +48,13 @@ struct SheetSectionTitle: View {
 
     var body: some View {
         Text(title)
-            .font(.geist(20, .semibold, relativeTo: .title3))
+            .font(.geist(20, .medium, relativeTo: .title3))
             .foregroundStyle(Palette.textPrimary)
             .accessibilityAddTraits(.isHeader)
     }
 }
 
-/// A 36 pt input row: Regular secondary label, SemiBold value with an optional Medium unit.
+/// A 36 pt input row: Regular secondary label, Medium value with an optional Regular unit.
 struct InputRow: View {
     let label: String
     let value: String
@@ -77,10 +77,10 @@ struct InputRow: View {
 
     private var valueText: AttributedString {
         var result = AttributedString(value)
-        result.font = .geist(16, .semibold, relativeTo: .body)
+        result.font = .geist(16, .medium, relativeTo: .body)
         if let unit {
             var suffix = AttributedString(" \(unit)")
-            suffix.font = .geist(16, .medium, relativeTo: .body)
+            suffix.font = .geist(16, .regular, relativeTo: .body)
             result += suffix
         }
         return result

@@ -53,8 +53,6 @@ enum GeistWeight: String {
     case light = "Light"
     case regular = "Regular"
     case medium = "Medium"
-    case semibold = "SemiBold"
-    case bold = "Bold"
 
     var postScriptName: String { "Geist-\(rawValue)" }
 }
@@ -70,16 +68,16 @@ extension Font {
     }
 }
 
-/// The type scale. Headings sit at Medium, body at Light/Regular — thinner strokes read as calmer and more trustworthy.
+/// The type scale. Display text sits at Regular, headings at Medium, body at Light/Regular — thinner strokes read as calmer and more trustworthy.
 enum TypeScale {
     /// Hero balance numerals ($35,000).
     static let hero = Font.geist(46, .light, relativeTo: .largeTitle)
     static let heroCents = Font.geist(22, .light, relativeTo: .title2)
     /// Splash wordmark.
-    static let wordmark = Font.geist(46, .medium, relativeTo: .largeTitle)
+    static let wordmark = Font.geist(46, .regular, relativeTo: .largeTitle)
     /// Screen titles (Plan, Explore, onboarding headings).
-    static let title = Font.geist(30, .medium, relativeTo: .largeTitle)
-    static let title2 = Font.geist(24, .medium, relativeTo: .title)
+    static let title = Font.geist(30, .regular, relativeTo: .largeTitle)
+    static let title2 = Font.geist(24, .regular, relativeTo: .title)
     /// Section headings.
     static let headline = Font.geist(17, .medium, relativeTo: .headline)
     /// Key amounts in rows.
@@ -100,7 +98,7 @@ enum FontRegistry {
     /// Registers bundled Geist faces once at launch.
     static func registerAll() {
         let names = ["Geist-Thin", "Geist-UltraLight", "Geist-Light", "Geist-Regular",
-                     "Geist-Medium", "Geist-SemiBold", "Geist-Bold", "GeistMono-Regular"]
+                     "Geist-Medium", "GeistMono-Regular"]
         for name in names {
             guard let url = Bundle.main.url(forResource: name, withExtension: "ttf") else { continue }
             CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)

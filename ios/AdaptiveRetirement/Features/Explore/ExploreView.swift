@@ -103,7 +103,7 @@ struct ExploreView: View {
         HStack(alignment: .center) {
             Button(action: togglePlayback) {
                 Image(systemName: playSymbol)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Palette.lavender)
                     .contentTransition(.symbolEffect(.replace))
                     .frame(width: 30, height: 30)
@@ -118,7 +118,7 @@ struct ExploreView: View {
 
             VStack(alignment: .trailing, spacing: 0) {
                 Text(ExploreTimeline.label(forMonth: selectedMonth))
-                    .font(.geist(24, .semibold, relativeTo: .title2))
+                    .font(.geist(24, .regular, relativeTo: .title2))
                     .monospacedDigit()
                     .foregroundStyle(Palette.textPrimary)
                     .contentTransition(.numericText(value: Double(selectedMonth)))
@@ -171,7 +171,7 @@ struct ExploreView: View {
     private var playheadLesson: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text("Drag to a date.")
-                .font(.geist(15, .semibold, relativeTo: .callout))
+                .font(.geist(15, .medium, relativeTo: .callout))
                 .foregroundStyle(Palette.textPrimary)
             Text("See how your priorities change.\nIllustrative dates · not a forecast.")
                 .font(.geist(12, .regular, relativeTo: .caption))

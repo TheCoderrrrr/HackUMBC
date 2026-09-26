@@ -252,7 +252,7 @@ private struct ProfileSwitcher: View {
     }
 }
 
-/// "$35,000" SemiBold with raised Medium cents, per the Overview design.
+/// "$35,000" Regular with raised Regular cents, per the Overview design.
 private struct BalanceAmount: View {
     let cents: Int64
 
@@ -260,10 +260,10 @@ private struct BalanceAmount: View {
         let parts = Money.split(cents)
         HStack(alignment: .top, spacing: 0) {
             Text(parts.dollars)
-                .font(.geist(46, .semibold, relativeTo: .largeTitle))
+                .font(.geist(46, .regular, relativeTo: .largeTitle))
                 .tracking(-1.38)
             Text(".\(parts.cents)")
-                .font(.geist(24, .medium, relativeTo: .title2))
+                .font(.geist(24, .regular, relativeTo: .title2))
                 .tracking(-0.48)
                 .padding(.top, 3)
         }
@@ -288,7 +288,7 @@ private struct ContributionColumn: View {
                 .font(.geist(13, .regular, relativeTo: .footnote))
                 .foregroundStyle(Palette.textSecondary)
             Text(Money.exact(cents))
-                .font(.geist(25, .semibold, relativeTo: .title2))
+                .font(.geist(25, .regular, relativeTo: .title2))
                 .tracking(-0.5)
                 .monospacedDigit()
                 .foregroundStyle(Palette.textPrimary)
@@ -303,15 +303,15 @@ private struct ContributionColumn: View {
     }
 }
 
-/// "1 month" / "6 months" with a SemiBold count and Medium unit.
+/// "1 month" / "6 months" with a Medium count and Regular unit.
 struct MonthsLabel: View {
     let months: Double
     var size: CGFloat = 18
     var color: Color = Palette.textPrimary
 
     var body: some View {
-        (Text(OverviewCopy.monthsCount(months)).font(.geist(size, .semibold, relativeTo: .headline))
-         + Text(months == 1 ? " month" : " months").font(.geist(size, .medium, relativeTo: .headline)))
+        (Text(OverviewCopy.monthsCount(months)).font(.geist(size, .medium, relativeTo: .headline))
+         + Text(months == 1 ? " month" : " months").font(.geist(size, .regular, relativeTo: .headline)))
             .monospacedDigit()
             .foregroundStyle(color)
     }

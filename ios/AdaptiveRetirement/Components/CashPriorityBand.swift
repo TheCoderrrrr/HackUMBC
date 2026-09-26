@@ -71,7 +71,7 @@ struct CashPriorityBand: View {
                 .clipShape(shape)
             shape.strokeBorder(Color.white.opacity(0.13), lineWidth: 0.6)
             Text(shareLabel(item))
-                .font(.geist(13, .semibold, relativeTo: .footnote))
+                .font(.geist(13, .medium, relativeTo: .footnote))
                 .monospacedDigit()
                 .foregroundStyle(Color(hex: 0xFAF9FF))
                 .lineLimit(1)
@@ -120,7 +120,7 @@ struct CashPriorityRow: View {
                 .foregroundStyle(Palette.textSecondary)
             Spacer(minLength: Space.m)
             Text(Money.exact(priority.amountCents))
-                .font(.geist(16, .semibold, relativeTo: .body))
+                .font(.geist(16, .medium, relativeTo: .body))
                 .monospacedDigit()
                 .foregroundStyle(funded ? priority.kind.accent : Palette.textSecondary)
         }

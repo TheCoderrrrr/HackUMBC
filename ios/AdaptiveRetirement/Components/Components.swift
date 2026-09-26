@@ -332,7 +332,7 @@ struct SheetScaffold<Content: View>: View {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(.geist(27, .semibold, relativeTo: .title))
+                        .font(.geist(27, .regular, relativeTo: .title))
                         .foregroundStyle(Palette.textPrimary)
                         .accessibilityAddTraits(.isHeader)
                     if let subtitle {

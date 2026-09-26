@@ -9,11 +9,11 @@ enum SetupStyle {
     static let disc = Color(hex: 0x28292F)
     static let divider = Color(hex: 0x2D2E35)
 
-    static let heading = Font.geist(32, .bold, relativeTo: .largeTitle)
+    static let heading = Font.geist(32, .regular, relativeTo: .largeTitle)
     static let instruction = Font.geist(16, .regular, relativeTo: .body)
-    static let navTitle = Font.geist(17, .semibold, relativeTo: .headline)
+    static let navTitle = Font.geist(17, .medium, relativeTo: .headline)
     static let progress = Font.geist(13, .medium, relativeTo: .footnote)
-    static let rowTitle = Font.geist(17, .semibold, relativeTo: .headline)
+    static let rowTitle = Font.geist(17, .medium, relativeTo: .headline)
     static let rowDetail = Font.geist(13, .regular, relativeTo: .footnote)
     static let secondaryAction = Font.geist(15, .medium, relativeTo: .subheadline)
 }
