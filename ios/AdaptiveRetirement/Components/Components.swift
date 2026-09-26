@@ -105,18 +105,33 @@ extension ScreenHeader where Leading == Text {
     }
 }
 
-/// Header avatar button that opens the profile picker.
+/// Header avatar: account menu with snapshot, profile switching, and onboarding replay.
 struct HeaderAvatarButton: View {
     @EnvironmentObject private var store: AppStore
 
     var body: some View {
-        Button {
-            store.sheet = .profilePicker
+        Menu {
+            Button {
+                store.sheet = .snapshot
+            } label: {
+                Label("Financial snapshot", systemImage: "chart.bar.doc.horizontal")
+            }
+            Button {
+                store.sheet = .profilePicker
+            } label: {
+                Label("Switch profile", systemImage: "person.2")
+            }
+            Divider()
+            Button {
+                store.sheet = nil
+                store.replayOnboarding()
+            } label: {
+                Label("Replay onboarding", systemImage: "arrow.counterclockwise")
+            }
         } label: {
             AvatarView(profile: store.profile, size: 44)
         }
-        .buttonStyle(PressableStyle(scale: 0.94))
-        .accessibilityLabel("Switch profile, currently \(store.profile.name)")
+        .accessibilityLabel("\(store.profile.name), account menu")
     }
 }
 
