@@ -176,3 +176,88 @@ float blob(float2 p, float2 c, float r) {
     c = mix(c, half3(1.0, 0.97, 0.93), half(lightMask * 0.10 * amount));
     return half4(c * color.a, color.a);
 }
+
+// Setup field: a flame-like gradient rising from the bottom edge only.
+// Soft tongues of lavender → indigo → deep violet dissolve into charcoal;
+// faint contour lines trace iso-levels of the same heat field.
+
+namespace ember {
+
+// Heat: >0 inside the flame, ~1 at the hottest (bottom centre). p is height-normalised, y up from the bottom.
+float heat(float2 p, float t) {
+    using namespace atmosphere;
+    // Vertically stretched noise → streaky, upward-flowing tongues.
+    float n = fbm(float2(p.x * 3.0 + 3.1, p.y * 0.7 - t * 0.05));
+    float sway = 0.02 * sin(p.y * 5.0 + t * 0.35) + 0.06 * (n - 0.5);
+    // 1 − |sin| gives cusped, upward-pointing peaks; noise varies their heights.
+    float peak = pow(1.0 - abs(sin((p.x + sway) * 15.0 + 0.9 + t * 0.03)), 1.2);
+    float tall = 0.25 + 1.4 * fbm(float2((p.x + sway) * 4.0 + 2.3, t * 0.02));
+    float height = 0.36 + 0.02 * sin(t * 0.13);
+    float h = 1.0 - p.y / height + 0.30 * (peak * tall - 0.5) * smoothstep(0.02, 0.3, p.y) + 0.18 * (n - 0.5);
+    // Hottest core low and centred.
+    float2 core = p - float2(0.03 * sin(t * 0.17), 0.0);
+    h += 0.12 * exp(-dot(core, core) / 0.05);
+    return h;
+}
+
+half3 ramp(float h, float t) {
+    using namespace atmosphere;
+    // Same slow drift as the brand field: indigo ↔ ultramarine ↔ violet.
+    float h1 = 0.5 + 0.5 * sin(t * 0.12);
+    float h2 = 0.5 + 0.5 * sin(t * 0.095 + 2.1);
+    half3 charcoal = srgb(16, 17, 20);
+    half3 deep     = mix(srgb(40, 46, 140), srgb(62, 40, 138), h1);
+    half3 indigo   = mix(mix(srgb(73, 89, 204), srgb(52, 86, 214), h1), srgb(98, 76, 214), h2 * 0.55);
+    half3 lavender = mix(mix(srgb(169, 171, 255), srgb(150, 182, 255), h2), srgb(196, 170, 255), h1 * 0.45);
+        half3 c = mix(charcoal, deep, half(smoothstep(-0.2, 0.3, h)));
+    c = mix(c, indigo,   half(smoothstep(0.24, 0.62, h)));
+    // Tops out at a mid lavender so the indigo button and lavender text stay legible.
+    c = mix(c, lavender, half(0.6 * smoothstep(0.62, 1.15, h)));
+    return c;
+}
+
+} // namespace ember
+
+/// - size: view size in points.
+/// - time: seconds (frozen under Reduce Motion).
+/// - contours: 0…1 opacity of the contour lines.
+/// - grain: 0…1 grain amount.
+/// - scale: display scale, for pixel-accurate grain.
+[[ stitchable ]] half4 emberAtmosphere(float2 position, half4 color, float2 size, float time,
+                                       float contours, float grain, float scale) {
+    using namespace atmosphere;
+
+    float t = time;
+    float2 uv = position / size;
+    float2 p = float2((uv.x - 0.5) * size.x / size.y, 1.0 - uv.y);
+
+    float h = ember::heat(p, t);
+    half3 col = ember::ramp(h, t);
+
+    // Contour lines on iso-levels of heat, analytic pixel-space anti-aliasing.
+    if (contours > 0.001) {
+        const float spacing = 0.11;
+        float px = 1.0 / size.y;
+        float hx = ember::heat(p + float2(px, 0), t);
+        float hy = ember::heat(p + float2(0, px), t);
+        float gradLen = max(length(float2(hx - h, hy - h)), 1e-5);
+
+        float phase = (h - 0.02 - t * 0.004) / spacing;
+        float distPts = abs(fract(phase + 0.5) - 0.5) * spacing / gradLen;
+        float line = 1.0 - smoothstep(0.25, 1.0, distPts);
+
+        // Visible through the flame body, fading out at its tips and in the hot core.
+        float band = smoothstep(0.0, 0.12, h) * (1.0 - smoothstep(0.85, 1.05, h));
+        col = mix(col, half3(1.0), half(line * band * 0.12 * contours));
+    }
+
+    if (grain > 0.001) {
+        float n = hash21(floor(position * scale / 0.75) + 0.5);
+        float darkMask = step(n, 0.39);
+        float lightMask = step(0.61, n);
+        col = mix(col, half3(0.0), half(darkMask * 0.12 * grain));
+        col = mix(col, half3(1.0), half(lightMask * 0.09 * grain));
+    }
+
+    return half4(col, 1.0h);
+}

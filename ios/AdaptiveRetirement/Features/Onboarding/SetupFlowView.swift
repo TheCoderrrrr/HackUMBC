@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Splash → four-step setup. The brand field stays mounted throughout;
-/// the wordmark and contours fade as the setup content appears.
+/// Splash → four-step setup. The brand field shows behind the wordmark, then
+/// crossfades to the bottom flame field as the setup content appears.
 struct SetupFlowView: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -10,7 +10,10 @@ struct SetupFlowView: View {
 
     var body: some View {
         ZStack {
+            // Splash keeps the full brand field; setup crossfades to the bottom flame.
             SetupAtmosphere(contours: isSplash ? 1 : 0)
+            EmberAtmosphereView()
+                .opacity(isSplash ? 0 : 1)
 
             if isSplash {
                 SplashWordmark(onTap: advanceFromSplash)
@@ -145,7 +148,7 @@ struct OnboardingFlow: View {
             Button(action: showAccountPreview) {
                 Text("Use my accounts")
                     .font(SetupStyle.secondaryAction)
-                    .foregroundStyle(Palette.lavender)
+                    .foregroundStyle(Palette.textPrimary)
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .contentShape(Rectangle())
                     .contentTransition(.opacity)

@@ -47,6 +47,42 @@ struct AtmosphereView: View {
     }
 }
 
+/// Setup background: a flame-like gradient rising from the bottom edge, with faint
+/// contour lines. Frozen under Reduce Motion; never intercepts touches.
+struct EmberAtmosphereView: View {
+    var contours: Double = 1
+    var grain: Double = 1
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.displayScale) private var displayScale
+    @State private var start = Date()
+
+    private static let restingTime: Double = 38
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: reduceMotion)) { context in
+            let elapsed = context.date.timeIntervalSince(start)
+            let t = reduceMotion ? Self.restingTime : Self.restingTime + elapsed
+            GeometryReader { proxy in
+                Rectangle()
+                    .fill(Palette.page)
+                    .colorEffect(
+                        ShaderLibrary.emberAtmosphere(
+                            .float2(proxy.size),
+                            .float(Float(t)),
+                            .float(Float(contours)),
+                            .float(Float(grain)),
+                            .float(Float(displayScale))
+                        )
+                    )
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
 /// Applies the chart/texture duotone grain to any filled shape.
 struct FillGrain: ViewModifier {
     var amount: Double = 1
