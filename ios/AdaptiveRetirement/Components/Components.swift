@@ -105,7 +105,7 @@ extension ScreenHeader where Leading == Text {
     }
 }
 
-/// Header avatar: account menu with snapshot, profile switching, and onboarding replay.
+/// Header avatar: account menu with snapshot, profile switching, and restart onboarding.
 struct HeaderAvatarButton: View {
     @EnvironmentObject private var store: AppStore
 
@@ -126,7 +126,7 @@ struct HeaderAvatarButton: View {
                 store.sheet = nil
                 store.replayOnboarding()
             } label: {
-                Label("Replay onboarding", systemImage: "arrow.counterclockwise")
+                Label("Restart onboarding", systemImage: "arrow.counterclockwise")
             }
         } label: {
             AvatarView(profile: store.profile, size: 44)
