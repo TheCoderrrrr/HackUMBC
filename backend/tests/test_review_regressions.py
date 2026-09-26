@@ -1,7 +1,5 @@
 """Independent regressions for review findings at decision and plan boundaries."""
 
-from copy import deepcopy
-
 import pytest
 
 from app.engine.explanations import render_reason, template_explanation

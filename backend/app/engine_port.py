@@ -59,9 +59,9 @@ def default_order(preference: str) -> list[str]:
 
 
 def permitted_orders(profile: FinancialProfile) -> list[list[str]]:
-    # The Morgan cash-security exception needs B's trusted opt-in and is shown only
-    # through C's saved artifact, so live requests always use the preference default.
-    return [default_order(profile.planning_preference)]
+    """Every documented order B's validator accepts; the preference default comes first."""
+    default = default_order(profile.planning_preference)
+    return [default] + [list(o) for o in _policy.PREFERENCE_ORDER.values() if list(o) != default]
 
 
 def agent_indicators(profile: FinancialProfile, state: State) -> dict:

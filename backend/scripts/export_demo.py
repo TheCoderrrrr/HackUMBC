@@ -15,13 +15,18 @@ from __future__ import annotations
 import argparse
 from contextlib import contextmanager
 from decimal import Decimal
-import fcntl
 from importlib import import_module
 import json
 from pathlib import Path
 import shutil
+import sys
 import tempfile
 from typing import Any, Callable, Iterator
+
+if sys.platform == "win32":
+    import msvcrt
+else:
+    import fcntl
 
 from app.engine.canonical import canonical_json, input_hash, profile_hash
 from app.engine.evaluate import evaluate
@@ -301,13 +306,21 @@ def _export_lock(output: Path) -> Iterator[None]:
     lock_path = output.with_name(output.name + ".lock")
     with lock_path.open("a+b") as handle:
         try:
-            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError as exc:
+            if sys.platform == "win32":
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
             raise ExportError(f"another export is already using {output}") from exc
         try:
             yield
         finally:
-            fcntl.flock(handle, fcntl.LOCK_UN)
+            if sys.platform == "win32":
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(handle, fcntl.LOCK_UN)
 
 
 def _recover(

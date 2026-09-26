@@ -4,7 +4,7 @@ This package implements the financial state, bounded decision validation, cash a
 
 ## Status at handoff
 
-Developer B's independent implementation is complete and reviewed. The backend test suite passes: **170 tests**, including Morgan's $963.80 extra card payment, contribution and matching arithmetic, cash conservation, blocked inputs, AI proposal fallback, changing monthly budgets, and Current/Adaptive/Custom allocation. The final review found no remaining critical or important issue in this scope. This is an engine handoff, not a claim that the live API, full projections, or offline bundle are finished.
+Developer B's independent implementation is complete and reviewed. The backend test suite, including Developer A's API and AI-pipeline tests, passes: **231 tests**, covering Morgan's $963.80 extra card payment, contribution and matching arithmetic, cash conservation, blocked inputs, AI proposal fallback, changing monthly budgets, and Current/Adaptive/Custom allocation. The final review found no remaining critical or important issue in this scope. This is an engine handoff, not a claim that the live API, full projections, or offline bundle are finished.
 
 Implemented files:
 
@@ -20,7 +20,7 @@ The three canonical profiles are Jordan, Morgan, and Casey in `profiles.json`. T
 ## What Developer B still needs to do with the team
 
 1. **Contract integration with A:** validate that the Pydantic `FinancialProfile`, `FinancialState`, `Plan`, `DecisionSummary`, `AIExplanation`, and error envelope accept the engine's exact JSON fields and cent/rate types. Update contract examples when needed and have the iOS developer check Swift decoding. Confirm the API maps `ProfileValidationError.path`, blocked assessments, and unaffordable custom scenarios to the documented HTTP behavior.
-2. **Saved-decision review with A and C:** inspect `fixtures/decisions.json` once generated. Check each ordering, evidence path, rationale, and tradeoff against the corresponding profile. Verify the Morgan cash-security exception is enabled only for its reviewed fixture. A confirms actual model/prompt provenance; C confirms that export replays validated decisions without live calls.
+2. **Saved-decision review with A and C:** inspect `fixtures/decisions.json` once generated. Check each ordering, evidence path, rationale, and tradeoff against the corresponding profile. Confirm the Morgan cash-security decision uses the documented starter → high-APR debt → full reserve order and grounds it in the card APR. A confirms actual model/prompt provenance; C confirms that export replays validated decisions without live calls.
 3. **Financial audit of C's evaluator and bundle:** compare the first simulated adaptive month with `allocate_month` and `build_plan`; check that debt interest is accrued once, caps and matching use actual contributions, final debt payments release cash once, and each feasible month conserves money. Verify all nine presets plus the tenth Morgan variant regenerate from the same evaluator with visible assumptions, correct hashes, and no handwritten totals.
 4. **Outage and presentation sign-off:** confirm rules/template fallback labels and numeric results remain honest when AI fails, and that stopping the backend leaves the core saved demo usable. Repeat Morgan's documented opening arithmetic and the critical-reserve versus employer-match tradeoff in the presenter walkthrough.
 
