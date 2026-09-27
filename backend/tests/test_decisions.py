@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.decisions import DecisionSnapshot, DecisionStore, new_decision_id
+from app.decisions import DecisionSnapshot, DecisionStore
 from app.limits import RateLimiter
 
 
@@ -31,12 +31,6 @@ def test_store_requires_matching_profile():
     store = DecisionStore()
     store.put("d", snap("morgan"))
     assert store.get("d", "jordan") is None
-
-
-def test_decision_ids_are_random_and_opaque():
-    ids = {new_decision_id() for _ in range(100)}
-    assert len(ids) == 100
-    assert all(i.startswith("dec_") and len(i) > 20 for i in ids)
 
 
 def test_rate_limiter_sliding_window():

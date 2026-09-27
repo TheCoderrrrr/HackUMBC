@@ -21,7 +21,7 @@ struct ComparisonChart: View {
             Chart(points) { point in
                 AreaMark(x: .value("Progress", point.x), y: .value("Balance", point.y),
                          stacking: .unstacked)
-                    .interpolationMethod(.catmullRom)
+                    .interpolationMethod(.monotone)
                     .foregroundStyle(by: .value("Series", point.series))
             }
             .chartForegroundStyleScale(domain: ["Current", "Adaptive"],
@@ -38,7 +38,7 @@ struct ComparisonChart: View {
                 }
                 ForEach(points) { point in
                     LineMark(x: .value("Progress", point.x), y: .value("Balance", point.y))
-                        .interpolationMethod(.catmullRom)
+                        .interpolationMethod(.monotone)
                         .foregroundStyle(by: .value("Series", point.series))
                         .lineStyle(point.series == "Current"
                                    ? StrokeStyle(lineWidth: 1.15, lineCap: .round, dash: [3, 4])

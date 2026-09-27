@@ -36,7 +36,7 @@ What the client does:
 - It accepts HTTPS URLs only. Don't add ATS exceptions.
 - Evaluations time out after 8 seconds; health and profile requests after 5.
 - It never logs request bodies.
-- Backend error responses become `APIError.server(status:body:)`. `error.isRetryable` tells the UI whether to show Retry.
+- Backend error responses become `APIError.server(status:body:)`. A non-2xx answer that isn't the JSON envelope — ngrok's HTML 404/502 pages for a dead tunnel or laptop, detected by the `ngrok-error-code` header or a 404/502/503/504 status — becomes `.unreachable`, so it is retryable and eligible for the saved-preset fallback instead of collapsing into a generic message. DEBUG builds log the status and first 200 bytes of any undecodable body (responses only; request bodies are never logged).
 
 What the repository does:
 
@@ -54,7 +54,7 @@ Each call to `store.select(profile)` runs `refreshEvaluation()`:
 4. Apply the response only if the counter and profile id still match.
 5. On failure, keep the previous result on screen: the last live result, relabeled `lastLive`, or else the saved one.
 
-The store also sets the existing `store.dataMode` to `.saved`, `.live` or `.lastLive`.
+The store derives `store.dataMode` from the load state: `.saved`, `.live` or `.lastLive` when a calculation is on screen, and `.preview` ("Illustrative preview") when only the hand-typed fixtures are showing — including during the first load.
 
 ## 4. What screens should read
 
@@ -63,7 +63,7 @@ switch store.evaluationLoad {
 case .idle:                         // no bundle and no server yet: keep DemoData
 case .loading(let previous):        // show previous (if any) with a small spinner
 case .loaded(let loaded):           // show loaded.evaluation
-case .failed(let previous, let e):  // show previous plus a retry banner if (e as? APIError)?.isRetryable == true
+case .failed(let previous, let e):  // show previous plus store.evaluationFailure's message and a manual Retry
 }
 ```
 
@@ -99,16 +99,15 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --host 127.0.0.1 --port 8000
 
-# second terminal (brew install cloudflared)
-cloudflared tunnel --url http://localhost:8000
-# prints https://<name>.trycloudflare.com
-python scripts/smoke.py https://<name>.trycloudflare.com
+# second terminal (brew install ngrok; one fixed free domain per event)
+ngrok http --url=your-team.ngrok-free.dev 8000
+python scripts/smoke.py https://your-team.ngrok-free.dev
 ```
 
 Then give the app the tunnel URL in either of these ways:
 
-- In Xcode, open Scheme > Run > Arguments and add `-serverBaseURL https://<name>.trycloudflare.com`.
-- Use the settings field from step 2.
+- At build time: `SERVER_BASE_URL = https:/$()/your-team.ngrok-free.dev` in `ios/Config/Signing.local.xcconfig` (git-ignored).
+- At run time: the settings field from step 2, or Scheme > Run > Arguments `-serverBaseURL https://your-team.ngrok-free.dev`.
 
 `http://localhost` is deliberately rejected, so always use the tunnel.
 
@@ -116,8 +115,9 @@ To check it worked, select Morgan and confirm `store.dataMode == .live` and that
 
 ## 7. Still waiting on others
 
-- **Eric (Developer C):** the offline bundle for `Resources/Demo/`. Until it's added, `DemoRepository` reports `bundleMissing` and the app falls back to `DemoData`.
+- ~~**Eric (Developer C):** the offline bundle~~ — done: `Resources/Demo/` is committed and kept in sync by `test_ios_bundle_matches_the_generated_export`.
 - **Gemini key:** goes only in the git-ignored `backend/.env`. No iOS changes are needed; decisions just switch from `rules` to `ai`.
+- **Demo key (optional):** if the server sets `DEMO_KEY`, put the same value in `Signing.local.xcconfig` as `DEMO_KEY`; the app sends it as `X-Demo-Key`.
 
 Questions about the contract or engine: ask Kevin. Questions about the bundle: ask Eric.
 
@@ -131,5 +131,5 @@ Questions about the contract or engine: ask Kevin. Questions about the bundle: a
   - `LiveStatusRow` shows a spinner while loading and Retry after a retryable failure.
 - **Server URL:** built-in default `AppStore.defaultServerBaseURL` (the team's fixed ngrok domain; see [RUNBOOK.md](RUNBOOK.md) and `backend/scripts/serve_demo.sh`). Override in Explore › Modeling assumptions › Live calculation, or with `-serverBaseURL https://…`. Requests send `ngrok-skip-browser-warning`.
 - **Preview without a bundle (DEBUG):** `-evaluationFixtures /path/to/contracts/examples` loads `evaluate-<profile>.response.json` as the saved result.
-- **End to end:** verified through `https://coral-sandbox-apron.ngrok-free.dev` (`smoke.py` RESULT: OK; a fresh simulator install shows "Live calculation" with no setup). Start it with `backend/scripts/serve_demo.sh coral-sandbox-apron.ngrok-free.dev`. The bundle is still waiting on Eric's `fixtures/decisions.json`.
+- **End to end:** verified through the team's fixed ngrok domain (`smoke.py` RESULT: OK). Start it with `backend/scripts/serve_demo.sh your-team.ngrok-free.dev` and set the same domain in `Signing.local.xcconfig`. The offline bundle is committed in `Resources/Demo/`; `backend/tests/test_export.py::test_ios_bundle_matches_the_generated_export` fails if it drifts from `backend/fixtures/generated/`.
 - `test_openapi_is_current` fails on newer Starlette only because the 413/422 reason phrases were renamed. That is not a contract change.

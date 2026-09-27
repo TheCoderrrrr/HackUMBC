@@ -138,6 +138,7 @@
         "template_key": "maintain_debt_minimum",
         "facts": {
           "debt_id": "jordan-student",
+          "debt_type": "student_loan",
           "balance_cents": 1500000,
           "apr_rate": 0.04,
           "minimum_payment_cents": 20000,
@@ -2546,6 +2547,10 @@
           "cash_cents": 145360497,
           "debt_cents": 0
         }
+      ],
+      "warnings": [
+        "SIMPLIFIED_TAX_ESTIMATE",
+        "UNASSIGNED_SURPLUS"
       ]
     },
     "adaptive": {
@@ -4872,6 +4877,10 @@
           "cash_cents": 145360473,
           "debt_cents": 0
         }
+      ],
+      "warnings": [
+        "SIMPLIFIED_TAX_ESTIMATE",
+        "UNASSIGNED_SURPLUS"
       ]
     },
     "custom": null

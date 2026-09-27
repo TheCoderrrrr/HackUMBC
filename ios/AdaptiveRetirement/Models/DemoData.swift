@@ -15,12 +15,16 @@ enum DataMode: String {
     case saved = "Saved demo calculation"
     case live = "Live calculation"
     case lastLive = "Last live calculation"
+    /// Hand-typed fixture values with no engine calculation behind them (REPORT B1).
+    case preview = "Illustrative preview"
 }
 
 enum DecisionOrigin: String {
     case ai = "AI-assisted priorities"
     case rules = "Rules fallback"
     case savedAI = "Saved AI-assisted priorities"
+    /// No decision produced these values; they are hand-typed fixtures (REPORT B1).
+    case none = "Not calculated yet"
 }
 
 struct Debt: Identifiable, Hashable {
@@ -138,7 +142,7 @@ extension Profile {
             checks: [("Full employer match preserved", true), ("Living costs covered", true),
                      ("Starter reserve funded", true), ("Card minimum paid", true)]
         ),
-        origin: .savedAI
+        origin: .none
     )
 
     static let jordan = Profile(
@@ -175,7 +179,7 @@ extension Profile {
             tradeoff: "Paying the 4% loan faster would reduce interest slightly but is unlikely to outpace long-term saving.",
             checks: [("Full employer match preserved", true), ("Living costs covered", true), ("Loan minimum paid", true)]
         ),
-        origin: .savedAI
+        origin: .none
     )
 
     static let casey = Profile(
@@ -211,7 +215,46 @@ extension Profile {
             tradeoff: "A higher balance does not by itself indicate retirement adequacy.",
             checks: [("Full employer match preserved", true), ("Living costs covered", true)]
         ),
-        origin: .savedAI
+        origin: .none
+    )
+
+    /// The cash-first demonstration variant (BACKEND.md §12): Morgan's inputs with a
+    /// `cash_security` planning preference and a saved, reviewed AI decision. Not in `all` —
+    /// reached from the profile picker's demonstration link (REPORT B7).
+    static let morganCashSecurity = Profile(
+        id: "morgan-cash-security", name: "Morgan", initials: "M",
+        subtitle: "Cash-first preference",
+        age: 35, retirementAge: 67,
+        annualSalaryCents: 8_400_000, monthlyTakeHomeCents: 480_000, monthlyLivingCents: 360_000,
+        retirementBalanceCents: 3_500_000, emergencyCashCents: 360_000, emergencyMonths: 1.0,
+        starterTargetMonths: 1, fullTargetMonths: 3,
+        debts: [Debt(id: "morgan-card", name: "Credit card", balanceCents: 1_800_000, apr: 0.25,
+                     minimumCents: 40_000, extraCents: 96_380)],
+        currentEmployeeRate: 0.08, adaptiveEmployeeRate: 0.05,
+        employeeMonthlyCents: 35_000, employerMonthlyCents: 35_000, takeHomeCostCents: 27_300,
+        matchCaptured: true,
+        primaryActionTitle: "Pay $963.80 extra toward your credit card",
+        primaryActionDetail: "A saved AI decision kept the 25% APR card ahead of the full reserve, even with a cash-first preference.",
+        primaryActionAmountCents: 96_380,
+        cashPriorities: [
+            CashPriority(id: "ret", kind: .retirement, title: "Retirement cost", amountCents: 27_300),
+            CashPriority(id: "debt", kind: .debt, title: "Additional debt payment", amountCents: 96_380),
+            CashPriority(id: "emg", kind: .emergency, title: "Emergency savings", amountCents: 0),
+            CashPriority(id: "rem", kind: .remaining, title: "Remaining cash", amountCents: 0)
+        ],
+        equityWeight: 0.90,
+        explanation: Explanation(
+            headline: "Cash-first, but the card still wins",
+            narrative: "With a cash-first preference the default order would build the full reserve before extra debt payments. The saved AI decision kept the 25% APR card ahead of the larger reserve: each extra dollar there removes more cost than the cushion is worth while the card balance lasts.",
+            priorities: ["Starter reserve", "Pay down 25% APR card", "Build three-month reserve"],
+            facts: [
+                ExplanationFact(label: "Planning preference", value: "Cash security"),
+                ExplanationFact(label: "Extra card payment", value: "$963.80")
+            ],
+            tradeoff: "The full three-month reserve builds later than a cash-first default would.",
+            checks: [("Starter reserve funded first", true), ("Full employer match preserved", true)]
+        ),
+        origin: .none
     )
 
     static let all: [Profile] = [.morgan, .jordan, .casey]

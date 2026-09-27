@@ -2,9 +2,12 @@ import SwiftUI
 
 /// Modeling assumptions and limitations behind every projection.
 struct AssumptionsSheet: View {
-    private let model = ModelAssumptions.illustrative
+    @EnvironmentObject private var store: AppStore
 
     var body: some View {
+        // The response's own assumptions when a calculation is loaded; the Swift copy is
+        // the offline fallback (REPORT B6).
+        let model = AssumptionValues(store.evaluationLoad.current?.evaluation.assumptions)
         SheetScaffold(title: "Assumptions", subtitle: "Illustrative and nominal. Not forecasts.") {
             VStack(alignment: .leading, spacing: 0) {
                 ServerSection()
@@ -22,17 +25,18 @@ struct AssumptionsSheet: View {
                 ])
 
                 AssumptionSection(title: "Planning rules", rows: [
-                    ("High-interest debt", "Over \(pct(model.highInterestAPRThreshold)) APR"),
+                    // The engine's threshold is inclusive: APR >= 10% (state.py).
+                    ("High-interest debt", "At least \(pct(model.highInterestAPRThreshold)) APR"),
                     ("Total saving target", pct(model.retirementTotalSavingTarget)),
-                    ("Starter reserve", months(model.starterReserveMonths)),
-                    ("Full reserve", months(model.fullReserveMonths)),
+                    ("Starter reserve", SheetCopy.months(model.starterReserveMonths)),
+                    ("Full reserve", SheetCopy.months(model.fullReserveMonths)),
                     ("Critical reserve cap", Money.whole(model.criticalReserveCapCents))
                 ])
 
                 AssumptionSection(title: "Stock allocation", note: Disclosure.allocationLabel, rows: model.glidePath.map { anchor in
-                    (anchor.yearsToRetirement == 0 ? "At retirement"
-                        : anchor.yearsToRetirement >= 30 ? "30+ years out" : "\(anchor.yearsToRetirement) years out",
-                     pct(anchor.equityWeight))
+                    (anchor.years == 0 ? "At retirement"
+                        : anchor.years >= 30 ? "30+ years out" : "\(Int(anchor.years)) years out",
+                     pct(anchor.equity))
                 })
 
                 SheetSectionTitle("Limitations")
@@ -57,7 +61,63 @@ struct AssumptionsSheet: View {
     }
 
     private func pct(_ value: Double) -> String { SheetCopy.percent(value) }
-    private func months(_ count: Int) -> String { count == 1 ? "1 month" : "\(count) months" }
+}
+
+/// Display-ready assumptions: the evaluation response's `assumptions` when a calculation
+/// is loaded, otherwise the bundled illustrative copy (REPORT B6).
+private struct AssumptionValues {
+    let returnsNetOfFees: Bool
+    let annualEquityReturn: Double
+    let annualBondReturn: Double
+    let annualCashReturn: Double
+    let annualInflation: Double
+    let annualSalaryGrowth: Double
+    let annualLivingCostGrowth: Double
+    let annualEmployeeLimitGrowth: Double
+    let highInterestAPRThreshold: Double
+    let retirementTotalSavingTarget: Double
+    let criticalReserveCapCents: Int64
+    let starterReserveMonths: Double
+    let fullReserveMonths: Double
+    let glidePath: [(years: Double, equity: Double)]
+    let limitations: [String]
+
+    init(_ api: API.ModelAssumptions?) {
+        if let api {
+            returnsNetOfFees = api.returnsNetOfFees
+            annualEquityReturn = api.annualEquityReturn
+            annualBondReturn = api.annualBondReturn
+            annualCashReturn = api.annualCashReturn
+            annualInflation = api.annualInflation
+            annualSalaryGrowth = api.annualSalaryGrowth
+            annualLivingCostGrowth = api.annualLivingCostGrowth
+            annualEmployeeLimitGrowth = api.annualEmployeeLimitGrowth
+            highInterestAPRThreshold = api.highInterestAprThreshold
+            retirementTotalSavingTarget = api.retirementTotalSavingTarget
+            criticalReserveCapCents = api.criticalReserveCapCents
+            starterReserveMonths = api.starterReserveMonths
+            fullReserveMonths = api.fullReserveMonths
+            glidePath = api.glidePath.map { (years: $0.yearsToRetirement, equity: $0.equityWeight) }
+            limitations = api.limitations
+        } else {
+            let local = ModelAssumptions.illustrative
+            returnsNetOfFees = local.returnsNetOfFees
+            annualEquityReturn = local.annualEquityReturn
+            annualBondReturn = local.annualBondReturn
+            annualCashReturn = local.annualCashReturn
+            annualInflation = local.annualInflation
+            annualSalaryGrowth = local.annualSalaryGrowth
+            annualLivingCostGrowth = local.annualLivingCostGrowth
+            annualEmployeeLimitGrowth = local.annualEmployeeLimitGrowth
+            highInterestAPRThreshold = local.highInterestAPRThreshold
+            retirementTotalSavingTarget = local.retirementTotalSavingTarget
+            criticalReserveCapCents = local.criticalReserveCapCents
+            starterReserveMonths = Double(local.starterReserveMonths)
+            fullReserveMonths = Double(local.fullReserveMonths)
+            glidePath = local.glidePath.map { (years: Double($0.yearsToRetirement), equity: $0.equityWeight) }
+            limitations = local.limitations
+        }
+    }
 }
 
 private struct AssumptionSection: View {
@@ -87,11 +147,14 @@ private struct AssumptionSection: View {
     }
 }
 
-/// Server URL for live calculations (the Cloudflare tunnel). HTTPS only; empty uses saved data.
+/// Server URL for live calculations (the ngrok tunnel). HTTPS only; empty uses saved data.
 private struct ServerSection: View {
     @EnvironmentObject private var store: AppStore
     @State private var text = ""
     @State private var rejected = false
+    /// From `/health`: whether this server can run the AI steps. nil until it answers, or for
+    /// an older server that doesn't report it.
+    @State private var aiAvailable: Bool?
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -116,11 +179,13 @@ private struct ServerSection: View {
                     .onSubmit(save)
                     .frame(minHeight: 44)
                     .accessibilityLabel("Server address")
-                Button(text == store.serverBaseURL ? "Saved" : "Save", action: save)
+                // With the saved URL in the field this becomes Reconnect, so there's always
+                // a way to force a fresh request from this sheet (REPORT E4).
+                Button(text == store.serverBaseURL ? "Reconnect" : "Save",
+                       action: text == store.serverBaseURL ? reconnect : save)
                     .font(.geist(15, .medium, relativeTo: .callout))
                     .foregroundStyle(Palette.accent)
                     .buttonStyle(PressableStyle())
-                    .disabled(text == store.serverBaseURL)
                     .frame(minHeight: 44)
             }
             .padding(.top, 8)
@@ -134,10 +199,18 @@ private struct ServerSection: View {
                 }
             }
             .frame(minHeight: 44)
+            if let aiAvailable, !rejected {
+                Text(aiAvailable ? "AI: available on this server"
+                                 : "AI: not configured on this server (plans use the rules order)")
+                    .font(.geist(13, .regular, relativeTo: .footnote))
+                    .foregroundStyle(Palette.textCaption)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Hairline(color: Palette.hairlineStrong)
                 .padding(.top, 8)
         }
         .onAppear { text = store.serverBaseURL }
+        .task(id: store.serverGeneration) { await checkAI() }
         .onChange(of: text) { _, _ in rejected = false }
     }
 
@@ -145,5 +218,17 @@ private struct ServerSection: View {
         focused = false
         rejected = !store.setServerBaseURL(text)
         if !rejected { text = store.serverBaseURL }
+    }
+
+    private func reconnect() {
+        focused = false
+        store.refreshEvaluation()
+        Task { await checkAI() }
+    }
+
+    private func checkAI() async {
+        aiAvailable = nil
+        guard let client = store.apiClient else { return }
+        aiAvailable = try? await client.health().aiAvailable
     }
 }

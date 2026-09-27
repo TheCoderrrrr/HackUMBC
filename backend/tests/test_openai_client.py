@@ -116,22 +116,39 @@ def test_pipeline_labels_openai_failures(morgan):
 # --- configuration ---------------------------------------------------------------------------
 
 
+AI_ENV_VARS = (
+    "AI_ENABLED", "AI_PROVIDER", "AI_MODEL", "OPENAI_API_KEY", "GEMINI_API_KEY",
+    "AI_REASONING_EFFORT", "AI_THINKING_LEVEL", "AI_TOTAL_TIMEOUT_SECONDS", "AI_PROMPT_VERSION",
+)
+
+
 def settings_env(monkeypatch, **env):
-    for name in ("AI_PROVIDER", "AI_MODEL", "OPENAI_API_KEY", "GEMINI_API_KEY", "AI_REASONING_EFFORT"):
+    # Clear every AI variable so the developer's shell (and nothing else) can't leak in
+    # (REPORT C7; `AI_ENABLED=false pytest` used to fail the availability test).
+    for name in AI_ENV_VARS:
         monkeypatch.delenv(name, raising=False)
     for name, value in env.items():
         monkeypatch.setenv(name, value)
     return load_settings()
 
 
-def test_default_provider_is_openai_gpt_6_luna(monkeypatch):
+def test_settings_ignore_the_real_env_file(monkeypatch):
+    # REPORT C7: app.config no longer loads backend/.env at import, so settings reflect
+    # only the process environment — a developer's .env or shell can't leak into tests.
+    for name in AI_ENV_VARS:
+        monkeypatch.delenv(name, raising=False)
+    assert load_settings().ai_available is False
+
+
+def test_default_provider_is_gemini_flash_lite(monkeypatch):
+    # Team decision (REPORT C1): Gemini by default — both AI calls fit the 4 s budget.
     s = settings_env(monkeypatch)
-    assert (s.ai_provider, s.ai_model, s.ai_reasoning_effort) == ("openai", "gpt-6-luna", "low")
+    assert (s.ai_provider, s.ai_model, s.ai_thinking_level) == ("gemini", "gemini-3.5-flash-lite", "minimal")
 
 
-def test_gemini_provider_defaults_to_gemini_model(monkeypatch):
-    s = settings_env(monkeypatch, AI_PROVIDER="gemini")
-    assert s.ai_model == "gemini-3.5-flash-lite"
+def test_openai_provider_defaults_to_gpt_6_luna(monkeypatch):
+    s = settings_env(monkeypatch, AI_PROVIDER="openai")
+    assert (s.ai_model, s.ai_reasoning_effort) == ("gpt-6-luna", "low")
 
 
 def test_ai_available_checks_the_selected_providers_key(monkeypatch):

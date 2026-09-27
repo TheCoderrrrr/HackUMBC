@@ -5,7 +5,6 @@ decision ID plus a matching profile ID permits comparison. No persistence.
 """
 from __future__ import annotations
 
-import secrets
 import threading
 import time
 from collections import OrderedDict
@@ -20,10 +19,6 @@ class DecisionSnapshot:
     profile_hash: str
     fields: dict[str, Scalar]
     stored_at: float = field(default=0.0)
-
-
-def new_decision_id() -> str:
-    return "dec_" + secrets.token_urlsafe(18)
 
 
 def snapshot_fields(profile: FinancialProfile, core: EvaluationCore, decision: DecisionSummary) -> dict[str, Scalar]:

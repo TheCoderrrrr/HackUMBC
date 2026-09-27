@@ -141,7 +141,7 @@ struct PlanView: View {
             }
             .padding(.bottom, Space.l)
 
-            Footnote(text: PlanCopy.debtNote(debt))
+            Footnote(text: PlanCopy.debtNote(for: profile, debt: debt))
         }
     }
 
@@ -228,7 +228,7 @@ struct PlanView: View {
 
 // MARK: - Palette
 
-private enum PlanPalette {
+enum PlanPalette {
     /// Employer match: a paler, cooler green beside "You".
     static let employer = [Color(hex: 0x7FC98A), Color(hex: 0x5EA36C), Color(hex: 0x3A5E42)]
     /// Required minimum: muted, so the extra payment reads as the decision.
@@ -237,6 +237,8 @@ private enum PlanPalette {
 }
 
 // MARK: - Pieces
+// HeroFigure, StatusChip, SegmentedBand, StatBlock, Footnote and PlanPalette are shared with
+// the Funds tab; the rest are Plan-only.
 
 /// A 19 pt Medium section title with a trailing **Why?** link.
 private struct PlanSectionHeader: View {
@@ -266,7 +268,7 @@ private struct PlanSectionHeader: View {
 }
 
 /// The section's single large figure.
-private struct HeroFigure: View {
+struct HeroFigure: View {
     let text: String
     var size: CGFloat = 52
 
@@ -282,7 +284,7 @@ private struct HeroFigure: View {
 }
 
 /// Small capsule status: "✓ Full match", "25% APR".
-private struct StatusChip: View {
+struct StatusChip: View {
     var symbol: String? = nil
     let text: String
     var tint: Color = Palette.accent
@@ -304,7 +306,7 @@ private struct StatusChip: View {
 }
 
 /// A proportional band whose segments carry their own label and amount.
-private struct SegmentedBand: View {
+struct SegmentedBand: View {
     struct Segment: Identifiable {
         var id: String { label }
         let label: String
@@ -362,7 +364,7 @@ private struct SegmentedBand: View {
 }
 
 /// Figure with a quiet unit and caption beneath.
-private struct StatBlock: View {
+struct StatBlock: View {
     let value: String
     let unit: String?
     let caption: String
@@ -503,7 +505,7 @@ private struct LegendFigure: View {
 }
 
 /// Supporting sentence set small and quiet.
-private struct Footnote: View {
+struct Footnote: View {
     let text: String
 
     var body: some View {
@@ -536,16 +538,32 @@ enum PlanCopy {
         debt.name == "Credit card" ? "Credit card debt" : debt.name
     }
 
-    static func debtNote(_ debt: Debt) -> String {
-        debt.extraCents > 0
+    /// What follows high-APR debt in the validated priority order drives the note, so the
+    /// copy can't contradict the engine's decision (REPORT B3).
+    static func debtNote(for profile: Profile, debt: Debt) -> String {
+        if let order = profile.evaluation?.decisionSummary.orderedPriorities,
+           let debtIndex = order.firstIndex(of: .highAprDebt) {
+            switch order.dropFirst(debtIndex + 1).first {
+            case .starterReserve:
+                return "After this debt is paid off, build your starter reserve next."
+            case .fullReserve:
+                return "After this debt is paid off, rebuild savings before increasing contributions."
+            case nil:
+                return "After this debt is paid off, contributions can increase."
+            case .highAprDebt:
+                break  // unreachable: priorities are unique
+            }
+        }
+        return debt.extraCents > 0
             ? "After this debt is paid off, rebuild savings before increasing contributions."
             : "At \(OverviewCopy.percent(debt.apr)) APR, the minimum payment keeps this on schedule without slowing saving."
     }
 
-    /// "Sep 2028" from Explore's illustrative timeline, when it marks this plan's payoff.
+    /// The payoff date only when it comes from the engine's adaptive projection; otherwise
+    /// the stat is hidden — never a hard-coded date (REPORT B5).
     static func debtCleared(for profile: Profile, debt: Debt) -> String? {
         guard debt.extraCents > 0,
-              let month = ExploreTimeline.illustrative(for: profile).milestones.first(where: { $0.title == "Debt cleared" })?.month
+              let month = profile.evaluation?.projections.adaptive.debtFreeMonth, month > 0
         else { return nil }
         return ExploreTimeline.label(forMonth: month)
     }

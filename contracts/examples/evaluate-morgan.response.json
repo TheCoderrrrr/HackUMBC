@@ -111,6 +111,7 @@
         "template_key": "high_apr_debt",
         "facts": {
           "debt_id": "morgan-card",
+          "debt_type": "credit_card",
           "balance_cents": 1800000,
           "apr_rate": 0.25,
           "minimum_payment_cents": 40000,
@@ -2507,6 +2508,10 @@
           "cash_cents": 64316669,
           "debt_cents": 0
         }
+      ],
+      "warnings": [
+        "SIMPLIFIED_TAX_ESTIMATE",
+        "UNASSIGNED_SURPLUS"
       ]
     },
     "adaptive": {
@@ -4833,13 +4838,16 @@
           "cash_cents": 61817577,
           "debt_cents": 0
         }
+      ],
+      "warnings": [
+        "SIMPLIFIED_TAX_ESTIMATE",
+        "UNASSIGNED_SURPLUS"
       ]
     },
     "custom": null
   },
   "warnings": [
-    "SIMPLIFIED_TAX_ESTIMATE",
-    "UNASSIGNED_SURPLUS"
+    "SIMPLIFIED_TAX_ESTIMATE"
   ],
   "decision_summary": {
     "decision_id": "dec_example",
@@ -4906,7 +4914,7 @@
   },
   "explanation": {
     "state_summary": "Monthly resources before retirement contributions are $5,236.80; required debt payments are $400.00, and emergency cash covers 1 month of living expenses.",
-    "narrative": "Pay $1,363.80 on debt morgan-card at 25% APR, including $963.80 beyond the $400.00 required payment.",
+    "narrative": "Pay $1,363.80 on your credit card at 25% APR, including $963.80 beyond the $400.00 required payment.",
     "source": "template",
     "changes": []
   }

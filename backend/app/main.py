@@ -3,8 +3,11 @@ from __future__ import annotations
 
 import logging
 import time
+from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
+from fastapi.middleware.gzip import GZipMiddleware
 
 from app.ai.client import StructuredModel, build_model
 from app.ai.pipeline import EvaluationPipeline
@@ -28,6 +31,9 @@ def create_app(settings: Settings | None = None, model: StructuredModel | None =
         model = build_model(settings)
 
     app = FastAPI(title="Adaptive Retirement Management (ARM) API", version="1.0.0")
+    # Evaluations are 110–190 KB of monthly points and gzip ~85–90%; that headroom keeps
+    # tunnel + cellular transfers well inside the app's 8 s timeout (REPORT A6).
+    app.add_middleware(GZipMiddleware, minimum_size=1024)
     app.state.settings = settings
     app.state.evaluate_limiter = RateLimiter(settings.evaluations_per_minute)
     app.state.pipeline = EvaluationPipeline(
@@ -39,9 +45,25 @@ def create_app(settings: Settings | None = None, model: StructuredModel | None =
 
     @app.middleware("http")
     async def guard_and_log(request: Request, call_next):
+        # When DEMO_KEY is set, /v1/* requires the shared header — the tunnel URL is
+        # public, and every evaluation can spend the team's AI budget (REPORT C2).
+        # /health stays open for smoke checks.
+        if settings.demo_key and request.url.path.startswith("/v1/"):
+            if request.headers.get("x-demo-key") != settings.demo_key:
+                return envelope(401, "INVALID_DEMO_KEY",
+                                "This demo server requires a key. Check the app's build settings.")
         length = request.headers.get("content-length")
         if length and length.isdigit() and int(length) > settings.max_body_bytes:
             return envelope(413, "PAYLOAD_TOO_LARGE", "Request body is larger than 128 KiB.")
+        if request.method in ("POST", "PUT", "PATCH") and not (length and length.isdigit()):
+            # A chunked request carries no Content-Length and would skip the limit, so
+            # cap the read (REPORT C8). Starlette hands the buffered body to the route.
+            body = bytearray()
+            async for chunk in request.stream():
+                body.extend(chunk)
+                if len(body) > settings.max_body_bytes:
+                    return envelope(413, "PAYLOAD_TOO_LARGE", "Request body is larger than 128 KiB.")
+            request._body = bytes(body)
         started = time.perf_counter()
         try:
             response = await call_next(request)
@@ -63,4 +85,8 @@ def create_app(settings: Settings | None = None, model: StructuredModel | None =
 
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+
+# Secrets and settings come from backend/.env at app startup — not at app.config
+# import time, so tests never read the developer's real .env (REPORT C7).
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 app = create_app()

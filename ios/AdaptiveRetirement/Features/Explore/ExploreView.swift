@@ -14,6 +14,9 @@ struct ExploreView: View {
     @State private var isScrolled = !ScreenHeaderScroll.isTrackable
     /// Live custom-scenario result from "Compare scenario"; cleared when the draft or profile changes.
     @State private var customResult: API.Evaluation?
+    /// The scenario behind `customResult`, so Scenario history saves exactly what is shown.
+    @State private var customScenario: API.Scenario?
+    @StateObject private var history = HistoryModel()
 
     private var timeline: ExploreTimeline { .illustrative(for: store.displayProfile) }
     private var selectedMonth: Int { Int(month.rounded()) }
@@ -34,11 +37,18 @@ struct ExploreView: View {
                     Hairline(color: Palette.hairlineStrong)
                         .padding(.top, 17)
                         .padding(.bottom, 18)
-                    ScenarioControls(profile: store.displayProfile, draft: $draft, result: $customResult)
+                    ScenarioControls(profile: store.displayProfile, draft: $draft, result: $customResult,
+                                     resultScenario: $customScenario)
                     Hairline(color: Palette.hairlineStrong)
                         .padding(.top, 19)
                         .padding(.bottom, 20)
                     OutcomeRows(evaluation: store.displayProfile.evaluation, custom: customResult)
+                    Hairline(color: Palette.hairlineStrong)
+                        .padding(.top, 19)
+                        .padding(.bottom, 20)
+                    ScenarioHistorySection(model: history, profile: store.displayProfile,
+                                           scenarioResult: customResult,
+                                           scenario: customResult == nil ? nil : customScenario)
                     Button { store.sheet = .assumptions } label: {
                         Label("Modeling assumptions", systemImage: "slider.horizontal.3")
                     }
@@ -290,6 +300,7 @@ struct ExploreView: View {
         month = 0
         draft = .original(for: store.displayProfile)
         customResult = nil
+        customScenario = nil
     }
 
     private static var debugScrollAnchor: UnitPoint? {

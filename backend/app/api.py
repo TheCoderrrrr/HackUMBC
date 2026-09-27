@@ -20,6 +20,7 @@ def health(request: Request) -> Health:
         model_version=engine.MODEL_VERSION,
         policy_version=engine.POLICY_VERSION,
         plaid_enabled=request.app.state.settings.plaid_enabled,
+        ai_available=request.app.state.settings.ai_available,
     )
 
 
@@ -28,9 +29,14 @@ def demo_profiles() -> DemoProfiles:
     return DemoProfiles(schema_version=SCHEMA_VERSION, profiles=engine.load_demo_profiles())
 
 
+def _client_key(request: Request) -> str:
+    """Rate-limit bucket: the demo key when present, otherwise the caller's IP (C2)."""
+    return request.headers.get("x-demo-key") or (request.client.host if request.client else "unknown")
+
+
 @router.post("/v1/evaluate", response_model=Evaluation, responses=_ERRORS)
 def evaluate(body: EvaluateRequest, request: Request) -> Evaluation:
-    if not request.app.state.evaluate_limiter.allow():
+    if not request.app.state.evaluate_limiter.allow(_client_key(request)):
         raise ApiError(429, "RATE_LIMITED", "Too many evaluations. Try again in a minute.", retryable=True)
     if body.scenario and body.scenario.retirement_age <= body.profile.age:
         raise ApiError(422, "INVALID_REQUEST", "Scenario retirement age must be greater than current age.",

@@ -160,7 +160,8 @@ struct HeaderAvatarButton: View {
         } label: {
             AvatarView(profile: store.profile, size: 40)
                 .padding(3)
-                .glassSurface(Circle(), interactive: true)
+                // Non-interactive glass: interactive glass on a tappable label swallows the tap.
+                .glassSurface(Circle(), interactive: false)
         }
         .accessibilityLabel("\(store.profile.name), account menu")
     }
@@ -204,7 +205,9 @@ private struct PrimaryFill: ViewModifier {
 
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *), !reduceTransparency {
-            content.glassEffect(.regular.tint(Palette.accentStrong).interactive(), in: Capsule())
+            // Not .interactive(): interactive glass on a button label takes the touch, so the
+            // action never fires. Press feedback comes from the style's scale effect.
+            content.glassEffect(.regular.tint(Palette.accentStrong), in: Capsule())
         } else {
             content.background {
                 Capsule()
@@ -235,7 +238,8 @@ struct SecondaryButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity, minHeight: 50)
             .background {
                 if bordered {
-                    Capsule().fill(.clear).glassCapsule()
+                    // Button label: the glass must not be interactive, or it swallows the tap.
+                    Capsule().fill(.clear).glassCapsule(interactive: false)
                 }
             }
             .opacity(configuration.isPressed ? 0.7 : 1)
@@ -383,7 +387,19 @@ struct LiveStatusRow: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: Space.s) {
-            DataModeBadge(mode: store.dataMode)
+            VStack(alignment: .leading, spacing: 2) {
+                DataModeBadge(mode: store.dataMode)
+                #if DEBUG
+                // Which host this build is actually talking to, so testers can tell (REPORT A2).
+                Text(store.serverBaseURL.isEmpty
+                     ? "no server configured"
+                     : URL(string: store.serverBaseURL)?.host ?? store.serverBaseURL)
+                    .font(TypeScale.caption)
+                    .foregroundStyle(Palette.textCaption)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                #endif
+            }
             if store.evaluationLoad.isLoading {
                 ProgressView()
                     .controlSize(.small)
@@ -391,7 +407,14 @@ struct LiveStatusRow: View {
                     .accessibilityLabel("Updating live calculation")
             }
             Spacer(minLength: 0)
-            if store.retryableError != nil {
+            if let failure = store.evaluationFailure {
+                // Every failure is visible and manually retryable, not just retryable ones (B10).
+                Text(failure.message)
+                    .font(TypeScale.caption)
+                    .foregroundStyle(Palette.textCaption)
+                    .multilineTextAlignment(.trailing)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 Button {
                     store.refreshEvaluation()
                 } label: {
@@ -402,7 +425,7 @@ struct LiveStatusRow: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PressableStyle())
-                .accessibilityHint("Couldn't reach the server. Showing the previous result.")
+                .accessibilityHint("Showing the previous result.")
             }
         }
         .animation(Motion.select, value: store.evaluationLoad.isLoading)
@@ -561,8 +584,10 @@ extension View {
         glassSurface(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous), tint: tint)
     }
 
-    /// Liquid Glass capsule, interactive by default (chips, pills, small buttons).
-    func glassCapsule(tint: Color? = nil, interactive: Bool = true) -> some View {
+    /// Liquid Glass capsule, non-interactive by default. Interactive glass on a button
+    /// label takes the touch and the action never fires (iOS 26), so only opt in on
+    /// non-button decorations.
+    func glassCapsule(tint: Color? = nil, interactive: Bool = false) -> some View {
         glassSurface(Capsule(), tint: tint, interactive: interactive)
     }
 }

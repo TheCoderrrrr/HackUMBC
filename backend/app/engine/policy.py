@@ -63,7 +63,14 @@ _UNSUPPORTED_CLAIM = re.compile(
 
 def _unsupported_rationale_claim(text: str, profile: Mapping[str, object]) -> bool:
     """Provider prose must be qualitative; Python owns amounts and personal facts."""
-    if _NUMERIC_PROSE.search(text) or _UNSUPPORTED_CLAIM.search(text):
+    if _NUMERIC_PROSE.search(text):
+        return True
+    for match in _UNSUPPORTED_CLAIM.finditer(text):
+        # "a certain buffer" is ordinary English; only certainty claims reject (REPORT C4).
+        if match.group(0).lower() == "certain" and re.search(
+            r"\b(?:a|an)\s+$", text[: match.start()], re.IGNORECASE
+        ):
+            continue
         return True
     return any(
         re.search(rf"\b{re.escape(value)}\b", text, re.IGNORECASE)
@@ -617,7 +624,8 @@ def build_plan(
         else:
             code = "MAINTAIN_DEBT_MINIMUM"
         reason(code, {
-            "debt_id": debt["id"], "balance_cents": debt["opening_balance_cents"],
+            "debt_id": debt["id"], "debt_type": debt["type"],
+            "balance_cents": debt["opening_balance_cents"],
             "apr_rate": debt["apr"],
             "minimum_payment_cents": debt["minimum_payment_cents"],
             "extra_payment_cents": debt["extra_payment_cents"],

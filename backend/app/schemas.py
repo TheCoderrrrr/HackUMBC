@@ -223,6 +223,9 @@ class Projection(Strict):
     starter_reserve_month: int | None
     full_reserve_month: int | None
     points: list[ProjectionPoint]
+    # This projection's own allocator/state warnings (REPORT C3); the evaluation's
+    # top-level warnings cover only state and the opening-month plan.
+    warnings: list[str] = Field(default_factory=list)
 
 
 class Projections(Strict):
@@ -333,6 +336,7 @@ class Health(Strict):
     model_version: str
     policy_version: str
     plaid_enabled: bool
+    ai_available: bool
 
 
 class DemoProfiles(Strict):

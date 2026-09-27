@@ -351,9 +351,12 @@ enum API {
         var starterReserveMonth: Int?
         var fullReserveMonth: Int?
         var points: [ProjectionPoint]
+        /// This projection's own warnings (REPORT C3). Optional so older servers and
+        /// bundles exported before the field existed still decode.
+        var warnings: [String]?
 
         enum CodingKeys: String, CodingKey {
-            case strategy, feasible, points
+            case strategy, feasible, points, warnings
             case retirementAge = "retirement_age"
             case shortfallCents = "shortfall_cents"
             case retirementBalanceNominalCents = "retirement_balance_nominal_cents"
@@ -521,6 +524,9 @@ enum API {
         var modelVersion: String
         var policyVersion: String
         var plaidEnabled: Bool
+        /// Whether the server has credentials for its selected AI provider. Optional so
+        /// older servers without the field still decode.
+        var aiAvailable: Bool?
 
         enum CodingKeys: String, CodingKey {
             case status
@@ -528,6 +534,7 @@ enum API {
             case modelVersion = "model_version"
             case policyVersion = "policy_version"
             case plaidEnabled = "plaid_enabled"
+            case aiAvailable = "ai_available"
         }
     }
 

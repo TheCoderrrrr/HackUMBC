@@ -15,9 +15,28 @@ struct ProfilePickerSheet: View {
                     }
                 }
 
+                // The saved cash-first demonstration (FRONTEND.md §7): Morgan's inputs with a
+                // cash_security preference and a saved, reviewed AI decision (REPORT B7).
+                // Not a fourth customer — the picker still lists the three default profiles.
+                Button {
+                    withAnimation(Motion.select) {
+                        store.select(store.profile.id == Profile.morganCashSecurity.id
+                                     ? .morgan : .morganCashSecurity)
+                    }
+                } label: {
+                    EmphasizedText(store.profile.id == Profile.morganCashSecurity.id
+                                   ? "Back to Morgan’s balanced plan"
+                                   : "See Morgan with a **cash-first** preference — a saved AI demonstration",
+                                   size: 13, style: .footnote, color: Palette.accent, lineSpacing: 2)
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressableStyle(scale: 1, dim: 0.7))
+                .padding(.top, Space.m)
+
                 Button("Explore \(store.profile.name)’s plan") { dismiss() }
                     .buttonStyle(PrimaryButtonStyle())
-                    .padding(.top, Space.xl)
+                    .padding(.top, Space.l)
 
                 Text("Fictional profiles · Synthetic data\nNot affiliated with or endorsed by T. Rowe Price.")
                     .font(.geist(11, .regular, relativeTo: .caption2))

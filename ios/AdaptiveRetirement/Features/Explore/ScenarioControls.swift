@@ -28,6 +28,16 @@ struct ScenarioDraft: Equatable {
     var fixedRate: Double
     var preset: Preset? = .original
 
+    /// The fields that change the request; `preset` is only a chip highlight, so editing a
+    /// control and reverting it no longer sends an identical request (REPORT E2).
+    var requestShape: RequestShape { RequestShape(age: retirementAge, policy: policy, rate: fixedRate) }
+
+    struct RequestShape: Equatable {
+        let age: Int
+        let policy: Policy
+        let rate: Double
+    }
+
     static func original(for profile: Profile) -> ScenarioDraft {
         ScenarioDraft(retirementAge: profile.retirementAge, fixedRate: profile.currentEmployeeRate * 100)
     }
@@ -133,6 +143,9 @@ struct ScenarioControls: View {
     @Binding var draft: ScenarioDraft
     /// Engine result for the compared draft (live, or an exact saved preset).
     @Binding var result: API.Evaluation?
+    /// The scenario behind `result` (the one sent, or the saved preset's), so Scenario history
+    /// can save that result's inputs.
+    var resultScenario: Binding<API.Scenario?> = .constant(nil)
     @State private var comparedDraft: ScenarioDraft?
     @State private var status: String?
     @State private var compareTask: Task<Void, Never>?
@@ -241,9 +254,11 @@ struct ScenarioControls: View {
                         + Text(" years").font(.geist(12, .medium, relativeTo: .caption))
                 } action: { apply(.retireLater) }
                 PresetChip(isSelected: draft.preset == .ratePlusOne) {
-                    Text("Rate ").font(.geist(12, .medium, relativeTo: .caption))
-                        + Text("+1").font(.geist(12, .medium, relativeTo: .caption))
-                        + Text(" pt").font(.geist(12, .medium, relativeTo: .caption))
+                    // The label says what the preset actually is — a fixed rate, which can
+                    // be below the current election (Morgan: 6% vs 8%) — never "+1 pt"
+                    // implying more saving (REPORT B9).
+                    Text("Fixed at \(percent(ratePlusOneRate))")
+                        .font(.geist(12, .medium, relativeTo: .caption))
                 } action: { apply(.ratePlusOne) }
             }
             }
@@ -253,7 +268,7 @@ struct ScenarioControls: View {
         .sensoryFeedback(.selection, trigger: draft)
         .sensoryFeedback(trigger: comparedDraft) { _, new in new != nil ? .impact(weight: .medium) : nil }
         .onChange(of: draft) { _, new in
-            if new != comparedDraft {
+            if new.requestShape != comparedDraft?.requestShape {
                 compareTask?.cancel()
                 compareTask = nil
                 comparedDraft = nil
@@ -269,7 +284,7 @@ struct ScenarioControls: View {
         let compared = draft
         comparedDraft = compared
         result = nil
-        guard compared != .original(for: profile) else {
+        guard compared.requestShape != ScenarioDraft.original(for: profile).requestShape else {
             status = "This is the saved plan. The chart already shows it."
             return
         }
@@ -277,6 +292,7 @@ struct ScenarioControls: View {
             if let preset = compared.preset?.demoPreset,
                let saved = store.savedEvaluation(for: profile.id, preset: preset) {
                 result = saved.evaluation
+                resultScenario.wrappedValue = store.savedArtifact(for: profile.id, preset: preset)?.scenario
                 status = "Saved calculation for this preset."
             } else {
                 status = "Reconnect for a custom scenario. Saved presets still work offline."
@@ -287,18 +303,38 @@ struct ScenarioControls: View {
         let scenario = API.Scenario(retirementAge: compared.retirementAge,
                                     employeeContributionRate: compared.policy == .fixed ? compared.fixedRate / 100 : nil)
         compareTask = Task {
-            defer { if comparedDraft == compared { compareTask = nil } }
+            defer { if comparedDraft?.requestShape == compared.requestShape { compareTask = nil } }
             do {
                 let loaded = try await store.evaluateScenario(scenario)
-                guard !Task.isCancelled, comparedDraft == compared else { return }
+                guard !Task.isCancelled, comparedDraft?.requestShape == compared.requestShape else { return }
                 result = loaded.evaluation
+                resultScenario.wrappedValue = scenario
                 status = loaded.evaluation.projections.custom?.feasible == false
                     ? "This scenario can't be funded as entered. See the outcomes below."
                     : "Live calculation for this scenario."
             } catch {
-                guard !Task.isCancelled, comparedDraft == compared else { return }
-                status = Self.message(for: error)
+                guard !Task.isCancelled, comparedDraft?.requestShape == compared.requestShape else { return }
+                // A transport failure shouldn't hide a saved preset the draft matches:
+                // show it and say so, instead of an error that suggests retrying (A3).
+                if Self.isTransport(error),
+                   let preset = compared.preset?.demoPreset,
+                   let saved = store.savedEvaluation(for: profile.id, preset: preset) {
+                    result = saved.evaluation
+                    resultScenario.wrappedValue = store.savedArtifact(for: profile.id, preset: preset)?.scenario
+                    status = "Offline. Showing the saved calculation for this preset."
+                } else {
+                    status = Self.message(for: error)
+                }
             }
+        }
+    }
+
+    /// Failures where no server answer exists, so a matching saved preset is the better
+    /// result (A3). A `.server` envelope is a real answer (e.g. infeasible) and is shown.
+    private static func isTransport(_ error: Error) -> Bool {
+        switch error as? APIError {
+        case .unreachable, .timedOut, .invalidBaseURL, .unexpectedStatus, .invalidResponse: return true
+        default: return false
         }
     }
 
@@ -307,6 +343,10 @@ struct ScenarioControls: View {
         case .server(_, let body): return body.message
         case .timedOut: return "The calculation took too long. Try again."
         case .unreachable, .invalidBaseURL: return "Reconnect for a custom scenario. Saved presets still work offline."
+        case .unexpectedStatus(let status):
+            return "The server answered with an error (\(status)). Check that the backend is running."
+        case .invalidResponse:
+            return "The server's answer didn't match what the app expects. Check that the backend is up to date."
         default: return "Couldn't calculate this scenario."
         }
     }
@@ -324,15 +364,19 @@ struct ScenarioControls: View {
         Binding { draft.fixedRate } set: { draft.fixedRate = $0; draft.preset = nil }
     }
 
+    /// Matches export_demo.py: the opening Adaptive rate plus one point, held fixed.
+    private var ratePlusOneRate: Double {
+        min(((profile.adaptiveEmployeeRate * 100 + 1) * 2).rounded() / 2, 20)
+    }
+
     private func apply(_ preset: ScenarioDraft.Preset) {
         var next = ScenarioDraft.original(for: profile)
         switch preset {
         case .original: break
         case .retireLater: next.retirementAge = min(profile.retirementAge + 2, 80)
-        // Matches export_demo.py: the opening Adaptive rate plus one point, held fixed.
         case .ratePlusOne:
             next.policy = .fixed
-            next.fixedRate = min(((profile.adaptiveEmployeeRate * 100 + 1) * 2).rounded() / 2, 20)
+            next.fixedRate = ratePlusOneRate
         }
         next.preset = preset
         draft = next
@@ -354,7 +398,8 @@ private struct PresetChip<Label: View>: View {
                 .foregroundStyle(isSelected ? Palette.accent : Palette.textSecondary)
                 .padding(.horizontal, 14)
                 .frame(minHeight: 36)
-                .glassCapsule(tint: isSelected ? Palette.accent : nil)
+                // Non-interactive glass: interactive glass on a button label swallows the tap.
+                .glassCapsule(tint: isSelected ? Palette.accent : nil, interactive: false)
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
         }

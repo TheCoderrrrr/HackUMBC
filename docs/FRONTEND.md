@@ -519,6 +519,8 @@ Projection
       retirement_balance_cents: integer
       cash_cents: integer
       debt_cents: integer
+  warnings: string[]   # this projection's own months; the top-level
+                       # warnings cover state + the opening-month plan only
 
 ModelAssumptions
   annual_equity_return: number
@@ -594,11 +596,11 @@ Keep prior content during refresh with an inline indicator. A changed control do
 
 ## 8. Networking and local backend
 
-The backend runs on a teammate's Mac through a temporary Cloudflare HTTPS tunnel. The iPhone must use the tunnel URL: its own localhost points to the phone.
+The backend runs on a teammate's Mac through an ngrok HTTPS tunnel on a fixed free domain. The iPhone must use the tunnel URL: its own localhost points to the phone.
 
 Connection Settings allows editing the HTTPS base URL without rebuilding. Changing it resets live connection state but preserves bundled profiles. Do not add global App Transport Security exceptions.
 
-Tunnel URLs may change on restart. Quick Tunnels have no uptime guarantee, so saved scenarios are mandatory. [Cloudflare Quick Tunnels](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/)
+The build-time default URL comes from `SERVER_BASE_URL` in `ios/Config/Server.xcconfig` (empty in the repo) via the git-ignored `Signing.local.xcconfig` on the demo host. The free tier has no uptime guarantee, so saved scenarios are mandatory. [ngrok docs](https://ngrok.com/docs)
 
 ## 9. Optional Plaid LinkKit
 

@@ -14,6 +14,14 @@ def _percent(value: float) -> str:
     return f"{value * 100:g}%"
 
 
+# Debts are named by type in prose, never by raw fixture ID ("morgan-card").
+_DEBT_LABELS = {"credit_card": "your credit card", "student_loan": "your student loan"}
+
+
+def _debt_label(facts: Mapping[str, object]) -> str:
+    return _DEBT_LABELS.get(str(facts.get("debt_type")), "your debt")
+
+
 def render_reason(reason: Mapping[str, object]) -> str:
     """Render a documented reason from its structured facts only."""
     code = reason["code"]
@@ -54,7 +62,7 @@ def render_reason(reason: Mapping[str, object]) -> str:
         )
     if code == "HIGH_APR_DEBT":
         return (
-            f"Pay {_dollars(facts['total_payment_cents'])} on debt {facts['debt_id']} "
+            f"Pay {_dollars(facts['total_payment_cents'])} on {_debt_label(facts)} "
             f"at {_percent(facts['apr_rate'])} APR, including "
             f"{_dollars(facts['extra_payment_cents'])} beyond the "
             f"{_dollars(facts['minimum_payment_cents'])} required payment."
@@ -62,7 +70,7 @@ def render_reason(reason: Mapping[str, object]) -> str:
     if code == "MAINTAIN_DEBT_MINIMUM":
         return (
             f"Pay the {_dollars(facts['total_payment_cents'])} required payment "
-            f"on debt {facts['debt_id']}."
+            f"on {_debt_label(facts)}."
         )
     if code == "BUILD_FULL_RESERVE":
         return (
@@ -129,12 +137,13 @@ def template_explanation(
     if changes:
         narrative += " The recorded changes from the prior decision are listed with this evaluation."
     months = state["emergency_months"]
-    month_word = "month" if months == 1 else "months"
+    months_text = f"{months:.1f}".removesuffix(".0")  # one decimal, never "0.952381"
+    month_word = "month" if months_text == "1" else "months"
     state_summary = (
         f"Monthly resources before retirement contributions are "
         f"{_dollars(state['monthly_resources_before_retirement_cents'])}; "
         f"required debt payments are {_dollars(state['monthly_required_debt_payments_cents'])}, "
-        f"and emergency cash covers {months:g} {month_word} of living expenses."
+        f"and emergency cash covers {months_text} {month_word} of living expenses."
     )
     return {
         "state_summary": state_summary,

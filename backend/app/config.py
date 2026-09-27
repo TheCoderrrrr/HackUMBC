@@ -1,24 +1,25 @@
 """Environment configuration (BACKEND.md section 15). Secrets stay in backend/.env.
 
 Invalid values stop startup with one clear ConfigError line instead of a traceback.
+
+`.env` is loaded by the app entry point (app.main) and the scripts that need it,
+never at this module's import — so tests reading settings never see the
+developer's real `.env` (REPORT C7).
 """
 from __future__ import annotations
 
 import logging
 import os
 from dataclasses import dataclass
-from pathlib import Path
-
-from dotenv import load_dotenv
 
 from app.ai.prompts import PROMPT_VERSION
-
-load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 THINKING_LEVELS = {"minimal", "low", "medium", "high"}
 REASONING_EFFORTS = {"none", "minimal", "low", "medium", "high"}
 PROVIDERS = {"openai", "gemini"}
-DEFAULT_MODELS = {"openai": "gpt-6-luna", "gemini": "gemini-3.5-flash-lite"}  # team decision: OpenAI
+# Team decision (REPORT C1): Gemini is the default provider — both AI calls fit the
+# 4-second budget. OpenAI/GPT-6 Luna only fits with AI_REASONING_EFFORT=none.
+DEFAULT_MODELS = {"openai": "gpt-6-luna", "gemini": "gemini-3.5-flash-lite"}
 IOS_TIMEOUT_SECONDS = 8.0
 
 
@@ -33,8 +34,8 @@ class ConfigError(SystemExit):
 class Settings:
     app_env: str = "hackathon"
     ai_enabled: bool = True
-    ai_provider: str = "openai"
-    ai_model: str = "gpt-6-luna"
+    ai_provider: str = "gemini"
+    ai_model: str = "gemini-3.5-flash-lite"
     openai_api_key: str | None = None
     ai_reasoning_effort: str | None = "low"      # OpenAI reasoning models
     gemini_api_key: str | None = None
@@ -44,9 +45,13 @@ class Settings:
     ai_min_explanation_seconds: float = 0.8
     plaid_enabled: bool = False
     max_body_bytes: int = 128 * 1024
-    evaluations_per_minute: int = 120
+    # Per client (demo key or IP), not global — a stranger's traffic can't push the demo
+    # phone into 429, and each caller spends their own share of the AI budget (REPORT C2).
+    evaluations_per_minute: int = 30
     decision_store_size: int = 128
     decision_ttl_seconds: int = 7200
+    # When set, /v1/* requires the X-Demo-Key header. Keep unset for local development.
+    demo_key: str | None = None
 
     @property
     def ai_available(self) -> bool:
@@ -91,7 +96,7 @@ def load_settings() -> Settings:
     thinking = _str("AI_THINKING_LEVEL", "minimal").lower()  # empty -> default; "none" disables
     if thinking not in THINKING_LEVELS | {"none"}:
         raise ConfigError(f"AI_THINKING_LEVEL={thinking!r} must be one of {sorted(THINKING_LEVELS)} or none")
-    provider = _str("AI_PROVIDER", "openai").lower()
+    provider = _str("AI_PROVIDER", "gemini").lower()
     if provider not in PROVIDERS:
         raise ConfigError(f"AI_PROVIDER={provider!r} must be one of {sorted(PROVIDERS)}")
     model = _str("AI_MODEL", DEFAULT_MODELS[provider])
@@ -109,10 +114,12 @@ def load_settings() -> Settings:
         ai_reasoning_effort=effort,
         gemini_api_key=_str("GEMINI_API_KEY", None),
         ai_thinking_level=None if thinking == "none" else thinking,
-        # The whole AI pipeline must finish well inside the iOS request timeout.
-        ai_total_timeout_seconds=_number("AI_TOTAL_TIMEOUT_SECONDS", 4.0, 0.5, IOS_TIMEOUT_SECONDS - 1),
+        # The whole AI pipeline must finish well inside the iOS request timeout, leaving
+        # ~3 s for tunnel + transfer overhead (measured 2–4.5 s end to end, REPORT A6).
+        ai_total_timeout_seconds=_number("AI_TOTAL_TIMEOUT_SECONDS", 4.0, 0.5, IOS_TIMEOUT_SECONDS - 3),
         plaid_enabled=_bool("PLAID_ENABLED", False),
         decision_ttl_seconds=_number("SESSION_TTL_SECONDS", 7200, 60, 86400, cast=int),
+        demo_key=_str("DEMO_KEY", None),
     )
     if settings.plaid_enabled:
         raise ConfigError("PLAID_ENABLED=true is not supported yet; the Plaid adapter is a post-MVP stretch")

@@ -12,7 +12,7 @@ enum OnboardingStep: Int, CaseIterable, Comparable {
 }
 
 enum MainTab: Hashable {
-    case overview, plan, explore
+    case overview, plan, explore, funds
 }
 
 enum ActiveSheet: String, Identifiable {
@@ -24,6 +24,10 @@ enum ActiveSheet: String, Identifiable {
 struct LoadedEvaluation {
     let evaluation: API.Evaluation
     let mode: DataMode
+    /// The exact profile the engine evaluated (sent with the request, or bundled with the
+    /// artifact), so display inputs come from what the engine saw — not the hand-typed
+    /// fixture (REPORT B4). Nil only for DEBUG fixture previews.
+    var apiProfile: API.FinancialProfile? = nil
 
     var origin: DecisionOrigin {
         switch evaluation.decisionSummary.source {
@@ -33,7 +37,7 @@ struct LoadedEvaluation {
     }
 
     func relabeled(_ mode: DataMode) -> LoadedEvaluation {
-        LoadedEvaluation(evaluation: evaluation, mode: mode)
+        LoadedEvaluation(evaluation: evaluation, mode: mode, apiProfile: apiProfile)
     }
 }
 
@@ -67,18 +71,33 @@ final class AppStore: ObservableObject {
     @Published var profile: Profile = .morgan
     @Published var tab: MainTab = .overview
     @Published var sheet: ActiveSheet?
-    @Published var dataMode: DataMode = .saved
     /// Explore's "Drag to a date" hint shows once after onboarding.
     @Published var showsPlayheadHint = true
 
     /// Backend evaluation for `profile`. `.idle` until a bundle or server supplies one.
     @Published private(set) var evaluationLoad: EvaluationLoad = .idle
-    /// Public HTTPS base URL, e.g. the Cloudflare tunnel. Empty means saved data only.
+    /// Public HTTPS base URL, e.g. the ngrok tunnel. Empty means saved data only.
     @Published private(set) var serverBaseURL: String
+    /// Bumped whenever the server changes, so Funds and History reload against the new one.
+    @Published private(set) var serverGeneration = 0
 
     static let serverBaseURLKey = "serverBaseURL"
-    /// Fixed ngrok domain used until someone saves a different URL (or an empty one for saved-only).
-    static let defaultServerBaseURL = "https://coral-sandbox-apron.ngrok-free.dev"
+    /// Build-time default from the `ServerBaseURL` Info.plist key (set by
+    /// `Config/Server.xcconfig`, overridden by the git-ignored `Signing.local.xcconfig`).
+    /// The committed default is empty — saved data only — until someone sets a domain for
+    /// the build or saves one in Explore › Modeling assumptions.
+    static var defaultServerBaseURL: String {
+        (Bundle.main.object(forInfoDictionaryKey: "ServerBaseURL") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    /// Shared demo key from the `DemoKey` Info.plist key (set by `Config/Server.xcconfig`,
+    /// overridden by the git-ignored `Signing.local.xcconfig`). Sent as `X-Demo-Key` when
+    /// the demo server requires it (REPORT C2); the committed default is empty.
+    static var defaultDemoKey: String {
+        (Bundle.main.object(forInfoDictionaryKey: "DemoKey") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
 
     private let demo: DemoRepository
     private var client: APIClient?
@@ -93,7 +112,7 @@ final class AppStore: ObservableObject {
         self.demo = demo
         let url = defaults.string(forKey: Self.serverBaseURLKey) ?? Self.defaultServerBaseURL
         self.serverBaseURL = url
-        self.client = client ?? LiveAPIClient(baseURLString: url)
+        self.client = client ?? LiveAPIClient(baseURLString: url, demoKey: Self.defaultDemoKey)
         #if DEBUG
         applyDebugLaunchArguments()
         #endif
@@ -132,6 +151,7 @@ final class AppStore: ObservableObject {
         case "overview": phase = .main; tab = .overview
         case "plan": phase = .main; tab = .plan
         case "explore": phase = .main; tab = .explore
+        case "funds": phase = .main; tab = .funds
         case "picker": phase = .main; sheet = .profilePicker
         case "snapshot": phase = .main; sheet = .snapshot
         case "explanation": phase = .main; sheet = .explanation
@@ -146,10 +166,33 @@ final class AppStore: ObservableObject {
     /// `DemoData` fixture while `evaluationLoad` is `.idle`.
     var displayProfile: Profile { profile.applying(evaluationLoad.current) }
 
-    /// Retryable failure to surface as a banner; nil while loading or when nothing can be retried.
-    var retryableError: APIError? {
-        guard case .failed(_, let error) = evaluationLoad, let api = error as? APIError, api.isRetryable else { return nil }
-        return api
+    /// Label for what is on screen, derived from the load state so it can never outlive
+    /// its source: a live/saved calculation, or "Illustrative preview" while the screens
+    /// show hand-typed fixture values — including during the first load (REPORT B1).
+    var dataMode: DataMode {
+        switch evaluationLoad {
+        case .idle: return .preview
+        case .loading(let previous), .failed(let previous, _): return previous?.mode ?? .preview
+        case .loaded(let loaded): return loaded.mode
+        }
+    }
+
+    /// The current evaluation failure with a short message, surfaced for every failure —
+    /// not just retryable ones — so a dead server never fails silently (REPORT B10).
+    /// Retry is always offered: it is a manual re-request, not an automatic one.
+    var evaluationFailure: (message: String, error: Error)? {
+        guard case .failed(_, let error) = evaluationLoad else { return nil }
+        if let api = error as? APIError {
+            switch api {
+            case .cancelled: return nil
+            case .timedOut: return ("The calculation took too long.", error)
+            case .unreachable, .invalidBaseURL: return ("Couldn't reach the server.", error)
+            case .server(_, let body): return (body.message, error)
+            case .unexpectedStatus(let status): return ("The server answered with an error (\(status)).", error)
+            case .invalidResponse: return ("The server's answer didn't match what the app expects.", error)
+            }
+        }
+        return ("Something went wrong.", error)
     }
 
     func select(_ profile: Profile) {
@@ -163,16 +206,20 @@ final class AppStore: ObservableObject {
 
     var isLiveEnabled: Bool { client != nil }
 
+    /// The configured client for the Funds and History screens; nil means saved data only.
+    var apiClient: APIClient? { client }
+
     /// Changing the server resets live state but keeps bundled profiles (FRONTEND.md §8).
     /// Returns false, and changes nothing, unless the URL is empty or absolute HTTPS.
     @discardableResult
     func setServerBaseURL(_ string: String, defaults: UserDefaults = .standard) -> Bool {
         let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
-        let newClient = LiveAPIClient(baseURLString: trimmed)
+        let newClient = LiveAPIClient(baseURLString: trimmed, demoKey: Self.defaultDemoKey)
         guard trimmed.isEmpty || newClient != nil else { return false }
         serverBaseURL = trimmed
         defaults.set(trimmed, forKey: Self.serverBaseURLKey)
         client = newClient
+        serverGeneration += 1
         lastLive = [:]
         lastLiveDecision = nil
         serverProfiles = [:]
@@ -191,11 +238,9 @@ final class AppStore: ObservableObject {
         let previous = lastLive[profileID]?.relabeled(.lastLive) ?? saved
         guard let client else {
             evaluationLoad = saved.map(EvaluationLoad.loaded) ?? .idle
-            dataMode = saved?.mode ?? .saved
             return
         }
         evaluationLoad = .loading(previous: previous)
-        dataMode = previous?.mode ?? .saved
 
         evaluationTask = Task { [weak self] in
             guard let self else { return }
@@ -206,15 +251,13 @@ final class AppStore: ObservableObject {
                     API.EvaluateRequest(profile: apiProfile, scenario: nil, previousDecisionID: previousID)
                 )
                 guard generation == self.selectionGeneration, evaluation.profileID == profileID else { return }
-                let loaded = LoadedEvaluation(evaluation: evaluation, mode: .live)
+                let loaded = LoadedEvaluation(evaluation: evaluation, mode: .live, apiProfile: apiProfile)
                 self.lastLive[profileID] = loaded
                 self.lastLiveDecision = (profileID, evaluation.decisionSummary.decisionID)
                 self.evaluationLoad = .loaded(loaded)
-                self.dataMode = .live
             } catch {
                 guard generation == self.selectionGeneration, !Self.isCancellation(error) else { return }
                 self.evaluationLoad = .failed(previous: previous, error: error)
-                self.dataMode = previous?.mode ?? .saved
             }
         }
     }
@@ -229,10 +272,9 @@ final class AppStore: ObservableObject {
         let evaluation = try await client.evaluate(
             API.EvaluateRequest(profile: apiProfile, scenario: scenario, previousDecisionID: previousID)
         )
-        if profile.id == profileID {
-            lastLiveDecision = (profileID, evaluation.decisionSummary.decisionID)
-        }
-        return LoadedEvaluation(evaluation: evaluation, mode: .live)
+        // Scenario decisions deliberately stay out of lastLiveDecision: the next base
+        // refresh must diff against the base plan's decision, not a scenario's (REPORT E1).
+        return LoadedEvaluation(evaluation: evaluation, mode: .live, apiProfile: apiProfile)
     }
 
     /// Exact saved artifact, or nil until Eric's bundle is in `Resources/Demo/`.
@@ -241,7 +283,13 @@ final class AppStore: ObservableObject {
         if preset == .original, let fixture = debugFixtureEvaluation(for: profileID) { return fixture }
         #endif
         guard let artifact = try? demo.artifact(profileID: profileID, preset: preset) else { return nil }
-        return LoadedEvaluation(evaluation: artifact.evaluation, mode: .saved)
+        return LoadedEvaluation(evaluation: artifact.evaluation, mode: .saved,
+                                apiProfile: try? demo.profiles()[profileID])
+    }
+
+    /// The saved artifact itself, for callers that also need the scenario it was exported with.
+    func savedArtifact(for profileID: String, preset: DemoPreset) -> DemoArtifact? {
+        try? demo.artifact(profileID: profileID, preset: preset)
     }
 
     private func apiProfile(for id: String, client: APIClient) async throws -> API.FinancialProfile {

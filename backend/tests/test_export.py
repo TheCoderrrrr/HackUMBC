@@ -329,5 +329,23 @@ class ExportTests(unittest.TestCase):
         )
 
 
+GENERATED = Path(__file__).resolve().parents[1] / "fixtures" / "generated"
+IOS_BUNDLE = Path(__file__).resolve().parents[2] / "ios" / "AdaptiveRetirement" / "Resources" / "Demo"
+
+
+def test_ios_bundle_matches_the_generated_export():
+    """The app's offline copy must be a byte-for-byte copy of the latest export (REPORT A4)."""
+    if not IOS_BUNDLE.is_dir():
+        raise unittest.SkipTest("ios/ app is not checked out next to backend/")
+    expected = {p.name: p.read_bytes() for p in GENERATED.glob("*.json")}
+    assert expected, "backend/fixtures/generated is empty; run scripts/export_demo.py"
+    missing = sorted(name for name in expected if not (IOS_BUNDLE / name).is_file())
+    assert not missing, f"ios/Resources/Demo is missing: {missing}; copy backend/fixtures/generated/*.json in"
+    stale = sorted(name for name, data in expected.items() if (IOS_BUNDLE / name).read_bytes() != data)
+    assert not stale, f"ios/Resources/Demo is stale: {stale}; re-copy backend/fixtures/generated/*.json"
+    extra = sorted(p.name for p in IOS_BUNDLE.glob("*.json") if p.name not in expected)
+    assert not extra, f"ios/Resources/Demo has files the exporter did not produce: {extra}"
+
+
 if __name__ == "__main__":
     unittest.main()

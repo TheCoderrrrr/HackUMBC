@@ -108,11 +108,22 @@ def evaluate(profile: FinancialProfile, scenario: Scenario | None, decision: Dec
             policy_version=POLICY_VERSION,
         )
     except InfeasibleScenario as exc:
+        if exc.reason == "cap":
+            # The amount is the excess over the annual contribution limit, not a budget gap.
+            message = ("The requested election exceeds the annual contribution limit. "
+                       if exc.rate is None else
+                       f"A {exc.rate * 100:g}% election exceeds the annual contribution limit. ")
+            raise ApiError(
+                422, "INFEASIBLE_SCENARIO",
+                message + "Choose a lower contribution rate.",
+                ["scenario.employee_contribution_rate"],
+            ) from exc
         raise ApiError(
             422, "INFEASIBLE_SCENARIO",
             f"This scenario is short ${exc.shortfall_cents / 100:,.2f} in month {exc.month}. "
             "Choose a lower contribution rate or a different retirement age.",
-            ["scenario.employee_contribution_rate"],
+            ["scenario.employee_contribution_rate" if exc.rate is not None
+             else "scenario.retirement_age"],
         ) from exc
     return EvaluationCore.model_validate(
         evaluation.model_dump(exclude={"decision_summary", "explanation"})

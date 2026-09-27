@@ -2352,6 +2352,10 @@
           "plaid_enabled": {
             "type": "boolean",
             "title": "Plaid Enabled"
+          },
+          "ai_available": {
+            "type": "boolean",
+            "title": "Ai Available"
           }
         },
         "additionalProperties": false,
@@ -2361,7 +2365,8 @@
           "schema_version",
           "model_version",
           "policy_version",
-          "plaid_enabled"
+          "plaid_enabled",
+          "ai_available"
         ],
         "title": "Health"
       },
@@ -2813,6 +2818,13 @@
             },
             "type": "array",
             "title": "Points"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
           }
         },
         "additionalProperties": false,

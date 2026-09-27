@@ -189,6 +189,17 @@ def test_each_prose_rule_rejects(summary, narrative):
     assert not valid_prose(ExplanationOut(state_summary=summary, narrative=narrative))
 
 
+@pytest.mark.parametrize("summary,narrative", [
+    # "no one" / "one of" are ordinary English, not numeric claims (REPORT C4).
+    ("Your cushion is small and the card is costly.",
+     "No one priority stands alone; one of your goals is staying flexible."),
+    ("Build up your savings.", "You are a quarter of the way there."),
+    ("Build up your savings.", "Each month follows the same order of priorities."),
+])
+def test_ordinary_english_passes_prose_validation(summary, narrative):
+    assert valid_prose(ExplanationOut(state_summary=summary, narrative=narrative))
+
+
 def test_explanation_with_numbers_falls_back_to_template(morgan):
     bad = ExplanationOut(state_summary="You owe eighteen thousand dollars.", narrative="Pay the card first.")
     body = evaluate(make_client(FakeModel(explain=bad)), morgan)

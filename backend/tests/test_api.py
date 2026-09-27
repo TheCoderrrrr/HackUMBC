@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from app.schemas import Evaluation
 
 from .conftest import FakeModel, make_client
@@ -8,7 +10,21 @@ from .conftest import FakeModel, make_client
 def test_health_reports_versions():
     body = make_client().get("/health").json()
     assert body == {"status": "ok", "schema_version": "1", "model_version": "1.0.0",
-                    "policy_version": "1.0.0", "plaid_enabled": False}
+                    "policy_version": "1.0.0", "plaid_enabled": False, "ai_available": False}
+
+
+def test_health_reports_ai_available_when_the_selected_provider_has_a_key():
+    body = make_client(gemini_api_key="g").get("/health").json()
+    assert body["ai_available"] is True
+
+
+def test_warnings_are_scoped_to_their_projection(morgan):
+    # REPORT C3: Morgan's opening plan has no residual cash; the surplus appears years
+    # later, after the card is paid off, so it belongs to the projection, not the plan.
+    body = make_client().post("/v1/evaluate", json={"profile": morgan}).json()
+    assert "UNASSIGNED_SURPLUS" not in body["warnings"]
+    assert "UNASSIGNED_SURPLUS" in body["projections"]["adaptive"]["warnings"]
+    assert "UNASSIGNED_SURPLUS" in body["projections"]["current"]["warnings"]
 
 
 def test_demo_profiles_are_the_three_fixtures():
@@ -17,6 +33,49 @@ def test_demo_profiles_are_the_three_fixtures():
     morgan = body["profiles"][1]
     assert morgan["annual_gross_salary_cents"] == 8400000
     assert morgan["debts"][0]["apr"] == 0.25
+
+
+def test_chunked_body_over_the_limit_is_rejected(morgan):
+    # REPORT C8: a chunked request has no Content-Length to check, so the read is capped.
+    def stream():
+        yield b"x" * (129 * 1024)
+
+    res = make_client().post("/v1/evaluate", content=stream(),
+                             headers={"content-type": "application/json"})
+    assert res.status_code == 413
+    assert res.json()["error"]["code"] == "PAYLOAD_TOO_LARGE"
+
+
+def test_chunked_body_under_the_limit_passes(morgan):
+    payload = json.dumps({"profile": morgan}).encode()
+    res = make_client().post("/v1/evaluate", content=iter([payload]),
+                             headers={"content-type": "application/json"})
+    assert res.status_code == 200
+
+
+def test_demo_key_required_on_v1_when_configured(morgan):
+    # REPORT C2: the public tunnel URL no longer spends the team's AI budget.
+    client = make_client(demo_key="s3cret")
+    assert client.get("/health").status_code == 200  # health stays open for smoke checks
+    body = {"profile": morgan}
+    missing = client.post("/v1/evaluate", json=body)
+    assert missing.status_code == 401
+    assert missing.json()["error"]["code"] == "INVALID_DEMO_KEY"
+    assert client.get("/v1/demo-profiles").status_code == 401
+    wrong = client.post("/v1/evaluate", json=body, headers={"x-demo-key": "nope"})
+    assert wrong.status_code == 401
+    ok = client.post("/v1/evaluate", json=body, headers={"x-demo-key": "s3cret"})
+    assert ok.status_code == 200
+
+
+def test_rate_limit_is_per_client(morgan):
+    # REPORT C2: one caller's burst can't push the demo phone into 429.
+    client = make_client(evaluations_per_minute=2)
+    body = {"profile": morgan}
+    assert client.post("/v1/evaluate", json=body, headers={"x-demo-key": "a"}).status_code == 200
+    assert client.post("/v1/evaluate", json=body, headers={"x-demo-key": "a"}).status_code == 200
+    assert client.post("/v1/evaluate", json=body, headers={"x-demo-key": "a"}).status_code == 429
+    assert client.post("/v1/evaluate", json=body, headers={"x-demo-key": "b"}).status_code == 200
 
 
 def test_evaluate_returns_full_contract(morgan):
