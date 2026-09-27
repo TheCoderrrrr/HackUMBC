@@ -7,6 +7,9 @@ import { pointAtMonth, yearlyBalances, type Display } from "../data/display";
 import { money, monthLabel, percent } from "../data/format";
 import type { Preset } from "../data/saved";
 import { useStore } from "../store";
+import { Tabs } from "../components/Tabs";
+
+type ExploreView = "compare" | "timeline" | "saved";
 import { History, type Shown } from "./History";
 
 type Policy = "adaptive" | "fixed";
@@ -33,18 +36,35 @@ export function Explore({ display }: { display: Display }) {
   const { profile, evaluation } = display;
   const { setDrawer } = useStore();
   const [compared, setCompared] = useState<Shown | null>(null);
+  const [view, setView] = useState<ExploreView>("compare");
   const custom = compared?.evaluation ?? null;
+  // A new scenario result is what the person wants to see next.
+  const onResult = (shown: Shown | null) => {
+    setCompared(shown);
+    if (shown) setView("compare");
+  };
+  const feasible = custom?.projections.custom?.feasible;
 
   return (
     <div className="grid explore fade-in" key={profile.id}>
-      <div className="stack">
-        <Timeline display={display} />
-        <Comparison display={display} custom={custom?.projections.custom ?? null} />
-        <Outcomes evaluation={evaluation} custom={custom?.projections.custom ?? null} asOf={profile.as_of_date} />
-        <History shown={compared ?? { evaluation, scenario: null }} />
+      <div className="section explore-tabs">
+        <Tabs label="Explore views" value={view} onChange={setView} items={[
+          { id: "compare", label: "Compare", hint: compared ? (feasible === false ? "Can't be funded" : "Your scenario") : "Plan vs current habits" },
+          { id: "timeline", label: "Timeline", hint: "Next five years" },
+          { id: "saved", label: "Saved runs", hint: "Tiger Data history" },
+        ]}>
+          {view === "compare" && (
+            <div className="stack" style={{ gap: 20 }}>
+              <Comparison display={display} custom={custom?.projections.custom ?? null} />
+              <Outcomes evaluation={evaluation} custom={custom?.projections.custom ?? null} asOf={profile.as_of_date} />
+            </div>
+          )}
+          {view === "timeline" && <Timeline display={display} />}
+          {view === "saved" && <History shown={compared ?? { evaluation, scenario: null }} />}
+        </Tabs>
       </div>
       <div className="stack" style={{ position: "sticky", top: 84 }}>
-        <ScenarioControls display={display} onResult={setCompared} />
+        <ScenarioControls display={display} onResult={onResult} />
         <button className="link" style={{ display: "inline-flex", gap: 8, alignItems: "center", fontSize: 15, alignSelf: "flex-start" }}
           onClick={() => setDrawer("assumptions")}>
           <Icon name="sliders" size={16} /> Modeling assumptions
@@ -259,8 +279,10 @@ function ScenarioControls({ display, onResult }: { display: Display; onResult: (
     edit({ ...next, preset });
   };
 
-  const showSaved = (d: Draft, fallback: string) => {
-    const saved = d.preset ? savedPreset(d.preset) : undefined;
+  const showSaved = async (d: Draft, fallback: string) => {
+    const id = requestID.current;
+    const saved = d.preset ? await savedPreset(d.preset) : undefined;
+    if (id !== requestID.current) return;
     if (saved && d.preset !== "original") {
       onResult({ evaluation: saved, scenario: scenarioOf(d) });
       setStatus("Saved calculation for this preset.");

@@ -4,6 +4,7 @@ import { LineChart } from "../components/LineChart";
 import { Tabs, type TabItem } from "../components/Tabs";
 import { Term } from "../components/Term";
 import { yearlyBalances, type Display } from "../data/display";
+import { firstReach, gapAt, goalPresets, moneyShort, parseGoal, yearMarkers, yearsSooner } from "../data/chart";
 import { money, moneyExact, monthLabel, months, percent } from "../data/format";
 import { STYLE_INFO } from "../data/styles";
 import { useStore, type PlanSection } from "../store";
@@ -70,25 +71,44 @@ function Future({ display }: { display: Display }) {
   const { profile, evaluation } = display;
   const { adaptive, current } = evaluation.projections;
   const years = display.yearsToRetirement;
-  const [year, setYear] = useState(years);
-  useEffect(() => setYear(years), [years, profile.id]);
+  const [pinned, setPinned] = useState(years);
+  const [hover, setHover] = useState<number | null>(null);
+  const [goal, setGoal] = useState<number | null>(null);
+  const [custom, setCustom] = useState("");
+  const [customError, setCustomError] = useState(false);
+  useEffect(() => {
+    setPinned(years);
+    setGoal(null);
+  }, [years, profile.id]);
 
   const plan = useMemo(() => yearlyBalances(adaptive, years), [adaptive, years]);
   const habits = useMemo(() => yearlyBalances(current, years), [current, years]);
+  const presets = useMemo(() => goalPresets(plan[years] ?? 0), [plan, years]);
   const startYear = Number(profile.as_of_date.slice(0, 4));
-  const markers = [
+  const markers = yearMarkers([
     { month: adaptive.debt_free_month, label: "Debt cleared" },
     { month: adaptive.full_reserve_month, label: "Emergency fund full" },
-  ].filter((m): m is { month: number; label: string } => m.month !== null && m.month > 0 && m.month <= years * 12)
-    .map((m) => ({ index: Math.ceil(m.month / 12), label: m.label }));
-  const atEnd = year === years;
+  ], years);
+
+  const shown = hover ?? pinned;
+  const gap = gapAt(plan, habits, shown);
+  const planReach = goal === null ? null : firstReach(plan, goal);
+  const habitsReach = goal === null ? null : firstReach(habits, goal);
+  const sooner = goal === null ? null : yearsSooner(plan, habits, goal);
+
+  const applyCustom = () => {
+    const cents = parseGoal(custom);
+    setCustomError(cents === null);
+    if (cents !== null) setGoal(cents);
+  };
+  const reachText = (i: number | null) => (i === null ? "not before retirement" : `at age ${profile.age + i} (${startYear + i})`);
 
   return (
     <section className="future glass card" aria-labelledby="future-title">
       <div className="future-top">
         <div>
           <h2 id="future-title" className="eyebrow" style={{ padding: 0 }}>Where your plan is heading</h2>
-          <p className="future-figure num">{money(adaptive.retirement_balance_nominal_cents ?? plan[plan.length - 1] ?? 0)}</p>
+          <p className="future-figure num">{money(adaptive.retirement_balance_nominal_cents ?? plan[years] ?? 0)}</p>
           <p className="body future-sub">
             at age {profile.retirement_age}, in {startYear + years}
             {adaptive.retirement_balance_today_cents !== null && (
@@ -98,31 +118,65 @@ function Future({ display }: { display: Display }) {
         </div>
         <div className="future-compare">
           <span className="caption"><Term id="current-habits">If you keep current habits</Term></span>
-          <span className="num">{money(current.retirement_balance_nominal_cents ?? habits[habits.length - 1] ?? 0)}</span>
+          <span className="num">{money(current.retirement_balance_nominal_cents ?? habits[years] ?? 0)}</span>
         </div>
       </div>
 
       <div className="future-readout" aria-live="polite">
-        <span className="label">{atEnd ? "At retirement" : `At age ${profile.age + year}`} · {startYear + year}</span>
-        <span><i className="dot-plan" /> Your plan <b className="num">{money(plan[year] ?? 0)}</b></span>
-        <span><i className="dot-habits" /> Current habits <b className="num">{money(habits[year] ?? 0)}</b></span>
+        <span className="label">
+          {hover !== null ? "Previewing" : shown === years ? "At retirement" : "Pinned"} · age {profile.age + shown}, {startYear + shown}
+        </span>
+        <span><i className="dot-plan" /> Your plan <b className="num">{money(plan[shown] ?? 0)}</b></span>
+        <span><i className="dot-habits" /> Current habits <b className="num">{money(habits[shown] ?? 0)}</b></span>
+        {gap !== null && (
+          <span className={`gap-chip ${gap >= 0 ? "up" : "down"}`}>
+            {gap >= 0 ? "+" : "−"}{money(Math.abs(gap))} {gap >= 0 ? "ahead" : "behind"}
+          </span>
+        )}
       </div>
 
-      <LineChart height={210} index={year} onIndex={(i) => i !== null && setYear(i)} markers={markers}
+      <LineChart height={230} index={pinned} onIndex={setHover} onPick={setPinned} markers={markers} formatY={moneyShort}
+        band={{ upper: "Your plan", lower: "Current habits", color: "#a8e6a1" }}
+        goal={goal === null ? null : { value: goal, label: `Goal ${moneyShort(goal)}` }}
         series={[
           { name: "Current habits", values: habits, color: "var(--blue)", dashed: true, width: 2 },
-          { name: "Your plan", values: plan, color: "var(--accent)", area: true, width: 2.6 },
+          { name: "Your plan", values: plan, color: "var(--accent)", width: 2.6 },
         ]} />
 
       <label className="age-slider">
         <span className="sr-only">Choose an age to see your projected balance</span>
-        <input type="range" min={0} max={years} step={1} value={year} onChange={(e) => setYear(Number(e.target.value))}
-          aria-valuetext={`Age ${profile.age + year}`} />
-        <span className="age-slider-ends"><span>Today · {profile.age}</span><span>Drag to see any age</span><span>{profile.retirement_age}</span></span>
+        <input type="range" min={0} max={years} step={1} value={pinned} onChange={(e) => setPinned(Number(e.target.value))}
+          aria-valuetext={`Age ${profile.age + pinned}`} />
+        <span className="age-slider-ends"><span>Today · {profile.age}</span><span>Click the chart or drag to pin an age</span><span>{profile.retirement_age}</span></span>
       </label>
 
-      <p className="caption" style={{ marginTop: 10 }}>
-        A <Term id="projection">projection</Term> with steady illustrative returns. Real markets rise and fall.
+      <div className="goal-bar">
+        <span className="goal-title">Set a goal line</span>
+        <div className="goal-options" role="group" aria-label="Goal amount">
+          {presets.map((p) => (
+            <button key={p} className={`pill ${goal === p ? "selected" : "neutral"}`} aria-pressed={goal === p} onClick={() => setGoal(goal === p ? null : p)}>
+              {moneyShort(p)}
+            </button>
+          ))}
+          <form className="goal-custom" onSubmit={(e) => { e.preventDefault(); applyCustom(); }}>
+            <input value={custom} onChange={(e) => { setCustom(e.target.value); setCustomError(false); }} placeholder="Your amount, e.g. 1.2m"
+              aria-label="Custom goal amount" aria-invalid={customError} />
+            <button className="pill neutral" type="submit">Set</button>
+          </form>
+          {goal !== null && <button className="link" onClick={() => setGoal(null)}>Clear</button>}
+        </div>
+        {customError && <p className="caption goal-error">Enter an amount like 800k, 1.2m or 1,000,000.</p>}
+        {goal !== null && (
+          <p className="goal-result">
+            Your plan reaches {moneyShort(goal)} <b>{reachText(planReach)}</b>; current habits {reachText(habitsReach)}.
+            {sooner !== null && sooner > 0 && <> That's <b>{sooner} {sooner === 1 ? "year" : "years"} sooner</b>.</>}
+          </p>
+        )}
+      </div>
+
+      <p className="caption" style={{ marginTop: 12 }}>
+        The shaded area is the difference between your plan and current habits. A <Term id="projection">projection</Term> with
+        steady illustrative returns; real markets rise and fall.
       </p>
     </section>
   );

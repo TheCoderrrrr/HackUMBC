@@ -1,28 +1,39 @@
-import { useCallback, useState } from "react";
+import { lazy, Suspense, useCallback, useState } from "react";
 import { Avatar, Icon, LiveStatus, PROFILE_SUBTITLE } from "./components/ui";
 import { Drawers } from "./views/Drawers";
-import { Explore } from "./views/Explore";
-import { Chat } from "./views/Chat";
-import { Funds } from "./views/Funds";
 import { Guide } from "./views/Guide";
-import { Learn } from "./views/Learn";
 import { Overview } from "./views/Overview";
 import { Plan } from "./views/Plan";
 import { errorMessage } from "./api/client";
 import { STYLE_INFO } from "./data/styles";
 import { useStore, type Tab } from "./store";
 
-const TABS: { id: Tab; title: string; icon: string }[] = [
-  { id: "overview", title: "Overview", icon: "overview" },
-  { id: "plan", title: "Your plan", icon: "plan" },
-  { id: "explore", title: "Explore", icon: "explore" },
-  { id: "funds", title: "Fund shortlist", icon: "funds" },
-  { id: "learn", title: "Learn", icon: "learn" },
+// Pages opened less often load on demand, keeping the first download small.
+const Explore = lazy(() => import("./views/Explore").then((m) => ({ default: m.Explore })));
+const Funds = lazy(() => import("./views/Funds").then((m) => ({ default: m.Funds })));
+const Learn = lazy(() => import("./views/Learn").then((m) => ({ default: m.Learn })));
+const Chat = lazy(() => import("./views/Chat").then((m) => ({ default: m.Chat })));
+
+/** Pages, grouped the way people use them: their money, planning ahead, learning. */
+const PAGES: { id: Tab; title: string; icon: string; group: string; description: (first: string) => string }[] = [
+  { id: "overview", title: "Overview", icon: "overview", group: "Your money",
+    description: (first) => `${first}, here's where you stand today and what to do next.` },
+  { id: "plan", title: "Your plan", icon: "plan", group: "Your money",
+    description: () => "Where your plan is heading, then one topic at a time." },
+  { id: "explore", title: "Explore", icon: "explore", group: "Plan ahead",
+    description: () => "Try a different retirement age or contribution and compare the results." },
+  { id: "funds", title: "Fund shortlist", icon: "funds", group: "Plan ahead",
+    description: () => "Find a target-date fund that fits your timeline and comfort with risk." },
+  { id: "learn", title: "Learn", icon: "learn", group: "Learn",
+    description: () => "Short lessons on the ideas behind your plan, each applied to your numbers." },
 ];
+const GROUPS = ["Your money", "Plan ahead", "Learn"] as const;
 
 export function App() {
   const { tab, display, profile, load, setDrawer, dataMode, savedMatchesStyle, style } = useStore();
+  const page = PAGES.find((p) => p.id === tab) ?? PAGES[0];
   const [chatOpen, setChatOpen] = useState(false);
+  const [chatLoaded, setChatLoaded] = useState(false);
   const closeChat = useCallback(() => setChatOpen(false), []);
 
   return (
@@ -31,7 +42,10 @@ export function App() {
       <main className="main">
         <div className="main-inner">
           <header className="topbar">
-            <h1>{tab === "overview" ? profile.name : TABS.find((t) => t.id === tab)?.title}</h1>
+            <div>
+              <h1>{page.title}</h1>
+              <p className="page-desc">{page.description(profile.name.split(" ")[0])}</p>
+            </div>
             <div className="topbar-actions">
               <LiveStatus />
               {display && tab !== "funds" && tab !== "learn" && (
@@ -54,19 +68,21 @@ export function App() {
             </div>
           )}
 
-          {tab === "funds" && <Funds />}
-          {!display && tab !== "funds" && <EmptyState />}
-          {display && tab === "overview" && <Overview display={display} />}
-          {display && tab === "plan" && <Plan display={display} />}
-          {display && tab === "explore" && <Explore display={display} />}
-          {display && tab === "learn" && <Learn display={display} />}
+          <Suspense fallback={<PageLoading />}>
+            {tab === "funds" && <Funds />}
+            {!display && tab !== "funds" && <EmptyState />}
+            {display && tab === "overview" && <Overview display={display} />}
+            {display && tab === "plan" && <Plan display={display} />}
+            {display && tab === "explore" && <Explore display={display} />}
+            {display && tab === "learn" && <Learn display={display} />}
+          </Suspense>
         </div>
       </main>
       {display && <Drawers display={display} />}
-      <button className="chat-launcher" type="button" onClick={() => setChatOpen(true)} aria-label="Ask a retirement question" aria-haspopup="dialog" aria-expanded={chatOpen}>
+      <button className="chat-launcher" type="button" onClick={() => { setChatLoaded(true); setChatOpen(true); }} aria-label="Ask a retirement question" aria-haspopup="dialog" aria-expanded={chatOpen}>
         <Icon name="chat" /> Ask
       </button>
-      <Chat open={chatOpen} onClose={closeChat} />
+      {chatLoaded && <Suspense fallback={null}><Chat open={chatOpen} onClose={closeChat} /></Suspense>}
       <Guide />
     </div>
   );
@@ -88,11 +104,19 @@ function Sidebar() {
         <small>Adaptive Retirement Management</small>
       </div>
 
-      <nav className="nav" aria-label="Sections">
-        {TABS.map((t) => (
-          <button key={t.id} aria-current={tab === t.id ? "page" : undefined} onClick={() => setTab(t.id)}>
-            <Icon name={t.icon} /> {t.title}
-          </button>
+      <nav className="nav" aria-label="Pages">
+        {GROUPS.map((group) => (
+          <div key={group} className="nav-group" role="group" aria-label={group}>
+            <p className="eyebrow nav-group-title">{group}</p>
+            {PAGES.filter((p) => p.group === group).map((p) => (
+              <button key={p.id} aria-current={tab === p.id ? "page" : undefined} onClick={() => setTab(p.id)}>
+                <Icon name={p.icon} /> {p.title}
+              </button>
+            ))}
+            {group === "Learn" && (
+              <button onClick={openGuide}><Icon name="play" /> Getting started</button>
+            )}
+          </div>
         ))}
       </nav>
 
@@ -148,4 +172,8 @@ function EmptyState() {
         : <button className="btn-primary" style={{ marginTop: 18 }} onClick={refresh}>Try again</button>}
     </div>
   );
+}
+
+function PageLoading() {
+  return <p className="caption" style={{ marginTop: 32 }} role="status"><span className="spinner" /> Loading…</p>;
 }
