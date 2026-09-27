@@ -356,6 +356,407 @@
           }
         }
       }
+    },
+    "/v1/funds/catalog": {
+      "get": {
+        "summary": "Fund Catalog",
+        "operationId": "fund_catalog_v1_funds_catalog_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogSummary"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request Entity Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/funds/shortlist": {
+      "post": {
+        "summary": "Fund Shortlist",
+        "operationId": "fund_shortlist_v1_funds_shortlist_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FundShortlistQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundShortlistEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request Entity Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/history/status": {
+      "get": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Status",
+        "operationId": "status_v1_history_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/history/runs": {
+      "post": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Save Run",
+        "operationId": "save_run_v1_history_runs_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveRunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveRunResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "history"
+        ],
+        "summary": "List Runs",
+        "operationId": "list_runs_v1_history_runs_get",
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunList"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/history/compare": {
+      "get": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Compare",
+        "operationId": "compare_v1_history_compare_get",
+        "parameters": [
+          {
+            "name": "base",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Base"
+            }
+          },
+          {
+            "name": "other",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Other"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comparison"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -395,6 +796,123 @@
           "changes"
         ],
         "title": "AIExplanation"
+      },
+      "AllocationDetail": {
+        "properties": {
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "reported_categories": {
+            "items": {
+              "$ref": "#/components/schemas/ReportedCategory"
+            },
+            "type": "array",
+            "title": "Reported Categories"
+          },
+          "mapping_note": {
+            "type": "string",
+            "title": "Mapping Note"
+          },
+          "evidence_url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Evidence Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of_date",
+          "reported_categories",
+          "mapping_note",
+          "evidence_url"
+        ],
+        "title": "AllocationDetail"
+      },
+      "CatalogEntry": {
+        "properties": {
+          "fund_id": {
+            "type": "string",
+            "title": "Fund Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "issuer": {
+            "type": "string",
+            "title": "Issuer"
+          },
+          "class_name": {
+            "type": "string",
+            "title": "Class Name"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticker"
+          },
+          "target_year": {
+            "type": "integer",
+            "title": "Target Year"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fund_id",
+          "name",
+          "issuer",
+          "class_name",
+          "ticker",
+          "target_year"
+        ],
+        "title": "CatalogEntry"
+      },
+      "CatalogSummary": {
+        "properties": {
+          "catalog_version": {
+            "type": "string",
+            "title": "Catalog Version"
+          },
+          "published_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Published On"
+          },
+          "reviewed_by": {
+            "type": "string",
+            "title": "Reviewed By"
+          },
+          "review_note": {
+            "type": "string",
+            "title": "Review Note"
+          },
+          "funds": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogEntry"
+            },
+            "type": "array",
+            "title": "Funds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "catalog_version",
+          "published_on",
+          "reviewed_by",
+          "review_note",
+          "funds"
+        ],
+        "title": "CatalogSummary"
       },
       "Change": {
         "properties": {
@@ -451,6 +969,108 @@
           "after"
         ],
         "title": "Change"
+      },
+      "Comparison": {
+        "properties": {
+          "profile_id": {
+            "type": "string",
+            "title": "Profile Id"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "base": {
+            "$ref": "#/components/schemas/RunSummary"
+          },
+          "other": {
+            "$ref": "#/components/schemas/RunSummary"
+          },
+          "years": {
+            "items": {
+              "$ref": "#/components/schemas/ComparisonYear"
+            },
+            "type": "array",
+            "title": "Years"
+          },
+          "horizons": {
+            "items": {
+              "$ref": "#/components/schemas/Horizon"
+            },
+            "type": "array",
+            "title": "Horizons"
+          },
+          "source": {
+            "type": "string",
+            "const": "tiger_data",
+            "title": "Source"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profile_id",
+          "as_of_date",
+          "base",
+          "other",
+          "years",
+          "horizons",
+          "source",
+          "method"
+        ],
+        "title": "Comparison"
+      },
+      "ComparisonYear": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "month": {
+            "type": "integer",
+            "title": "Month"
+          },
+          "projected_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Projected On"
+          },
+          "base": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YearValues"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "other": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YearValues"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "year",
+          "month",
+          "projected_on",
+          "base",
+          "other"
+        ],
+        "title": "ComparisonYear"
       },
       "ConstraintCheck": {
         "properties": {
@@ -620,6 +1240,38 @@
           "profiles"
         ],
         "title": "DemoProfiles"
+      },
+      "DocumentLink": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "form": {
+            "type": "string",
+            "title": "Form"
+          },
+          "filed_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Filed Date"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "form",
+          "filed_date",
+          "url"
+        ],
+        "title": "DocumentLink"
       },
       "EmployerMatch": {
         "properties": {
@@ -799,6 +1451,104 @@
           "explanation"
         ],
         "title": "Evaluation"
+      },
+      "ExcludedFund": {
+        "properties": {
+          "fund_id": {
+            "type": "string",
+            "title": "Fund Id"
+          },
+          "reason_code": {
+            "type": "string",
+            "enum": [
+              "NOT_IN_PLAN_MENU",
+              "UNAVAILABLE",
+              "INCOMPLETE_FACTS",
+              "STALE_FACTS",
+              "NOT_TARGET_DATE",
+              "NON_USD",
+              "POOR_HORIZON_FIT",
+              "POOR_RISK_FIT"
+            ],
+            "title": "Reason Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fund_id",
+          "reason_code"
+        ],
+        "title": "ExcludedFund"
+      },
+      "FeeDetail": {
+        "properties": {
+          "gross_expense_ratio": {
+            "type": "number",
+            "title": "Gross Expense Ratio"
+          },
+          "acquired_fund_fees": {
+            "type": "number",
+            "title": "Acquired Fund Fees"
+          },
+          "fee_waiver": {
+            "type": "number",
+            "title": "Fee Waiver"
+          },
+          "net_expense_ratio": {
+            "type": "number",
+            "title": "Net Expense Ratio"
+          },
+          "applied_expense_ratio": {
+            "type": "number",
+            "title": "Applied Expense Ratio"
+          },
+          "waiver_active": {
+            "type": "boolean",
+            "title": "Waiver Active"
+          },
+          "waiver_ends": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waiver Ends"
+          },
+          "waiver_terms": {
+            "type": "string",
+            "title": "Waiver Terms"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "evidence_url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Evidence Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "gross_expense_ratio",
+          "acquired_fund_fees",
+          "fee_waiver",
+          "net_expense_ratio",
+          "applied_expense_ratio",
+          "waiver_active",
+          "waiver_ends",
+          "waiver_terms",
+          "as_of_date",
+          "evidence_url"
+        ],
+        "title": "FeeDetail"
       },
       "FinancialProfile": {
         "properties": {
@@ -1134,6 +1884,433 @@
         ],
         "title": "FinancialState"
       },
+      "FundDetail": {
+        "properties": {
+          "fund_id": {
+            "type": "string",
+            "title": "Fund Id"
+          },
+          "issuer": {
+            "type": "string",
+            "title": "Issuer"
+          },
+          "registrant": {
+            "type": "string",
+            "title": "Registrant"
+          },
+          "series_id": {
+            "type": "string",
+            "title": "Series Id"
+          },
+          "share_class_id": {
+            "type": "string",
+            "title": "Share Class Id"
+          },
+          "class_name": {
+            "type": "string",
+            "title": "Class Name"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticker"
+          },
+          "target_year": {
+            "type": "integer",
+            "title": "Target Year"
+          },
+          "fees": {
+            "$ref": "#/components/schemas/FeeDetail"
+          },
+          "allocation": {
+            "$ref": "#/components/schemas/AllocationDetail"
+          },
+          "glide_path": {
+            "type": "string",
+            "title": "Glide Path"
+          },
+          "prospectus": {
+            "$ref": "#/components/schemas/DocumentLink"
+          },
+          "holdings_report": {
+            "$ref": "#/components/schemas/DocumentLink"
+          },
+          "caveats": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Caveats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fund_id",
+          "issuer",
+          "registrant",
+          "series_id",
+          "share_class_id",
+          "class_name",
+          "ticker",
+          "target_year",
+          "fees",
+          "allocation",
+          "glide_path",
+          "prospectus",
+          "holdings_report",
+          "caveats"
+        ],
+        "title": "FundDetail"
+      },
+      "FundRecommendation": {
+        "properties": {
+          "fund_id": {
+            "type": "string",
+            "title": "Fund Id"
+          },
+          "fund_type": {
+            "type": "string",
+            "const": "target_date",
+            "title": "Fund Type"
+          },
+          "currency": {
+            "type": "string",
+            "const": "USD",
+            "title": "Currency"
+          },
+          "share_class_id": {
+            "type": "string",
+            "title": "Share Class Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "account_type": {
+            "type": "string",
+            "enum": [
+              "401k",
+              "ira"
+            ],
+            "title": "Account Type"
+          },
+          "availability_label": {
+            "type": "string",
+            "enum": [
+              "in_supplied_plan_menu",
+              "research_candidate_plan_menu_unconfirmed",
+              "discoverable_not_confirmed_purchasable"
+            ],
+            "title": "Availability Label"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "source_url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Source Url"
+          },
+          "prospectus_url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Prospectus Url"
+          },
+          "facts_as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Facts As Of Date"
+          },
+          "expense_ratio_source": {
+            "type": "string",
+            "title": "Expense Ratio Source"
+          },
+          "expense_ratio_as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Expense Ratio As Of Date"
+          },
+          "expense_ratio": {
+            "type": "number",
+            "title": "Expense Ratio"
+          },
+          "equity_weight": {
+            "type": "number",
+            "title": "Equity Weight"
+          },
+          "bond_weight": {
+            "type": "number",
+            "title": "Bond Weight"
+          },
+          "other_weight": {
+            "type": "number",
+            "title": "Other Weight"
+          },
+          "risk_band": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Risk Band"
+          },
+          "risk_method": {
+            "type": "string",
+            "const": "current_equity_weight_proxy_not_volatility",
+            "title": "Risk Method"
+          },
+          "risk_inputs": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Risk Inputs"
+          },
+          "target_year": {
+            "type": "integer",
+            "title": "Target Year"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "score_components": {
+            "$ref": "#/components/schemas/ScoreComponents"
+          },
+          "reason_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reason Codes"
+          },
+          "hypothetical_scenarios": {
+            "items": {
+              "$ref": "#/components/schemas/HypotheticalScenario"
+            },
+            "type": "array",
+            "title": "Hypothetical Scenarios"
+          },
+          "historical_returns": {
+            "items": {
+              "$ref": "#/components/schemas/HistoricalReturn"
+            },
+            "type": "array",
+            "title": "Historical Returns"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fund_id",
+          "fund_type",
+          "currency",
+          "share_class_id",
+          "name",
+          "account_type",
+          "availability_label",
+          "source",
+          "source_url",
+          "prospectus_url",
+          "facts_as_of_date",
+          "expense_ratio_source",
+          "expense_ratio_as_of_date",
+          "expense_ratio",
+          "equity_weight",
+          "bond_weight",
+          "other_weight",
+          "risk_band",
+          "risk_method",
+          "risk_inputs",
+          "target_year",
+          "score",
+          "score_components",
+          "reason_codes",
+          "hypothetical_scenarios",
+          "historical_returns"
+        ],
+        "title": "FundRecommendation"
+      },
+      "FundShortlistEnvelope": {
+        "properties": {
+          "catalog_version": {
+            "type": "string",
+            "title": "Catalog Version"
+          },
+          "catalog_published_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Catalog Published On"
+          },
+          "catalog_reviewed_by": {
+            "type": "string",
+            "title": "Catalog Reviewed By"
+          },
+          "unmatched_plan_menu_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unmatched Plan Menu Ids"
+          },
+          "shortlist": {
+            "$ref": "#/components/schemas/FundShortlistResponse"
+          },
+          "details": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FundDetail"
+            },
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "catalog_version",
+          "catalog_published_on",
+          "catalog_reviewed_by",
+          "unmatched_plan_menu_ids",
+          "shortlist",
+          "details"
+        ],
+        "title": "FundShortlistEnvelope"
+      },
+      "FundShortlistQuery": {
+        "properties": {
+          "account_type": {
+            "type": "string",
+            "enum": [
+              "401k",
+              "ira"
+            ],
+            "title": "Account Type"
+          },
+          "retirement_year": {
+            "type": "integer",
+            "title": "Retirement Year"
+          },
+          "risk_tolerance": {
+            "type": "string",
+            "enum": [
+              "conservative",
+              "moderate",
+              "growth"
+            ],
+            "title": "Risk Tolerance"
+          },
+          "plan_menu_fund_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Menu Fund Ids"
+          },
+          "max_results": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Max Results",
+            "default": 3
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "account_type",
+          "retirement_year",
+          "risk_tolerance"
+        ],
+        "title": "FundShortlistQuery"
+      },
+      "FundShortlistResponse": {
+        "properties": {
+          "account_type": {
+            "type": "string",
+            "enum": [
+              "401k",
+              "ira"
+            ],
+            "title": "Account Type"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/FundRecommendation"
+            },
+            "type": "array",
+            "title": "Recommendations"
+          },
+          "excluded": {
+            "items": {
+              "$ref": "#/components/schemas/ExcludedFund"
+            },
+            "type": "array",
+            "title": "Excluded"
+          },
+          "plan_menu_status": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "confirmed",
+              "not_applicable"
+            ],
+            "title": "Plan Menu Status"
+          },
+          "score_weights": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Score Weights"
+          },
+          "assumption_set_version": {
+            "type": "string",
+            "title": "Assumption Set Version"
+          },
+          "assumption_set_as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Assumption Set As Of Date"
+          },
+          "hypothetical_disclosure": {
+            "type": "string",
+            "title": "Hypothetical Disclosure"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_type",
+          "as_of_date",
+          "recommendations",
+          "excluded",
+          "plan_menu_status",
+          "score_weights",
+          "assumption_set_version",
+          "assumption_set_as_of_date",
+          "hypothetical_disclosure"
+        ],
+        "title": "FundShortlistResponse"
+      },
       "GlidePathAnchor": {
         "properties": {
           "years_to_retirement": {
@@ -1187,6 +2364,166 @@
           "plaid_enabled"
         ],
         "title": "Health"
+      },
+      "HistoricalReturn": {
+        "properties": {
+          "period_years": {
+            "type": "integer",
+            "maximum": 30.0,
+            "minimum": 1.0,
+            "title": "Period Years"
+          },
+          "annualized_return_rate": {
+            "type": "number",
+            "maximum": 2.0,
+            "minimum": -1.0,
+            "title": "Annualized Return Rate"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Source"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "period_years",
+          "annualized_return_rate",
+          "as_of_date",
+          "source"
+        ],
+        "title": "HistoricalReturn"
+      },
+      "HistoryStatus": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "enabled",
+          "available"
+        ],
+        "title": "HistoryStatus"
+      },
+      "Horizon": {
+        "properties": {
+          "years": {
+            "type": "integer",
+            "title": "Years"
+          },
+          "month": {
+            "type": "integer",
+            "title": "Month"
+          },
+          "projected_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Projected On"
+          },
+          "base": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YearValues"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "other": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YearValues"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "years",
+          "month",
+          "projected_on",
+          "base",
+          "other"
+        ],
+        "title": "Horizon"
+      },
+      "HypotheticalScenario": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "enum": [
+              "low",
+              "base",
+              "high"
+            ],
+            "title": "Label"
+          },
+          "equity_assumption_rate": {
+            "type": "number",
+            "title": "Equity Assumption Rate"
+          },
+          "bond_assumption_rate": {
+            "type": "number",
+            "title": "Bond Assumption Rate"
+          },
+          "other_assumption_rate": {
+            "type": "number",
+            "title": "Other Assumption Rate"
+          },
+          "annual_net_return_rate": {
+            "type": "number",
+            "title": "Annual Net Return Rate"
+          },
+          "years": {
+            "type": "integer",
+            "title": "Years"
+          },
+          "hypothetical_start_cents": {
+            "type": "integer",
+            "title": "Hypothetical Start Cents"
+          },
+          "hypothetical_end_cents": {
+            "type": "integer",
+            "title": "Hypothetical End Cents"
+          },
+          "allocation_assumption": {
+            "type": "string",
+            "const": "current_weights_held_constant",
+            "title": "Allocation Assumption"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "equity_assumption_rate",
+          "bond_assumption_rate",
+          "other_assumption_rate",
+          "annual_net_return_rate",
+          "years",
+          "hypothetical_start_cents",
+          "hypothetical_end_cents",
+          "allocation_assumption"
+        ],
+        "title": "HypotheticalScenario"
       },
       "MatchTier": {
         "properties": {
@@ -1777,6 +3114,228 @@
         ],
         "title": "RecommendationAction"
       },
+      "ReportedCategory": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Label"
+          },
+          "percent_of_net_assets": {
+            "type": "number",
+            "maximum": 200.0,
+            "minimum": -100.0,
+            "title": "Percent Of Net Assets"
+          },
+          "bucket": {
+            "type": "string",
+            "enum": [
+              "equity",
+              "bond",
+              "other"
+            ],
+            "title": "Bucket"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "label",
+          "percent_of_net_assets",
+          "bucket"
+        ],
+        "title": "ReportedCategory"
+      },
+      "RunList": {
+        "properties": {
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/RunSummary"
+            },
+            "type": "array",
+            "title": "Runs"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "runs"
+        ],
+        "title": "RunList"
+      },
+      "RunSummary": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "profile_id": {
+            "type": "string",
+            "title": "Profile Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Scenario"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "primary_strategy": {
+            "type": "string",
+            "enum": [
+              "current",
+              "adaptive",
+              "custom"
+            ],
+            "title": "Primary Strategy"
+          },
+          "retirement_age": {
+            "type": "integer",
+            "title": "Retirement Age"
+          },
+          "final_retirement_balance_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": -10000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Retirement Balance Cents"
+          },
+          "decision_source": {
+            "type": "string",
+            "enum": [
+              "ai",
+              "rules_fallback"
+            ],
+            "title": "Decision Source"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "prompt_version": {
+            "type": "string",
+            "title": "Prompt Version"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "policy_version": {
+            "type": "string",
+            "title": "Policy Version"
+          },
+          "input_hash": {
+            "type": "string",
+            "title": "Input Hash"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run_id",
+          "profile_id",
+          "label",
+          "created_at",
+          "as_of_date",
+          "scenario",
+          "primary_strategy",
+          "retirement_age",
+          "final_retirement_balance_cents",
+          "decision_source",
+          "model_id",
+          "prompt_version",
+          "model_version",
+          "policy_version",
+          "input_hash"
+        ],
+        "title": "RunSummary"
+      },
+      "SaveRunRequest": {
+        "properties": {
+          "profile_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Profile Id"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Scenario"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "decision_summary": {
+            "$ref": "#/components/schemas/DecisionSummary"
+          },
+          "input_hash": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Input Hash"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profile_id",
+          "decision_summary",
+          "input_hash"
+        ],
+        "title": "SaveRunRequest",
+        "description": "What the app saves: the inputs of a result it is showing, never its numbers.\n\nThe server re-runs the engine from these inputs and stores only its own output.\n`input_hash` must match the recomputed hash, which proves the stored run is the\nresult the user saw."
+      },
+      "SaveRunResponse": {
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/RunSummary"
+          },
+          "created": {
+            "type": "boolean",
+            "title": "Created"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run",
+          "created"
+        ],
+        "title": "SaveRunResponse"
+      },
       "Scenario": {
         "properties": {
           "retirement_age": {
@@ -1804,6 +3363,64 @@
           "retirement_age"
         ],
         "title": "Scenario"
+      },
+      "ScoreComponents": {
+        "properties": {
+          "horizon_fit": {
+            "type": "number",
+            "title": "Horizon Fit"
+          },
+          "risk_fit": {
+            "type": "number",
+            "title": "Risk Fit"
+          },
+          "fee_fit": {
+            "type": "number",
+            "title": "Fee Fit"
+          },
+          "data_completeness": {
+            "type": "number",
+            "title": "Data Completeness"
+          }
+        },
+        "type": "object",
+        "required": [
+          "horizon_fit",
+          "risk_fit",
+          "fee_fit",
+          "data_completeness"
+        ],
+        "title": "ScoreComponents"
+      },
+      "YearValues": {
+        "properties": {
+          "retirement_balance_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Retirement Balance Cents"
+          },
+          "cash_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Cash Cents"
+          },
+          "debt_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Debt Cents"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "retirement_balance_cents",
+          "cash_cents",
+          "debt_cents"
+        ],
+        "title": "YearValues"
       }
     }
   }
