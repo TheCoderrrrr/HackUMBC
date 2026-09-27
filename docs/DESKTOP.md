@@ -34,6 +34,7 @@ If the backend sets `DEMO_KEY`, set the same value in the desktop env so the Vit
 | Learn | **Learn** | Six short lessons; **Try** applies each one to your numbers (a scenario in Explore or a plan style) |
 | Learn | **Getting started** | Five-page guide: welcome, how ARM decides, three key ideas, choose a plan style, where to find things. Opens on first visit per profile |
 
+- **Your numbers** (sidebar → *Add your numbers*): a five-part form (about you, income and spending, savings, employer match, debts) in dollars and percents. The engine previews what it sees as you type (monthly budget after essentials, emergency months, rate for the full match, high-interest debt), and server errors highlight the exact field. Saving stores the numbers in Tiger Data under an anonymous key kept in this browser; the "You" profile then works like the demo profiles, including private saved plans. *Start from Morgan's numbers* pre-fills the form for demos, and *Erase my numbers* removes everything.
 - **Ask** (bottom right) opens the education chat ([EDUCATION_CHAT.md](EDUCATION_CHAT.md)).
 - **Key terms** carry a **?** popover. Definitions that quote numbers read them from the engine's `assumptions`.
 
@@ -63,4 +64,5 @@ Balanced, Cash security first and Debt payoff first are compared with `POST /v1/
 | `src/api/client.test.ts` | Error envelopes, unreachable backend, `204 No Content` |
 | `src/data/chart.test.ts` | Chart math: gap, goal reach, years sooner, presets, axis ticks, goal parsing, labels, milestones |
 | `src/data/display.test.ts` | Sync on real engine output: yearly sampling, chart end = retirement figure, gap = engine totals |
+| `src/data/numbers.test.ts` | Form ↔ API conversion (Morgan round-trips exactly), missing fields, error-path mapping, key format |
 | `src/data/live.test.ts` | Opt-in, against a running backend: `ARM_API=http://127.0.0.1:8000 npx vitest run src/data/live.test.ts` |

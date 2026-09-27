@@ -774,3 +774,43 @@ p.lesson-apply { padding-top: 16px; }
 .pill.danger { color: #101114; background: #f0a58f; }
 .pill.danger:hover { background: #f4b8a6; }
 
+/* ---------- Your numbers ---------- */
+.numbers-intro { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.numbers-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; margin-top: 18px; align-items: start; }
+.numbers-group { padding: 20px 22px; }
+.numbers-group-title { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 500; }
+.numbers-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+.field { display: grid; gap: 5px; align-content: start; }
+.field-label { font-size: 13px; color: var(--text-2); }
+.field-hint { color: var(--caption); }
+.field-input { display: flex; align-items: center; height: 40px; border-radius: 10px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--hairline-strong); }
+.field-input:focus-within { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.field.invalid .field-input { box-shadow: inset 0 0 0 1.5px #f0a58f; }
+.field-input input { flex: 1; min-width: 0; height: 100%; padding: 0 12px; background: none; border: 0; font: inherit; font-size: 15px; color: var(--text); font-variant-numeric: tabular-nums; outline: none; }
+.field-input input::placeholder { color: var(--quiet); }
+.field-affix { padding: 0 10px; font-size: 14px; color: var(--caption); }
+.field-affix:first-child { padding-right: 0; }
+.field-affix:last-child { padding-left: 0; }
+.field-error { font-size: 12px; color: #f0a58f; }
+.field select { height: 40px; padding: 0 10px; border-radius: 10px; font: inherit; font-size: 14px; color: var(--text); background: var(--raised); border: 1px solid var(--hairline-strong); }
+.debt-row { grid-column: 1 / -1; display: grid; grid-template-columns: 1.1fr 1fr 0.8fr 1fr auto; gap: 12px; align-items: end; padding-bottom: 12px; border-bottom: 1px solid var(--hairline); }
+.debt-remove { height: 40px; }
+.numbers-side { position: sticky; top: 84px; display: grid; gap: 12px; }
+.numbers-state { margin-top: 12px; font-size: 14px; }
+.numbers-bad { color: #f0a58f; }
+.numbers-facts { display: grid; gap: 10px; margin-top: 12px; }
+.numbers-facts div { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; }
+.numbers-facts dt { color: var(--text-2); }
+.numbers-facts dd { color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; text-align: right; }
+.numbers-privacy { display: block; line-height: 1.55; }
+.numbers-privacy svg { vertical-align: -2px; color: var(--accent); }
+.numbers-erase { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.add-numbers { display: flex; align-items: center; gap: 8px; margin: 4px 8px 0; padding: 8px 10px; border-radius: 10px; font-size: 13.5px; color: var(--accent); box-shadow: inset 0 0 0 1px rgba(168, 230, 161, 0.3); }
+.add-numbers:hover { background: rgba(168, 230, 161, 0.08); }
+@container (max-width: 900px) {
+  .numbers-grid { grid-template-columns: 1fr; }
+  .numbers-side { position: static; }
+  .numbers-fields { grid-template-columns: 1fr 1fr; }
+  .debt-row { grid-template-columns: 1fr 1fr; }
+}
+

@@ -100,20 +100,38 @@ struct ExploreView: View {
         .animation(Motion.respecting(reduceMotion, Motion.smartFast), value: showsHint)
         .onChange(of: store.profile.id) { _, _ in resetForProfile() }
         .onAppear {
-            // Only the first appearance seeds the draft; profile switches reset it via
-            // resetForProfile. Re-seeding here threw away your scenario on every tab switch.
-            guard !draftReady else { return }
-            draftReady = true
             draft = .original(for: store.displayProfile)
-            #if DEBUG
-            // `-scenarioAge 69` / `-scenarioRate 10` edit the scenario controls on launch, as a
-            // stepper tap would, for screenshots of the live recalculation.
-            let defaults = UserDefaults.standard
-            if defaults.object(forKey: "scenarioAge") != nil { draft.retirementAge = defaults.integer(forKey: "scenarioAge"); draft.preset = nil }
-            if defaults.object(forKey: "scenarioRate") != nil { draft.policy = .fixed; draft.fixedRate = defaults.double(forKey: "scenarioRate"); draft.preset = nil }
-            #endif
+            updateChatContext()
         }
+        .onChange(of: selectedMonth) { _, _ in updateChatContext() }
+        .onChange(of: customResult?.inputHash) { _, _ in updateChatContext() }
+        .onChange(of: store.displayProfile.evaluation?.inputHash) { _, _ in updateChatContext() }
         .onDisappear(perform: pause)
+    }
+
+    private func updateChatContext() {
+        var facts = [
+            EducationScreenFact(label: "selected_timeline_month", value: ExploreTimeline.label(forMonth: selectedMonth)),
+            EducationScreenFact(label: "timeline_note", value: String(timeline.context(at: selectedMonth).prefix(120))),
+            EducationScreenFact(label: "projection_kind", value: "illustrative scenario, not a forecast")
+        ]
+        if let projections = store.displayProfile.evaluation?.projections {
+            if let current = projections.current.retirementBalanceTodayCents {
+                facts.append(EducationScreenFact(label: "current_projected_retirement_balance", value: Money.exact(current)))
+            }
+            if let adaptive = projections.adaptive.retirementBalanceTodayCents {
+                facts.append(EducationScreenFact(label: "adaptive_projected_retirement_balance", value: Money.exact(adaptive)))
+            }
+        }
+        if let scenario = customScenario, let result = customResult?.projections.custom {
+            facts.append(EducationScreenFact(label: "compared_retirement_age", value: String(scenario.retirementAge)))
+            facts.append(EducationScreenFact(label: "compared_contribution_rate", value: scenario.employeeContributionRate.map { String(format: "%.1f%%", $0 * 100) } ?? "adaptive policy"))
+            facts.append(EducationScreenFact(label: "compared_feasible", value: String(result.feasible)))
+            if let amount = result.retirementBalanceTodayCents {
+                facts.append(EducationScreenFact(label: "compared_projected_retirement_balance", value: Money.exact(amount)))
+            }
+        }
+        store.chatScreenFacts[.explore] = facts
     }
 
     // MARK: River and playhead

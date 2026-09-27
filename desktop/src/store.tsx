@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { APIError, api } from "./api/client";
-import type { Evaluation, FinancialProfile, Health, PlanningPreference, PlanStyles, Scenario } from "./api/types";
+import type { Evaluation, FinancialProfile, Health, PlanningPreference, PlanStyles, Scenario, StoredProfile } from "./api/types";
+import { peekProfileKey } from "./data/profileKey";
 import { buildDisplay, type DataMode, type Display } from "./data/display";
 import { loadSavedEvaluation, peekSavedEvaluation, savedProfiles, type Preset } from "./data/saved";
 
@@ -58,6 +59,13 @@ interface Store {
   /** A scenario another view asks Explore to run next (from a Learn lesson). */
   pendingScenario: Scenario | null;
   setPendingScenario: (scenario: Scenario | null) => void;
+  /** The user's own numbers (stored in Tiger Data under their anonymous key), or null. */
+  mine: StoredProfile | null;
+  setMine: (stored: StoredProfile | null) => void;
+  /** True while the "Your numbers" form should show instead of the page. */
+  numbersOpen: boolean;
+  openNumbers: () => void;
+  closeNumbers: () => void;
   /** The open tab inside Your plan. */
   planSection: PlanSection;
   setPlanSection: (section: PlanSection) => void;
@@ -69,6 +77,10 @@ interface Store {
 
 const StoreContext = createContext<Store | null>(null);
 
+/** The profile ID the backend gives the user's own numbers. */
+export const MY_ID = "me";
+const MINE_CACHE = "arm:myProfile";
+
 const current = (load: Load): Loaded | undefined =>
   load.status === "loaded" ? load.loaded : load.status === "idle" ? undefined : load.previous;
 
@@ -77,10 +89,20 @@ function stored<T extends string>(key: string, fallback: T): T {
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const profiles = savedProfiles;
+  // The user's own numbers: a local copy for instant start, refreshed from Tiger Data when live.
+  const [mine, setMineState] = useState<StoredProfile | null>(() => {
+    try {
+      const cached = localStorage.getItem(MINE_CACHE);
+      return cached ? (JSON.parse(cached) as StoredProfile) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [numbersOpen, setNumbersOpen] = useState(false);
+  const profiles = useMemo(() => (mine ? [...savedProfiles, mine.profile] : savedProfiles), [mine]);
   const [profileID, setProfileID] = useState(() => {
-    const id = stored("profile", "morgan");
-    return profiles.some((p) => p.id === id) ? id : profiles[0].id;
+    const id: string = stored<string>("profile", "morgan");
+    return id === MY_ID || savedProfiles.some((p) => p.id === id) ? id : savedProfiles[0].id;
   });
   const [tab, setTab] = useState<Tab>(() => {
     const saved = localStorage.getItem("tab");
@@ -98,6 +120,40 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const lastDecision = useRef<{ profileID: string; decisionID: string } | null>(null);
 
   const baseProfile = profiles.find((p) => p.id === profileID) ?? profiles[0];
+
+  const setMine = useCallback((next: StoredProfile | null) => {
+    setMineState(next);
+    lastLive.current.delete(MY_ID);
+    try {
+      if (next) localStorage.setItem(MINE_CACHE, JSON.stringify(next));
+      else localStorage.removeItem(MINE_CACHE);
+    } catch {
+      // Storage unavailable: the numbers still load from Tiger Data next time.
+    }
+    if (next) {
+      setProfileID(MY_ID);
+      localStorage.setItem("profile", MY_ID);
+    }
+  }, []);
+
+  // With live calculation on, the stored copy in Tiger Data wins over the local one.
+  useEffect(() => {
+    const key = peekProfileKey();
+    if (!key || !liveEnabled) return;
+    const controller = new AbortController();
+    api.profiles.load(key, controller.signal)
+      .then((remote) => {
+        setMineState(remote);
+        try { localStorage.setItem(MINE_CACHE, JSON.stringify(remote)); } catch { /* ignore */ }
+      })
+      .catch((error: unknown) => {
+        if (error instanceof APIError && error.body?.code === "PROFILE_NOT_FOUND") {
+          setMineState(null);
+          try { localStorage.removeItem(MINE_CACHE); } catch { /* ignore */ }
+        }
+      });
+    return () => controller.abort();
+  }, [liveEnabled]);
   const [styles, setStyles] = useState<Record<string, PlanningPreference>>(() => {
     const out: Record<string, PlanningPreference> = {};
     for (const p of profiles) {
@@ -305,6 +361,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     closeGuide: () => setGuideOpen(false),
     pendingScenario,
     setPendingScenario,
+    mine,
+    setMine,
+    numbersOpen: numbersOpen || (profileID === MY_ID && !mine),
+    openNumbers: () => setNumbersOpen(true),
+    closeNumbers: () => setNumbersOpen(false),
     planSection,
     setPlanSection,
     openPlan,

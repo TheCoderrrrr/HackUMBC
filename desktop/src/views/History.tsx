@@ -5,7 +5,8 @@ import { Icon } from "../components/ui";
 import { Disclosure } from "../components/Tabs";
 import { LineChart, type Series } from "../components/LineChart";
 import { money, monthLabel } from "../data/format";
-import { useStore } from "../store";
+import { peekProfileKey } from "../data/profileKey";
+import { MY_ID, useStore } from "../store";
 
 /** The result currently on screen: the plan as is, or a compared scenario. */
 export interface Shown {
@@ -45,7 +46,7 @@ export function History({ shown }: { shown: Shown }) {
   const ready = state.kind === "ready" && state.status.enabled && state.status.available;
 
   const loadRuns = useCallback(async (select?: string) => {
-    const list = (await api.history.list(profile.id)).runs;
+    const list = (await api.history.list(profile.id, undefined, keyFor(profile.id))).runs;
     setRuns(list);
     setPick((current) => {
       const ids = new Set(list.map((r) => r.run_id));
@@ -82,7 +83,7 @@ export function History({ shown }: { shown: Shown }) {
     setComparison(null);
     if (!ready || !pick.base || !pick.other || pick.base === pick.other) return;
     const controller = new AbortController();
-    api.history.compare(pick.base, pick.other, controller.signal)
+    api.history.compare(pick.base, pick.other, controller.signal, keyFor(profile.id))
       .then(setComparison)
       .catch((error) => {
         if (!controller.signal.aborted) setMessage(errorMessage(error));
@@ -94,7 +95,7 @@ export function History({ shown }: { shown: Shown }) {
     setSaving(true);
     setMessage(null);
     try {
-      const { run, created } = await api.history.save(shown.evaluation, shown.scenario, style);
+      const { run, created } = await api.history.save(shown.evaluation, shown.scenario, style, keyFor(profile.id));
       setMessage(created ? `Saved “${run.label}”.` : `“${run.label}” is already in history.`);
       await loadRuns(run.run_id);
     } catch (error) {
@@ -265,7 +266,7 @@ function RunRow({ run, onDeleted, onError }: {
   const remove = async () => {
     setBusy(true);
     try {
-      await api.history.remove(run.run_id);
+      await api.history.remove(run.run_id, peekProfileKey());
       await onDeleted(run.label);
     } catch (error) {
       onError(errorMessage(error));
@@ -295,5 +296,10 @@ function RunRow({ run, onDeleted, onError }: {
       )}
     </li>
   );
+}
+
+/** The user's own plans are scoped to their anonymous key; demo plans are shared. */
+function keyFor(profileID: string): string | null {
+  return profileID === MY_ID ? peekProfileKey() : null;
 }
 

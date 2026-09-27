@@ -1,12 +1,14 @@
 # iOS chatbot handoff
 
-This is the implementation and design brief for the Mac teammate. The goal is an educational retirement guide that can be opened from **Overview**, **Plan**, **Explore**, and **Funds** without making chat its own tab. The visual treatment should feel like the rest of Adaptive Retirement: dark, calm, light on borders, and easy to read. The app should answer a user's actual question and follow-up through the backend's Gemini chat endpoint.
+This is the implementation and design brief for the Mac teammate. The goal is a screen-aware retirement guide that can be opened from **Overview**, **Plan**, **Explore**, and **Funds** without making chat its own tab. The visual treatment should feel like the rest of Adaptive Retirement: dark, calm, light on borders, and easy to read. The app should answer questions about the plan and fund figures the user is seeing, plus follow-ups, through the backend's Gemini chat endpoint.
 
 ## Current files
 
 - `ios/AdaptiveRetirement/App/AdaptiveRetirementApp.swift`: `MainTabView` adds the floating **Ask** control to the tab view, opens `.educationChat`, and owns `chatMessages` so the conversation survives closing the sheet or changing tabs.
-- `ios/AdaptiveRetirement/App/AppStore.swift`: `ActiveSheet.educationChat`; `AppStore.defaultDemoKey` supplies the `X-Demo-Key` header the chat request sends when the server sets `DEMO_KEY`.
-- `ios/AdaptiveRetirement/Features/Education/EducationChatView.swift`: sheet UI, starter questions, message list, composer, `POST /v1/education/chat`, and response/source display.
+- `ios/AdaptiveRetirement/App/AppStore.swift`: `ActiveSheet.educationChat`, `chatScreenFacts` for Explore and Funds; `AppStore.defaultDemoKey` supplies the `X-Demo-Key` header the chat request sends when the server sets `DEMO_KEY`.
+- `ios/AdaptiveRetirement/Features/Education/EducationChatView.swift`: sheet UI, section-specific starter questions, message list, composer, screen context request, and response/source display.
+- `ios/AdaptiveRetirement/Features/Explore/ExploreView.swift`: publishes the selected timeline month and visible comparison values for chat.
+- `ios/AdaptiveRetirement/Features/Funds/FundsView.swift`: publishes selected filters and the visible shortlist for chat.
 - `ios/AdaptiveRetirement/DesignSystem/Theme.swift`: use the existing `Palette`, `TypeScale`, and `Space` tokens. Do not add an unrelated color or font system.
 - `docs/EDUCATION_CHAT.md`: backend behavior and API contract.
 
@@ -22,7 +24,7 @@ When the conversation is empty, show a short headline, one line explaining the p
 
 Put user messages on the trailing side in a faint green rounded bubble. Put assistant responses on the leading side as open text with an `ADAPTIVE GUIDE` label, generous line spacing, and no heavy background. Long answers must wrap and scroll naturally. Show a progress indicator while waiting; keep the current user question visible. Put references in a disclosure group under the response, collapsed initially. This keeps the main answer readable while preserving source access.
 
-Anchor the composer at the bottom of the sheet: rounded dark field, circular green send button, disabled state while sending, and nearby error text. The current character limit is 500. Under the field, keep a short notice that questions and recent chat are sent to Google Gemini, that answers are educational, and that users should not type sensitive details. Do not claim a response was AI generated when `mode` is `template`.
+Anchor the composer at the bottom of the sheet: rounded dark field, circular green send button, disabled state while sending, and nearby error text. The current character limit is 500. Under the field, keep a short notice that questions, recent chat, and a summary of the current screen may be sent to Google Gemini, and that users should not type sensitive details. Do not claim a response was AI generated when `mode` is `template`.
 
 ## Behavior and data flow
 
@@ -34,15 +36,23 @@ The iPhone sends `POST /v1/education/chat` to the backend URL in `AppStore.serve
   "history": [
     { "role": "user", "content": "What is an expense ratio?" },
     { "role": "assistant", "content": "..." }
-  ]
+  ],
+  "context": {
+    "screen": "funds",
+    "data_mode": "live",
+    "facts": [
+      { "label": "selected_risk_tolerance", "value": "moderate" },
+      { "label": "fund_1_expense_ratio", "value": "0.09%" }
+    ]
+  }
 }
 ```
 
-Send at most the last four turns. The backend response has `answer`, `mode` (`ai` or `template`), `topic`, and server-selected `sources` with `title` and `url`. Display the actual `answer`; do not replace it with local topic text. Open only valid HTTPS source links. Keep the Gemini key in `backend/.env`; never put it in the iOS app, Xcode scheme, bundle, or repository.
+Send at most the last four turns. The context has a screen ID, data mode, and at most 40 short label/value facts derived from the current app view. Refresh it when the selected profile, Explore comparison, or Funds shortlist changes. The backend response has `answer`, `mode` (`ai` or `template`), `topic`, and server-selected `sources` with `title` and `url`. Display the actual `answer`; do not replace it with local topic text. Open only valid HTTPS source links. Keep the Gemini key in `backend/.env`; never put it in the iOS app, Xcode scheme, bundle, or repository.
 
-The app does not attach the customer's financial profile or account state to chat automatically. The user-entered question and recent chat **do** reach the backend and, when Gemini answers, Google Gemini. The backend may use a built-in answer when Gemini is unavailable or the question is restricted. The app distinguishes those cases through `mode`. The chat UI keeps messages only in memory for the current app session.
+The app attaches a bounded summary of visible plan and fund data, including some synthetic balances, contributions, and shortlist facts. It does not send the full raw account record, credentials, or hidden evaluation object. The question, recent chat, and screen summary reach the backend and, when Gemini answers, Google Gemini. The backend may use a built-in answer when Gemini is unavailable or the question is restricted. The app distinguishes those cases through `mode`. The chat UI keeps messages only in memory for the current app session.
 
-The sheet owns transient draft, loading, and error state. `MainTabView` owns the message list, so closing and reopening the sheet retains context. On dismissal, cancel an in-flight request. On cancellation or failure, remove only that request's user message and restore its draft; never remove a later message from a newly opened sheet. The network request timeout is 16 seconds, longer than the backend's separate education deadline.
+The sheet owns transient loading and error state. `MainTabView` owns the message list and draft, so closing and reopening the sheet retains context. Switching customers clears the old conversation so one person's questions are not applied to another person's plan. On dismissal, cancel an in-flight request. On cancellation or failure, remove only that request's user message and restore its draft; never remove a later message from a newly opened sheet. The network request timeout is 16 seconds, longer than the backend's separate education deadline.
 
 ## Mac verification checklist
 
@@ -51,5 +61,6 @@ The sheet owns transient draft, loading, and error state. `MainTabView` owns the
 3. With a Gemini-enabled backend, ask two different questions on the same topic and a follow-up such as “Why does that matter?” Verify the responses address the wording and history and show the AI label.
 4. Test with Gemini unavailable. Verify the built-in answer is labeled honestly. Also test backend offline, a slow response, a 429 response, dismissing while a request is in flight, and retrying after failure.
 5. Check VoiceOver order and labels, large Dynamic Type, small-screen layout, dark-mode contrast, keyboard avoidance, safe areas, and HTTPS source links.
+6. Switch between the fictional customers while chat is closed and verify the old customer's chat is cleared. Compare the JSON `context.facts` in an Xcode network inspection with the exact values visible on each screen; check that no unrelated account fields are attached.
 
 Start the backend with `AI_PROVIDER=gemini`, `AI_MODEL=gemini-3.5-flash-lite`, and `GEMINI_API_KEY` set in `backend/.env`. Use the existing HTTPS tunnel for an iPhone device. The key stays on the server. See `docs/RUNBOOK.md` for backend and tunnel setup.

@@ -55,6 +55,47 @@ struct FundsView: View {
         }
         .animation(Motion.reveal, value: model.account)
         .animation(Motion.reveal, value: model.menuKnown)
+        .onAppear { updateChatContext() }
+        .onReceive(model.objectWillChange) { _ in
+            Task { @MainActor in updateChatContext() }
+        }
+    }
+
+    private func updateChatContext() {
+        var facts = [
+            EducationScreenFact(label: "account_type", value: model.account.rawValue),
+            EducationScreenFact(label: "selected_risk_tolerance", value: model.risk.rawValue),
+            EducationScreenFact(label: "selected_retirement_year", value: String(model.retirementYear)),
+            EducationScreenFact(label: "plan_menu_known", value: String(model.menuKnown)),
+            EducationScreenFact(label: "ranking_method", value: "horizon fit, stock allocation risk fit, fund fees, verified data completeness"),
+            EducationScreenFact(label: "risk_scale", value: "1 to 5, based on current stock weight, not volatility")
+        ]
+        if let catalog = model.catalog.value {
+            facts.append(EducationScreenFact(label: "catalog_published_on", value: catalog.publishedOn))
+        }
+        if let shortlist = model.shortlist.value?.shortlist {
+            facts.append(EducationScreenFact(label: "shortlist_count", value: String(shortlist.recommendations.count)))
+            for (index, fund) in shortlist.recommendations.prefix(3).enumerated() {
+                let key = "fund_\(index + 1)"
+                facts += [
+                    EducationScreenFact(label: "\(key)_name", value: String(fund.name.prefix(120))),
+                    EducationScreenFact(label: "\(key)_target_year", value: String(fund.targetYear)),
+                    EducationScreenFact(label: "\(key)_expense_ratio", value: String(format: "%.2f%%", fund.expenseRatio * 100)),
+                    EducationScreenFact(label: "\(key)_stock_mix", value: String(format: "%.1f%%", fund.equityWeight * 100)),
+                    EducationScreenFact(label: "\(key)_risk_band_out_of_five", value: String(fund.riskBand)),
+                    EducationScreenFact(label: "\(key)_availability", value: fund.availabilityLabel.rawValue),
+                    EducationScreenFact(label: "\(key)_facts_as_of", value: fund.factsAsOfDate)
+                ]
+                if let base = fund.hypotheticalScenarios.first(where: { $0.label == "base" }) {
+                    facts.append(EducationScreenFact(label: "\(key)_hypothetical_base_annual_return", value: String(format: "%.1f%%", base.annualNetReturnRate * 100)))
+                }
+                if let history = fund.historicalReturns.first {
+                    let rate = String(format: "%.1f%%", history.annualizedReturnRate * 100)
+                    facts.append(EducationScreenFact(label: "\(key)_historical_return", value: "\(rate) annualized over \(history.periodYears) years as of \(history.asOfDate)"))
+                }
+            }
+        }
+        store.chatScreenFacts[.funds] = facts
     }
 
     private var envelope: API.Funds.Envelope? { model.shortlist.value }

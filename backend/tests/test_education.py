@@ -57,6 +57,52 @@ def test_actual_question_and_recent_history_drive_generated_answer():
     assert "Do not perform calculations" in system
 
 
+def test_current_screen_facts_reach_model_and_exact_screen_figure_is_allowed():
+    model = ChatModel("Your plan shows $963.80 extra toward the credit card each month.")
+    client = make_client(model)
+    context = {"screen": "plan", "data_mode": "live", "facts": [
+        {"label": "next_step", "value": "Tackle the credit card"},
+        {"label": "next_step_monthly_amount", "value": "$963.80"},
+    ]}
+    response = client.post("/v1/education/chat", json={
+        "message": "Why is this my next step?", "context": context,
+    })
+    assert response.status_code == 200
+    assert response.json()["mode"] == "ai"
+    assert "$963.80" in response.json()["answer"]
+    assert model.calls[0][1]["screen_context"] == context
+    assert len(model.calls) == 1
+
+
+def test_made_up_screen_figure_falls_back():
+    context = {"screen": "funds", "data_mode": "saved", "facts": [
+        {"label": "fund_1_expense_ratio", "value": "0.09%"},
+    ]}
+    model = ChatModel("This fund has a 9% expense ratio.")
+    response = make_client(model).post("/v1/education/chat", json={
+        "message": "What does this fund fee mean?", "context": context,
+    })
+    assert response.json()["mode"] == "template"
+    assert "9%" not in response.json()["answer"]
+
+
+def test_screen_context_is_bounded_and_sensitive_values_stay_local():
+    client = make_client(ChatModel())
+    too_many = [{"label": "item", "value": "example"}] * 41
+    invalid = client.post("/v1/education/chat", json={
+        "message": "What does my plan show?", "context": {"screen": "plan", "data_mode": "live", "facts": too_many},
+    })
+    assert invalid.status_code == 422
+    model = ChatModel()
+    safe = make_client(model).post("/v1/education/chat", json={
+        "message": "Explain this plan", "context": {"screen": "plan", "data_mode": "live", "facts": [
+            {"label": "note", "value": "password is bluebird"},
+        ]},
+    })
+    assert safe.json()["mode"] == "template"
+    assert model.calls == []
+
+
 def test_general_retirement_question_and_followup_reach_model():
     model = ChatModel("A retirement time horizon is the period before and during withdrawals.")
     client = make_client(model)

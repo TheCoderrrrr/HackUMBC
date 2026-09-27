@@ -7,14 +7,16 @@ from fastapi import APIRouter, Query, Request, Response
 
 from app.analytics import service
 from app.analytics.models import Comparison, HistoryStatus, RunList, SaveRunRequest, SaveRunResponse
+from app.analytics.owner import owner_from
 from app.analytics.store import HistoryStore, HistoryUnavailable
 from app.errors import ApiError
 from app.limits import client_key
-from app.schemas import ErrorEnvelope
+from app.schemas import ErrorEnvelope, FinancialProfile
 
 router = APIRouter(prefix="/v1/history", tags=["history"])
 
-_ERRORS = {code: {"model": ErrorEnvelope} for code in (404, 409, 422, 429, 503)}
+_ERRORS = {code: {"model": ErrorEnvelope} for code in (401, 404, 409, 422, 429, 503)}
+MANUAL_PROFILE_ID = "me"
 LIST_LIMIT = 20
 
 
@@ -48,9 +50,18 @@ def save_run(body: SaveRunRequest, request: Request, response: Response) -> Save
     store = _store(request)
     if not request.app.state.evaluate_limiter.allow(client_key(request)):
         raise ApiError(429, "RATE_LIMITED", "Too many requests. Try again in a minute.", retryable=True)
-    record = service.build_run(body.profile_id, body.scenario, body.decision_summary, body.input_hash,
-                               body.planning_preference)
     try:
+        if body.profile_id == MANUAL_PROFILE_ID:  # the user's own stored numbers
+            owner = owner_from(request, required=True)
+            stored = store.get_profile(owner)
+            if stored is None:
+                raise ApiError(404, "PROFILE_NOT_FOUND", "Save your numbers first.", ["profile_id"])
+            record = service.build_run(body.profile_id, body.scenario, body.decision_summary, body.input_hash,
+                                       body.planning_preference, profile=FinancialProfile.model_validate(stored[1]),
+                                       owner=owner)
+        else:
+            record = service.build_run(body.profile_id, body.scenario, body.decision_summary, body.input_hash,
+                                       body.planning_preference)
         run, created = store.save(record)
     except HistoryUnavailable:
         raise _unavailable() from None
@@ -62,8 +73,9 @@ def save_run(body: SaveRunRequest, request: Request, response: Response) -> Save
 @router.get("/runs", response_model=RunList, responses=_ERRORS)
 def list_runs(request: Request, profile_id: str = Query(min_length=1, max_length=64)) -> RunList:
     store = _store(request)
+    owner = owner_from(request, required=True) if profile_id == MANUAL_PROFILE_ID else None
     try:
-        return RunList(runs=store.list_runs(profile_id, LIST_LIMIT))
+        return RunList(runs=store.list_runs(profile_id, LIST_LIMIT, owner))
     except HistoryUnavailable:
         raise _unavailable() from None
 
@@ -72,8 +84,9 @@ def list_runs(request: Request, profile_id: str = Query(min_length=1, max_length
 def delete_run(run_id: str, request: Request) -> Response:
     store = _store(request)
     run_id = _run_id(run_id, "run_id")
+    owner = owner_from(request)
     try:
-        if not store.delete(run_id):
+        if not store.delete(run_id, owner):
             raise ApiError(404, "RUN_NOT_FOUND", "That saved run doesn't exist.", ["run_id"])
     except HistoryUnavailable:
         raise _unavailable() from None
@@ -84,8 +97,9 @@ def delete_run(run_id: str, request: Request) -> Response:
 def compare(request: Request, base: str = Query(), other: str = Query()) -> Comparison:
     store = _store(request)
     base_id, other_id = _run_id(base, "base"), _run_id(other, "other")
+    owner = owner_from(request)
     try:
-        runs = store.get_runs([base_id, other_id])
+        runs = store.get_runs([base_id, other_id], owner)
         for run_id, field in ((base_id, "base"), (other_id, "other")):
             if run_id not in runs:
                 raise ApiError(404, "RUN_NOT_FOUND", "That saved run doesn't exist.", [field])

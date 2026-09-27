@@ -4,7 +4,7 @@ Save a projection run, then compare two runs of the same profile over 5, 10 and 
 
 This targets the [hackUMBC Best Use of Tiger Data prize](https://hackumbc-2026.devpost.com/), which rewards time-series analytics with a visible user benefit: two saved scenarios diverging over time, with the yearly values coming from a Tiger Data continuous aggregate. Code lives in `backend/app/analytics/`, behind its own router, so the fund shortlist and the evaluation flow don't depend on it.
 
-**Data rules:** synthetic demo profiles only. No real profiles, names, debts, API keys, or raw requests go to the cloud database, and neither does the raw SEC staging database. Projection points are stored as computed; SQL never recalculates financial policy. Credentials stay in git-ignored `backend/.env`.
+**Data rules:** demo profiles are synthetic. Users can also enter **their own numbers** ("Your numbers" in the desktop app), which are stored here under an **anonymous key**: the browser generates 32 random bytes, sends them as `X-Profile-Key`, and the server stores and compares only their SHA-256. There's no email, account or required name. Users can erase their numbers and every plan saved from them (`DELETE /v1/profiles/me`). API keys, raw requests and the SEC staging database never go to the cloud database. Projection points are stored as computed; SQL never recalculates financial policy. Credentials stay in git-ignored `backend/.env`.
 
 ## Setup
 
@@ -24,6 +24,8 @@ Tables are created on first use (`store.migrations`). Every statement is idempot
 |---|---|
 | `scenario_run` | One saved run: demo profile ID, server-built label, scenario, decision source/order/model, prompt/model/policy versions, assumptions, `input_hash` (unique). |
 | `projection_point` | Hypertable on the integer `month`, one row per `(run, strategy, month)` with retirement, cash and debt in integer cents, plus `projected_on`. |
+| `user_profile` | A user's own numbers: the form as entered and the built profile (JSON), keyed by the SHA-256 of their anonymous key. |
+| `scenario_run.owner_key_hash` | Owner of a run saved from a user's numbers; `NULL` for shared demo runs. Uniqueness is `(input_hash, owner)`, so identical plans by different users stay separate. |
 | `projection_yearly` | Continuous aggregate: `time_bucket(12, month)` with `first(value, month)`. Real-time mode is on, and each save refreshes its window. |
 | Compression | `projection_point` is compressed, segmented by `(run_id, strategy)` and ordered by `month`, with a compression policy. Saved projections never change. Measured on the live service: 1.38 MB → 262 KB (81% smaller) for 5,887 points. Reads and deletes work on compressed chunks. |
 
@@ -41,6 +43,8 @@ Connections come from a small lazy pool (`psycopg-pool`, 0–4 connections, heal
 | `POST /v1/history/runs` | Save a run: `201` new, `200` already saved (same `input_hash`) |
 | `GET /v1/history/runs?profile_id=` | Up to 20 runs, newest first |
 | `GET /v1/history/compare?base=&other=` | Yearly timeline and 5/10/20-year horizons for two runs of one profile, read in one query |
+| `PUT` / `GET` / `DELETE /v1/profiles/me` | Store, load or erase the user's own numbers (needs `X-Profile-Key`; erasing also removes their runs) |
+| `POST /v1/profiles/build` | Validate the form and preview the engine's financial state, without storing |
 | `DELETE /v1/history/runs/{id}` | Delete a run: `204`, or `404` if it doesn't exist. Points go by `ON DELETE CASCADE`; the continuous aggregate is refreshed |
 
 Saves also record the plan style (`planning_preference`), so a result made with a non-default style recomputes to the same `input_hash`.
