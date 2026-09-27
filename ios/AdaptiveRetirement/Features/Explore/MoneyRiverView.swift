@@ -6,7 +6,6 @@ import SwiftUI
 struct MoneyRiverView: View {
     let timeline: ExploreTimeline
     let month: Double
-
     var body: some View {
         let destinations = timeline.destinations(at: Int(month.rounded()))
         VStack(spacing: 0) {

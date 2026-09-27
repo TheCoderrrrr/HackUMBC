@@ -180,7 +180,10 @@ private struct ComparisonDetail: View {
             }
             .frame(minHeight: 28)
 
-            HistoryChart(base: base, other: other)
+            YearlyComparisonChart(series: [
+                YearlySeries(name: comparison.base.label, values: base, style: .baseline),
+                YearlySeries(name: comparison.other.label, values: other, style: .primary),
+            ])
                 .frame(height: 190)
                 .padding(.top, Space.s)
                 .accessibilityLabel("Retirement balance over time: \(comparison.base.label), dashed, compared with \(comparison.other.label), solid")
@@ -281,105 +284,5 @@ private struct HorizonRow: View {
         return Text(Money.whole(cents))
             .font(.numeral(13, emphasized ? .medium : .regular, relativeTo: .footnote))
             .foregroundColor(emphasized ? Palette.textPrimary : Palette.textSecondary)
-    }
-}
-
-/// Two runs on a shared year axis, in the style of Explore's Current vs Adaptive chart: faded
-/// unstacked areas under a dashed blue and a solid accent line. Unlike that chart, series aren't
-/// stretched to full width, so a run that retires sooner ends sooner.
-private struct HistoryChart: View {
-    let base: [Double]
-    let other: [Double]
-
-    private struct Point: Identifiable {
-        let id: Int
-        let year: Int
-        let value: Double
-        let series: String
-    }
-
-    private static let domain = ["Compare", "With"]
-
-    var body: some View {
-        let lastYear = Double(max(base.count, other.count, 2) - 1)
-        let yMax = max(base.max() ?? 1, other.max() ?? 1, 1) * 1.04
-        ZStack {
-            Chart(points) { point in
-                AreaMark(x: .value("Year", point.year), y: .value("Balance", point.value), stacking: .unstacked)
-                    .interpolationMethod(.monotone)
-                    .foregroundStyle(by: .value("Run", point.series))
-            }
-            .chartForegroundStyleScale(domain: Self.domain,
-                                       range: [fade(Palette.blue, top: 0.26, mid: 0.09),
-                                               fade(Color(hex: 0x86DB8F), top: 0.36, mid: 0.14)])
-            .modifier(Axes(lastYear: lastYear, yMax: yMax))
-            .fillGrain()
-
-            Chart {
-                ForEach([0.12, 0.42, 0.72], id: \.self) { y in
-                    RuleMark(y: .value("Guide", y * yMax))
-                        .foregroundStyle(Palette.hairline)
-                        .lineStyle(StrokeStyle(lineWidth: 1))
-                }
-                ForEach(points) { point in
-                    LineMark(x: .value("Year", point.year), y: .value("Balance", point.value))
-                        .interpolationMethod(.monotone)
-                        .foregroundStyle(by: .value("Run", point.series))
-                        .lineStyle(point.series == "Compare"
-                                   ? StrokeStyle(lineWidth: 1.15, lineCap: .round, dash: [3, 4])
-                                   : StrokeStyle(lineWidth: 1.65, lineCap: .round))
-                }
-                if let end = other.last {
-                    PointMark(x: .value("Year", other.count - 1), y: .value("Balance", end))
-                        .symbolSize(40)
-                        .foregroundStyle(Palette.accent)
-                }
-            }
-            .chartForegroundStyleScale(domain: Self.domain, range: [Palette.blue.opacity(0.9), Palette.accent])
-            .modifier(Axes(lastYear: lastYear, yMax: yMax))
-        }
-        .accessibilityElement(children: .ignore)
-    }
-
-    private var points: [Point] {
-        base.enumerated().map { Point(id: $0.offset, year: $0.offset, value: $0.element, series: "Compare") }
-            + other.enumerated().map { Point(id: 10_000 + $0.offset, year: $0.offset, value: $0.element, series: "With") }
-    }
-
-    private func fade(_ color: Color, top: Double, mid: Double) -> LinearGradient {
-        LinearGradient(stops: [
-            .init(color: color.opacity(top), location: 0),
-            .init(color: color.opacity(mid), location: 0.5),
-            .init(color: color.opacity(0), location: 1)
-        ], startPoint: .top, endPoint: .bottom)
-    }
-
-    private struct Axes: ViewModifier {
-        let lastYear: Double
-        let yMax: Double
-        func body(content: Content) -> some View {
-            content
-                .chartXScale(domain: 0...lastYear)
-                .chartYScale(domain: 0...yMax)
-                .chartXAxis(.hidden)
-                .chartYAxis(.hidden)
-                .chartLegend(.hidden)
-        }
-    }
-}
-
-/// A short line sample: dashed for "Compare", solid for "with".
-private struct SeriesSwatch: View {
-    let color: Color
-    let dashed: Bool
-
-    var body: some View {
-        Path { p in
-            p.move(to: CGPoint(x: 0, y: 1))
-            p.addLine(to: CGPoint(x: 17, y: 1))
-        }
-        .stroke(color, style: StrokeStyle(lineWidth: 2, dash: dashed ? [3, 2] : []))
-        .frame(width: 17, height: 2)
-        .accessibilityHidden(true)
     }
 }
