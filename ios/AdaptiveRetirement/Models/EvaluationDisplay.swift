@@ -5,22 +5,31 @@ import SwiftUI
 // from it. Names, copy and inputs the evaluation doesn't carry stay from `DemoData`.
 
 extension Profile {
-    /// The fixture with the engine's plan, derived state and projections applied.
+    /// The fixture with the engine's plan, derived state and projections applied. Inputs
+    /// (salary, take-home, balances, debts) come from the profile the engine evaluated
+    /// when it's known, so the snapshot shows the request's values, not `DemoData` (B4).
     func applying(_ loaded: LoadedEvaluation?) -> Profile {
         guard let loaded, loaded.evaluation.profileID == id else { return self }
         let e = loaded.evaluation
         let state = e.financialState
         let actions = e.plan.actions
+        let input = loaded.apiProfile
 
         let contribution = actions.first { $0.category == .contribution }
         let rate = contribution?.employeeContributionRate ?? adaptiveEmployeeRate
         let employeeCents = contribution?.employeeContributionCents ?? employeeMonthlyCents
         let takeHomeCost = contribution?.monthlyCashCostCents ?? takeHomeCostCents
 
-        // The engine reports match at the current rate and at the full-match rate; pick whichever applies.
         let captured = state.employeeRateForFullMatch.map { rate + 1e-9 >= $0 } ?? matchCaptured
+        // The actual employer match at the plan's rate lives in the contribution reason's
+        // facts; the state fields only carry the current-rate and maximum amounts (B4).
         let employerCents: Int64
-        if captured, let maximum = state.maximumMonthlyEmployerMatchCents {
+        let matchReason = e.plan.reasons.first {
+            $0.code == "CAPTURE_EMPLOYER_MATCH" || $0.code == "MATCH_PARTIALLY_AFFORDABLE"
+        }
+        if case .int(let employer)? = matchReason?.facts["employer_contribution_cents"] {
+            employerCents = employer
+        } else if captured, let maximum = state.maximumMonthlyEmployerMatchCents {
             employerCents = maximum
         } else if abs(rate - currentEmployeeRate) < 1e-9, let current = state.currentMonthlyEmployerMatchCents {
             employerCents = current
@@ -28,11 +37,27 @@ extension Profile {
             employerCents = employerMonthlyCents
         }
 
-        let mappedDebts = debts.map { debt -> Debt in
+        // Balances/APRs/minimums from the evaluated profile when it's available.
+        let baseDebts: [Debt] = input?.debts.map { apiDebt in
+            Debt(id: apiDebt.id, name: apiDebt.type.displayName, balanceCents: apiDebt.balanceCents,
+                 apr: apiDebt.apr, minimumCents: apiDebt.minimumPaymentCents, extraCents: 0)
+        } ?? debts
+
+        let mappedDebts = baseDebts.map { debt -> Debt in
             guard let action = actions.first(where: { $0.debtID == debt.id }) else { return debt }
+            // The engine's capped extra payment from the reason facts, not the action total
+            // minus the fixture's minimum (B4).
+            let reason = e.plan.reasons.first {
+                $0.facts["debt_id"] == .string(debt.id) && $0.facts["extra_payment_cents"] != nil
+            }
+            let extra: Int64
+            if case .int(let value)? = reason?.facts["extra_payment_cents"] {
+                extra = value
+            } else {
+                extra = max(action.monthlyCashCostCents - debt.minimumCents, 0)
+            }
             return Debt(id: debt.id, name: debt.name, balanceCents: debt.balanceCents, apr: debt.apr,
-                        minimumCents: debt.minimumCents,
-                        extraCents: max(action.monthlyCashCostCents - debt.minimumCents, 0))
+                        minimumCents: debt.minimumCents, extraCents: max(extra, 0))
         }
         let extraDebt = mappedDebts.reduce(Int64(0)) { $0 + $1.extraCents }
         func cost(_ category: API.RecommendationAction.Category) -> Int64 {
@@ -49,14 +74,17 @@ extension Profile {
 
         var result = Profile(
             id: id, name: name, initials: initials, subtitle: subtitle,
-            age: age, retirementAge: retirementAge,
-            annualSalaryCents: annualSalaryCents, monthlyTakeHomeCents: monthlyTakeHomeCents,
-            monthlyLivingCents: monthlyLivingCents,
-            retirementBalanceCents: retirementBalanceCents, emergencyCashCents: emergencyCashCents,
+            age: input?.age ?? age, retirementAge: input?.retirementAge ?? retirementAge,
+            annualSalaryCents: input?.annualGrossSalaryCents ?? annualSalaryCents,
+            monthlyTakeHomeCents: input?.monthlyTakeHomeCents ?? monthlyTakeHomeCents,
+            monthlyLivingCents: input?.monthlyLivingExpensesCents ?? monthlyLivingCents,
+            retirementBalanceCents: input?.retirementBalanceCents ?? retirementBalanceCents,
+            emergencyCashCents: input?.emergencyCashCents ?? emergencyCashCents,
             emergencyMonths: state.emergencyMonths,
             starterTargetMonths: starterTargetMonths, fullTargetMonths: fullTargetMonths,
             debts: mappedDebts,
-            currentEmployeeRate: currentEmployeeRate, adaptiveEmployeeRate: rate,
+            currentEmployeeRate: input?.employeeContributionRate ?? currentEmployeeRate,
+            adaptiveEmployeeRate: rate,
             employeeMonthlyCents: employeeCents, employerMonthlyCents: employerCents,
             takeHomeCostCents: takeHomeCost, matchCaptured: captured,
             primaryActionTitle: primaryActionTitle, primaryActionDetail: primaryActionDetail,
@@ -85,6 +113,17 @@ extension API.Projection {
 
     func retirementBalance(atYear year: Int) -> Int64? {
         points.last { $0.month <= year * 12 }?.retirementBalanceCents
+    }
+}
+
+extension API.Debt.Kind {
+    /// Display name for a debt the engine evaluated ("Credit card"), matching fixture style.
+    var displayName: String {
+        switch self {
+        case .creditCard: return "Credit card"
+        case .studentLoan: return "Student loan"
+        case .other: return "Debt"
+        }
     }
 }
 

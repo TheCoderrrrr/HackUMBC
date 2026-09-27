@@ -24,6 +24,10 @@ enum ActiveSheet: String, Identifiable {
 struct LoadedEvaluation {
     let evaluation: API.Evaluation
     let mode: DataMode
+    /// The exact profile the engine evaluated (sent with the request, or bundled with the
+    /// artifact), so display inputs come from what the engine saw — not the hand-typed
+    /// fixture (REPORT B4). Nil only for DEBUG fixture previews.
+    var apiProfile: API.FinancialProfile? = nil
 
     var origin: DecisionOrigin {
         switch evaluation.decisionSummary.source {
@@ -33,7 +37,7 @@ struct LoadedEvaluation {
     }
 
     func relabeled(_ mode: DataMode) -> LoadedEvaluation {
-        LoadedEvaluation(evaluation: evaluation, mode: mode)
+        LoadedEvaluation(evaluation: evaluation, mode: mode, apiProfile: apiProfile)
     }
 }
 
@@ -232,7 +236,7 @@ final class AppStore: ObservableObject {
                     API.EvaluateRequest(profile: apiProfile, scenario: nil, previousDecisionID: previousID)
                 )
                 guard generation == self.selectionGeneration, evaluation.profileID == profileID else { return }
-                let loaded = LoadedEvaluation(evaluation: evaluation, mode: .live)
+                let loaded = LoadedEvaluation(evaluation: evaluation, mode: .live, apiProfile: apiProfile)
                 self.lastLive[profileID] = loaded
                 self.lastLiveDecision = (profileID, evaluation.decisionSummary.decisionID)
                 self.evaluationLoad = .loaded(loaded)
@@ -256,7 +260,7 @@ final class AppStore: ObservableObject {
         if profile.id == profileID {
             lastLiveDecision = (profileID, evaluation.decisionSummary.decisionID)
         }
-        return LoadedEvaluation(evaluation: evaluation, mode: .live)
+        return LoadedEvaluation(evaluation: evaluation, mode: .live, apiProfile: apiProfile)
     }
 
     /// Exact saved artifact, or nil until Eric's bundle is in `Resources/Demo/`.
@@ -265,7 +269,8 @@ final class AppStore: ObservableObject {
         if preset == .original, let fixture = debugFixtureEvaluation(for: profileID) { return fixture }
         #endif
         guard let artifact = try? demo.artifact(profileID: profileID, preset: preset) else { return nil }
-        return LoadedEvaluation(evaluation: artifact.evaluation, mode: .saved)
+        return LoadedEvaluation(evaluation: artifact.evaluation, mode: .saved,
+                                apiProfile: try? demo.profiles()[profileID])
     }
 
     private func apiProfile(for id: String, client: APIClient) async throws -> API.FinancialProfile {
