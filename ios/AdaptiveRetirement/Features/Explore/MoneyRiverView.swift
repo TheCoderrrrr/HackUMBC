@@ -30,8 +30,9 @@ enum MoneyRiverLayout {
 
     /// Centers of the three destination columns.
     static func columnCenters(width: CGFloat) -> [CGFloat] {
-        let column = (width - columnSpacing * 2) / 3
-        return (0..<3).map { column / 2 + CGFloat($0) * (column + columnSpacing) }
+        let column: CGFloat = (width - columnSpacing * 2) / 3
+        let pitch: CGFloat = column + columnSpacing
+        return (0..<3).map { (index: Int) -> CGFloat in column / 2 + CGFloat(index) * pitch }
     }
 }
 
@@ -81,61 +82,72 @@ private struct RiverStreamlines: View, Animatable {
 
     private func canvas(time: Double) -> some View {
         Canvas { context, size in
-            let scale = size.width / MoneyRiverLayout.referenceWidth
-            let bottom = size.height * 179 / 190
-            let centers = MoneyRiverLayout.columnCenters(width: size.width)
+            draw(in: &context, size: size, time: time)
+        }
+    }
 
-            // Hairline down the middle destination.
-            var guide = Path()
-            guide.move(to: CGPoint(x: centers[1], y: 0))
-            guide.addLine(to: CGPoint(x: centers[1], y: bottom))
-            context.stroke(guide, with: .color(Palette.textCaption.opacity(0.2)), lineWidth: 1)
+    /// The streamline drawing, kept out of the `Canvas` closure and in one numeric type
+    /// (CGFloat) so the compiler can type-check it quickly.
+    private func draw(in context: inout GraphicsContext, size: CGSize, time: Double) {
+        let scale: CGFloat = size.width / MoneyRiverLayout.referenceWidth
+        let bottom: CGFloat = size.height * 179 / 190
+        let centers: [CGFloat] = MoneyRiverLayout.columnCenters(width: size.width)
 
-            // The river is never still: its shape follows the playhead month continuously
-            // (every month reads differently, not only at dated states) and sways gently in
-            // real time. Reduce Motion freezes the sway; scrubbing still reshapes it.
-            let clock = reduceMotion ? 0 : time
-            let drift = sin(month * 0.21) * 0.6 + sin(month * 0.53 + 1.3) * 0.4
-            let spread = 1 + 0.14 * CGFloat(sin(month * 0.37 + 0.6) + 0.35 * sin(clock * 0.9))
-            let waist = bottom * (102 / 179 + 0.045 * CGFloat(drift) + 0.012 * CGFloat(sin(clock * 0.7)))
-            let sourceShift = scale * CGFloat(7 * sin(month * 0.29 + 2.1) + 2.5 * sin(clock * 0.55))
+        // Hairline down the middle destination.
+        var guide = Path()
+        guide.move(to: CGPoint(x: centers[1], y: 0))
+        guide.addLine(to: CGPoint(x: centers[1], y: bottom))
+        context.stroke(guide, with: .color(Palette.textCaption.opacity(0.2)), lineWidth: 1)
 
-            let segment = timeline.segment(at: month)
-            let from = Self.ends(segment.from, centers: centers, scale: scale, spread: spread)
-            let to = Self.ends(segment.to, centers: centers, scale: scale, spread: spread)
-            let sourceSpacing = 1.82 * scale
-            let sourceStart = size.width / 2 + sourceShift - sourceSpacing * CGFloat(ExploreTimeline.streamCount - 1) / 2
+        // The river is never still: its shape follows the playhead month continuously
+        // (every month reads differently, not only at dated states) and sways gently in
+        // real time. Reduce Motion freezes the sway; scrubbing still reshapes it.
+        let m = CGFloat(month)
+        let clock: CGFloat = reduceMotion ? 0 : CGFloat(time)
+        let drift: CGFloat = sin(m * 0.21) * 0.6 + sin(m * 0.53 + 1.3) * 0.4
+        let sway: CGFloat = sin(m * 0.37 + 0.6) + 0.35 * sin(clock * 0.9)
+        let spread: CGFloat = 1 + 0.14 * sway
+        let waistFraction: CGFloat = 102 / 179 + 0.045 * drift + 0.012 * sin(clock * 0.7)
+        let waist: CGFloat = bottom * waistFraction
+        let sourceWobble: CGFloat = 7 * sin(m * 0.29 + 2.1) + 2.5 * sin(clock * 0.55)
+        let sourceShift: CGFloat = scale * sourceWobble
 
-            for i in 0..<ExploreTimeline.streamCount {
-                let t = segment.t
-                let x = from[i].x + (to[i].x - from[i].x) * t
-                let warmth = from[i].warmth + (to[i].warmth - from[i].warmth) * t
-                let source = sourceStart + CGFloat(i) * sourceSpacing
-                // Each stream ripples on its own phase so the braid shimmers as it moves.
-                let ripple = scale * CGFloat(2.4 * sin(clock * 1.1 + Double(i) * 0.31)
-                                             + 1.6 * sin(month * 0.8 + Double(i) * 0.17))
-                let mid = (source + x) / 2 + ripple
+        let segment = timeline.segment(at: month)
+        let t = CGFloat(segment.t)
+        let from = Self.ends(segment.from, centers: centers, scale: scale, spread: spread)
+        let to = Self.ends(segment.to, centers: centers, scale: scale, spread: spread)
+        let count = ExploreTimeline.streamCount
+        let sourceSpacing: CGFloat = 1.82 * scale
+        let sourceStart: CGFloat = size.width / 2 + sourceShift - sourceSpacing * CGFloat(count - 1) / 2
 
-                var path = Path()
-                path.move(to: CGPoint(x: source, y: 0))
-                path.addCurve(to: CGPoint(x: mid, y: waist),
-                              control1: CGPoint(x: source, y: waist * 50 / 102),
-                              control2: CGPoint(x: source + ripple * 0.5, y: waist * 72 / 102))
-                path.addCurve(to: CGPoint(x: x, y: bottom),
-                              control1: CGPoint(x: x, y: bottom * 137 / 179),
-                              control2: CGPoint(x: x, y: bottom * 154 / 179))
+        for i in 0..<count {
+            let index = CGFloat(i)
+            let x: CGFloat = from[i].x + (to[i].x - from[i].x) * t
+            let warmth: CGFloat = from[i].warmth + (to[i].warmth - from[i].warmth) * t
+            let source: CGFloat = sourceStart + index * sourceSpacing
+            // Each stream ripples on its own phase so the braid shimmers as it moves.
+            let rippleWave: CGFloat = 2.4 * sin(clock * 1.1 + index * 0.31) + 1.6 * sin(m * 0.8 + index * 0.17)
+            let ripple: CGFloat = scale * rippleWave
+            let mid: CGFloat = (source + x) / 2 + ripple
 
-                let color = Self.mix(warmth)
-                let gradient = Gradient(stops: [
-                    .init(color: color.opacity(0.08), location: 0),
-                    .init(color: color.opacity(0.95), location: 0.5),
-                    .init(color: color.opacity(0.38), location: 1)
-                ])
-                context.stroke(path,
-                               with: .linearGradient(gradient, startPoint: CGPoint(x: x, y: 0),
-                                                     endPoint: CGPoint(x: x, y: bottom)),
-                               lineWidth: 1.2)
-            }
+            var path = Path()
+            path.move(to: CGPoint(x: source, y: 0))
+            path.addCurve(to: CGPoint(x: mid, y: waist),
+                          control1: CGPoint(x: source, y: waist * 50 / 102),
+                          control2: CGPoint(x: source + ripple * 0.5, y: waist * 72 / 102))
+            path.addCurve(to: CGPoint(x: x, y: bottom),
+                          control1: CGPoint(x: x, y: bottom * 137 / 179),
+                          control2: CGPoint(x: x, y: bottom * 154 / 179))
+
+            let color = Self.mix(warmth)
+            let gradient = Gradient(stops: [
+                .init(color: color.opacity(0.08), location: 0),
+                .init(color: color.opacity(0.95), location: 0.5),
+                .init(color: color.opacity(0.38), location: 1)
+            ])
+            let top = CGPoint(x: x, y: 0)
+            let base = CGPoint(x: x, y: bottom)
+            context.stroke(path, with: .linearGradient(gradient, startPoint: top, endPoint: base), lineWidth: 1.2)
         }
     }
 

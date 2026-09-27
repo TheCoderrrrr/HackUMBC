@@ -448,21 +448,48 @@ extension IllustrativeProjection {
             (0, 0.026), (0.223, 0.079), (0.45, 0.376), (0.691, 0.72), (1, 1)
         ]
         // Monotone cubic (Fritsch–Carlson) through the knots: smooth, no overshoot.
+        // Written as typed loops: the compact closure form overwhelmed the type checker.
         let n = knots.count
-        let d = (0..<(n - 1)).map { (knots[$0 + 1].y - knots[$0].y) / (knots[$0 + 1].x - knots[$0].x) }
-        var m = [d[0]] + (1..<(n - 1)).map { d[$0 - 1] * d[$0] <= 0 ? 0 : (d[$0 - 1] + d[$0]) / 2 } + [d[n - 2]]
+        var d: [Double] = []
+        for k in 0..<(n - 1) {
+            let rise: Double = knots[k + 1].y - knots[k].y
+            let run: Double = knots[k + 1].x - knots[k].x
+            d.append(rise / run)
+        }
+        var m: [Double] = [d[0]]
+        for k in 1..<(n - 1) {
+            let sameDirection: Bool = d[k - 1] * d[k] > 0
+            m.append(sameDirection ? (d[k - 1] + d[k]) / 2 : 0)
+        }
+        m.append(d[n - 2])
         for k in 0..<(n - 1) where d[k] != 0 {
-            let a = m[k] / d[k], b = m[k + 1] / d[k], h = a * a + b * b
-            if h > 9 { m[k] = 3 * a / h.squareRoot() * d[k]; m[k + 1] = 3 * b / h.squareRoot() * d[k] }
+            let a: Double = m[k] / d[k]
+            let b: Double = m[k + 1] / d[k]
+            let h: Double = a * a + b * b
+            if h > 9 {
+                let limit: Double = 3 / h.squareRoot() * d[k]
+                m[k] = a * limit
+                m[k + 1] = b * limit
+            }
         }
-        return (0..<count).map { i in
-            let x = Double(i) / Double(count - 1)
-            let k = min(knots.lastIndex { $0.x <= x } ?? 0, n - 2)
-            let a = knots[k], b = knots[k + 1], h = b.x - a.x
-            let t = (x - a.x) / h, t2 = t * t, t3 = t2 * t
-            return (2 * t3 - 3 * t2 + 1) * a.y + (t3 - 2 * t2 + t) * h * m[k]
-                + (-2 * t3 + 3 * t2) * b.y + (t3 - t2) * h * m[k + 1]
+        var values: [Double] = []
+        for i in 0..<count {
+            let x: Double = Double(i) / Double(count - 1)
+            let k: Int = min(knots.lastIndex { $0.x <= x } ?? 0, n - 2)
+            let a = knots[k]
+            let b = knots[k + 1]
+            let h: Double = b.x - a.x
+            let t: Double = (x - a.x) / h
+            let t2: Double = t * t
+            let t3: Double = t2 * t
+            let h00: Double = 2 * t3 - 3 * t2 + 1
+            let h10: Double = t3 - 2 * t2 + t
+            let h01: Double = -2 * t3 + 3 * t2
+            let h11: Double = t3 - t2
+            let value: Double = h00 * a.y + h10 * h * m[k] + h01 * b.y + h11 * h * m[k + 1]
+            values.append(value)
         }
+        return values
     }
 }
 
