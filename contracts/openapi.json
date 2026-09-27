@@ -1507,6 +1507,16 @@
             "type": "array",
             "maxItems": 4,
             "title": "History"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScreenContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -3777,6 +3787,71 @@
           "data_completeness"
         ],
         "title": "ScoreComponents"
+      },
+      "ScreenContext": {
+        "properties": {
+          "screen": {
+            "type": "string",
+            "enum": [
+              "overview",
+              "plan",
+              "explore",
+              "funds",
+              "learn"
+            ],
+            "title": "Screen"
+          },
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "live",
+              "saved",
+              "lastLive",
+              "preview",
+              "not_loaded"
+            ],
+            "title": "Data Mode"
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/ScreenFact"
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Facts"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "screen",
+          "data_mode"
+        ],
+        "title": "ScreenContext"
+      },
+      "ScreenFact": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "maxLength": 48,
+            "minLength": 2,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Label"
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "ScreenFact"
       },
       "StyleOutcome": {
         "properties": {

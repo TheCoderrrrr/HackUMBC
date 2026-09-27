@@ -1,4 +1,5 @@
 import type { CatalogSummary, FundShortlistEnvelope, FundShortlistQuery } from "./funds";
+import type { ScreenContext } from "./chatContext";
 import type {
   Comparison, ErrorBody, EvaluateRequest, Evaluation, FinancialProfile, Health, HistoryStatus, PlanningPreference,
   PlanStyles, RunSummary, Scenario,
@@ -102,9 +103,9 @@ export const api = {
     send<CatalogSummary>("/v1/funds/catalog", { method: "GET" }, REQUEST_TIMEOUT_MS, signal),
   fundShortlist: (query: FundShortlistQuery, signal?: AbortSignal) =>
     send<FundShortlistEnvelope>("/v1/funds/shortlist", { method: "POST", body: JSON.stringify(query) }, REQUEST_TIMEOUT_MS, signal),
-  educationChat: (message: string, history: EducationTurn[], signal?: AbortSignal) =>
+  educationChat: (message: string, history: EducationTurn[], context: ScreenContext, signal?: AbortSignal) =>
     send<EducationReply>("/v1/education/chat", {
-      method: "POST", body: JSON.stringify({ message, history: history.slice(-4) }),
+      method: "POST", body: JSON.stringify({ message, history: history.slice(-4), context }),
     }, CHAT_TIMEOUT_MS, signal),
   /** Each plan style's own rule order through the engine; no AI, so fast and comparable. */
   planStyles: (profile: FinancialProfile, signal?: AbortSignal) =>

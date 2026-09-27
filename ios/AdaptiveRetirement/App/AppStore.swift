@@ -70,6 +70,7 @@ final class AppStore: ObservableObject {
     @Published var focus: Focus = .debt
     @Published var profile: Profile = .morgan
     @Published var tab: MainTab = .overview
+    @Published var chatScreenFacts: [MainTab: [EducationScreenFact]] = [:]
     @Published var sheet: ActiveSheet?
     /// Explore's "Drag to a date" hint shows once after onboarding.
     @Published var showsPlayheadHint = true
@@ -198,6 +199,7 @@ final class AppStore: ObservableObject {
     func select(_ profile: Profile) {
         guard profile.id != self.profile.id else { return }
         self.profile = profile
+        chatScreenFacts = [:]
         lastLiveDecision = nil
         refreshEvaluation()
     }

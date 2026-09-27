@@ -9,6 +9,23 @@ private struct EducationTurn: Encodable {
 private struct EducationRequest: Encodable {
     let message: String
     let history: [EducationTurn]
+    let context: EducationScreenContext
+}
+
+struct EducationScreenFact: Encodable {
+    let label: String
+    let value: String
+}
+
+struct EducationScreenContext: Encodable {
+    let screen: String
+    let dataMode: String
+    let facts: [EducationScreenFact]
+
+    enum CodingKeys: String, CodingKey {
+        case screen, facts
+        case dataMode = "data_mode"
+    }
 }
 
 struct EducationSource: Decodable, Hashable {
@@ -34,22 +51,26 @@ private enum EducationChatFailure: Error {
     case server(String)
 }
 
-/// Sends the question and recent chat through the backend. No app profile or account state is attached.
+/// Sends the question, recent chat, and a bounded summary of the visible screen through the backend.
 struct EducationChatView: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
     @Binding var messages: [EducationMessage]
     @Binding var draft: String
+    let context: EducationScreenContext
     @State private var isSending = false
     @State private var errorMessage: String?
     @State private var requestTask: Task<Void, Never>?
 
-    private let starters = [
-        "What is a target-date fund?",
-        "Why does an employer match matter?",
-        "How do fund fees affect savings?",
-        "What does investment risk mean?"
-    ]
+    private var starters: [String] {
+        switch context.screen {
+        case "overview": return ["Why is this my next step?", "What does my emergency savings mean?", "How does the employer match help?"]
+        case "plan": return ["Why did my plan choose this order?", "Explain my contribution rate", "What does this debt APR mean?"]
+        case "explore": return ["What changes in this scenario?", "Why are the projections different?", "Is this return guaranteed?"]
+        case "funds": return ["How were these funds ranked?", "What does the risk score mean?", "How do the fund fees compare?"]
+        default: return ["What is a target-date fund?", "Why does an employer match matter?", "What does investment risk mean?"]
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -105,7 +126,7 @@ struct EducationChatView: View {
             Text("What’s on your mind?")
                 .font(TypeScale.title)
                 .foregroundStyle(Palette.textPrimary)
-            Text("Make sense of retirement, one question at a time. Explore matching, funds, fees, and risk.")
+            Text("Ask about what's on this screen, or explore a retirement topic.")
                 .font(TypeScale.body)
                 .foregroundStyle(Palette.textSecondary)
         }
@@ -211,7 +232,7 @@ struct EducationChatView: View {
             }
             .padding(6)
             .background(Palette.raised, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-            Text("Questions and recent chat are sent to Google Gemini. Educational guidance. Keep personal details private.")
+            Text("Your question, recent chat, and a summary of this screen may be sent to Google Gemini. Keep personal details private.")
                 .font(TypeScale.caption)
                 .foregroundStyle(Palette.textSecondary)
                 .multilineTextAlignment(.center)
@@ -258,7 +279,7 @@ struct EducationChatView: View {
                 if !AppStore.defaultDemoKey.isEmpty {
                     request.setValue(AppStore.defaultDemoKey, forHTTPHeaderField: "X-Demo-Key")
                 }
-                request.httpBody = try JSONEncoder().encode(EducationRequest(message: question, history: history))
+                request.httpBody = try JSONEncoder().encode(EducationRequest(message: question, history: history, context: context))
                 let (data, response) = try await URLSession.shared.data(for: request)
                 guard let http = response as? HTTPURLResponse else {
                     throw URLError(.badServerResponse)

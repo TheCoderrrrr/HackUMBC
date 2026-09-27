@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api, errorMessage } from "../api/client";
+import type { ScreenFact } from "../api/chatContext";
 import type {
   AccountType, AvailabilityLabel, CatalogSummary, ExclusionReason, FundDetail, FundRecommendation,
   FundShortlistEnvelope, RiskTolerance,
@@ -42,7 +43,7 @@ type Result =
   | { status: "loaded"; data: FundShortlistEnvelope }
   | { status: "failed"; message: string };
 
-export function Funds() {
+export function Funds({ onContext }: { onContext: (facts: ScreenFact[]) => void }) {
   const { profile } = useStore();
   const defaultYear = Number(profile.as_of_date.slice(0, 4)) + (profile.retirement_age - profile.age);
   const thisYear = Number(profile.as_of_date.slice(0, 4));
@@ -56,6 +57,42 @@ export function Funds() {
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [result, setResult] = useState<Result>({ status: "idle" });
   const requestID = useRef(0);
+
+  useEffect(() => () => onContext([]), [onContext]);
+
+  useEffect(() => {
+    const facts: ScreenFact[] = [
+      { label: "account_type", value: account },
+      { label: "selected_risk_tolerance", value: risk },
+      { label: "selected_retirement_year", value: String(year) },
+      { label: "plan_menu_known", value: String(menuKnown) },
+      { label: "ranking_method", value: "horizon fit, stock allocation risk fit, fund fees, verified data completeness" },
+      { label: "risk_scale", value: "1 to 5, based on current stock weight, not volatility" },
+    ];
+    if (catalog) facts.push({ label: "catalog_published_on", value: catalog.published_on });
+    if (result.status === "loaded") {
+      facts.push({ label: "shortlist_count", value: String(result.data.shortlist.recommendations.length) });
+      facts.push({ label: "plan_menu_status", value: result.data.shortlist.plan_menu_status });
+      result.data.shortlist.recommendations.slice(0, 3).forEach((fund, index) => {
+        const label = `fund_${index + 1}`;
+        const base = fund.hypothetical_scenarios.find((scenario) => scenario.label === "base");
+        const history = fund.historical_returns[0];
+        facts.push(
+          { label: `${label}_name`, value: fund.name.slice(0, 120) },
+          { label: `${label}_target_year`, value: String(fund.target_year) },
+          { label: `${label}_expense_ratio`, value: fee(fund.expense_ratio) },
+          { label: `${label}_stock_mix`, value: pct1(fund.equity_weight) },
+          { label: `${label}_risk_band_out_of_five`, value: String(fund.risk_band) },
+          { label: `${label}_availability`, value: fund.availability_label },
+          { label: `${label}_facts_as_of`, value: fund.facts_as_of_date },
+          { label: `${label}_reason_codes`, value: fund.reason_codes.slice(0, 3).join(", ").slice(0, 120) },
+        );
+        if (base) facts.push({ label: `${label}_hypothetical_base_annual_return`, value: pct1(base.annual_net_return_rate) });
+        if (history) facts.push({ label: `${label}_historical_return`, value: `${pct1(history.annualized_return_rate)} annualized over ${history.period_years} years as of ${history.as_of_date}` });
+      });
+    }
+    onContext(facts);
+  }, [account, risk, year, menuKnown, catalog, result, onContext]);
 
   useEffect(() => setYear(defaultYear), [defaultYear]);
 

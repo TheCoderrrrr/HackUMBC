@@ -1,22 +1,27 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { APIError, api, type EducationReply, type EducationTurn } from "../api/client";
+import type { ScreenContext } from "../api/chatContext";
 import { Icon } from "../components/ui";
 
 type Message = EducationTurn & { reply?: EducationReply };
 
-const STARTERS = [
-  "What is a target-date fund?",
-  "Why does an employer match matter?",
-  "How do fund fees affect savings?",
-  "What does investment risk mean?",
-];
+const STARTERS: Record<ScreenContext["screen"], string[]> = {
+  overview: ["Why is this my next step?", "What does my emergency savings mean?", "How does the employer match help?"],
+  plan: ["Why did my plan choose this order?", "Explain my contribution rate", "What does this debt APR mean?"],
+  explore: ["What changes in this scenario?", "Why are the projections different?", "Is this return guaranteed?"],
+  funds: ["How were these funds ranked?", "What does the risk score mean?", "How do the fund fees compare?"],
+  learn: ["What is a target-date fund?", "What is an employer match?", "What does investment risk mean?"],
+};
+const SCREEN_LABEL: Record<ScreenContext["screen"], string> = {
+  overview: "Overview", plan: "Your plan", explore: "Explore", funds: "Fund shortlist", learn: "Learn",
+};
 
 function originLabel(reply: EducationReply) {
   if (reply.mode === "ai") return "AI-generated explanation";
   return reply.topic === "out_of_scope" ? "Built-in answer" : "Built-in answer · Gemini unavailable or question restricted";
 }
 
-export function Chat({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function Chat({ open, onClose, context }: { open: boolean; onClose: () => void; context: ScreenContext }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -64,7 +69,7 @@ export function Chat({ open, onClose }: { open: boolean; onClose: () => void }) 
     setDraft("");
     setMessages((current) => [...current, { role: "user", content: message }]);
     try {
-      const reply = await api.educationChat(message, history, controller.signal);
+      const reply = await api.educationChat(message, history, context, controller.signal);
       setMessages((current) => [...current, { role: "assistant", content: reply.answer, reply }]);
     } catch (failure) {
       if (!controller.signal.aborted) {
@@ -94,7 +99,7 @@ export function Chat({ open, onClose }: { open: boolean; onClose: () => void }) 
     <div className="scrim chat-scrim" onClick={onClose} />
     <section ref={panel} className="chat-page chat-panel" role="dialog" aria-modal="true" aria-label="Retirement learning assistant">
       <div className="chat-panel-head">
-        <div className="chat-identity"><span className="chat-mark"><Icon name="chat" size={18} /></span><div><strong>Adaptive guide</strong><span>Retirement questions in plain language</span></div></div>
+        <div className="chat-identity"><span className="chat-mark"><Icon name="chat" size={18} /></span><div><strong>Adaptive guide</strong><span>Looking at {SCREEN_LABEL[context.screen]}</span></div></div>
         <button type="button" className="close" onClick={onClose} aria-label="Close chat"><Icon name="close" size={18} /></button>
       </div>
       <div ref={thread} className="chat-thread" role="log" aria-live="polite" aria-label="Conversation">
@@ -102,11 +107,11 @@ export function Chat({ open, onClose }: { open: boolean; onClose: () => void }) 
           <>
           <div className="chat-intro">
             <h2>What’s on your mind?</h2>
-            <p>Make sense of retirement, one question at a time. Explore matching, funds, fees, and risk.</p>
+            <p>Ask about what you see on {SCREEN_LABEL[context.screen]}, or explore a retirement topic.</p>
           </div>
           <div className="chat-starters">
             <p className="chat-label">Try a question</p>
-            {STARTERS.map((question) => (
+            {STARTERS[context.screen].map((question) => (
               <button type="button" key={question} disabled={sending} onClick={() => void ask(question)}><span>{question}</span><span aria-hidden="true">↗</span></button>
             ))}
           </div>
@@ -140,7 +145,7 @@ export function Chat({ open, onClose }: { open: boolean; onClose: () => void }) 
             onChange={(event) => setDraft(event.target.value)} placeholder="Ask a retirement question…" />
           <button className="chat-send" type="submit" aria-label="Send question" disabled={sending || !draft.trim()}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6" /></svg></button>
         </div>
-        <p className="chat-footnote">Questions and recent chat are sent to Google Gemini. Educational only; don’t include personal details.</p>
+        <p className="chat-footnote">Your question, recent chat, and a summary of this screen may be sent to Google Gemini. Educational only; keep personal details private.</p>
       </form>
     </section>
     </>
