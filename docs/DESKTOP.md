@@ -29,6 +29,10 @@ $env:BACKEND_URL="https://coral-sandbox-apron.ngrok-free.dev"; npm run dev
 
 Every figure comes from the profile or the engine response; the app does no financial calculation of its own.
 
+## Fund shortlist
+
+The **Fund shortlist** tab ranks target-date funds from the reviewed catalog by account type, risk tolerance, retirement year, and an optional 401(k) menu. It needs the live backend. See [FUNDS.md](FUNDS.md).
+
 ## Scenario history (Tiger Data)
 
-Explore → **Scenario history** saves the result on screen and compares two saved runs of the same profile over time, with 5/10/20-year values. Runs live in Tiger Data; set `TIGER_DATABASE_URL` in `backend/.env` (see [`backend/app/analytics/README.md`](../backend/app/analytics/README.md)). Without it the panel says history isn't set up, and everything else works.
+Explore → **Scenario history** saves the result on screen and compares two saved runs of the same profile over time, with 5/10/20-year values. Runs live in Tiger Data; set `TIGER_DATABASE_URL` in `backend/.env` (see [SCENARIO_HISTORY.md](SCENARIO_HISTORY.md)). Without it the panel says history isn't set up, and everything else works.

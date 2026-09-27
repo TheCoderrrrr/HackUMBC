@@ -199,7 +199,7 @@ pytest                             # 341 backend tests
 ```
 
 > [!NOTE]
-> **No API key? It still works.** Without a key for the selected `AI_PROVIDER`, every response uses the rules fallback and is labeled that way. The phone reaches the laptop through an ngrok tunnel (below); see also [`backend/RUNBOOK.md`](backend/RUNBOOK.md).
+> **No API key? It still works.** Without a key for the selected `AI_PROVIDER`, every response uses the rules fallback and is labeled that way. The phone reaches the laptop through an ngrok tunnel (below); see also [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
 
 ### 📱 Run the full stack on an iPhone
 
@@ -279,7 +279,8 @@ backend/
   fixtures/                          Jordan, Morgan, Casey (+ Morgan cash-security)
   tests/                             341 tests
 contracts/                           OpenAPI + example payloads for iOS
-BACKEND.md · FRONTEND.md             full specifications
+desktop/                             React desktop app
+docs/                                specifications, handoffs and runbook
 ```
 
 </details>
@@ -299,6 +300,21 @@ BACKEND.md · FRONTEND.md             full specifications
 
 ---
 
+## 📚 Docs
+
+| File | What it covers |
+|---|---|
+| [`docs/BACKEND.md`](docs/BACKEND.md) | Full backend and financial-engine specification |
+| [`docs/FRONTEND.md`](docs/FRONTEND.md) | iOS app specification |
+| [`docs/ENGINE_HANDOFF.md`](docs/ENGINE_HANDOFF.md) | Who owns which part of the engine, and the function contracts between them |
+| [`docs/RUNBOOK.md`](docs/RUNBOOK.md) | Running, tunneling, checking and recovering the demo server |
+| [`docs/IOS_INTEGRATION.md`](docs/IOS_INTEGRATION.md) | iOS data layer and backend wiring |
+| [`docs/DESKTOP.md`](docs/DESKTOP.md) | React desktop app |
+| [`docs/FUNDS.md`](docs/FUNDS.md) | Target-date fund shortlist and its reviewed catalog |
+| [`docs/SCENARIO_HISTORY.md`](docs/SCENARIO_HISTORY.md) | Scenario history on Tiger Data |
+
+---
+
 ## 🆚 Why this beats a standard target-date default
 
 | Standard target-date fund | ARM |
@@ -311,7 +327,7 @@ BACKEND.md · FRONTEND.md             full specifications
 
 ## Open Implementation Items (Neil and Eric)
 
-What's still to build between Developer A (Neil) and Developer C (Eric). Everything else each side asked for is on `main` (see `what_we_needed/`).
+What's still to build between Developer A (Neil) and Developer C (Eric). Everything else each side asked for is on `main`.
 
 **Team decision:** the reasoning model is OpenAI **GPT-6 Luna** (`gpt-6-luna`), with Structured Outputs. Tier 1 allows 500 requests per minute, so the Gemini free-tier rate limits go away. Neil's PR #12 made it the default provider (`AI_PROVIDER=openai`); Gemini remains available with `AI_PROVIDER=gemini`.
 
@@ -324,7 +340,7 @@ What's still to build between Developer A (Neil) and Developer C (Eric). Everyth
 
 ### Eric (Developer C)
 
-1. **Get the bundle into the app:** the twelve files in `backend/fixtures/generated/` go into `ios/AdaptiveRetirement/Resources/Demo/` (see `ios/IOS_INTEGRATION.md`). Until then, `DemoRepository` reports `bundleMissing` and the app falls back to `DemoData`.
+1. **Get the bundle into the app:** the twelve files in `backend/fixtures/generated/` go into `ios/AdaptiveRetirement/Resources/Demo/` (see [`docs/IOS_INTEGRATION.md`](docs/IOS_INTEGRATION.md)). Until then, `DemoRepository` reports `bundleMissing` and the app falls back to `DemoData`.
 
 No human sign-off step (team decision): the saved AI text is demo placeholder content. To change it later, edit `fixtures/decisions.json` or regenerate, then re-export. The exporter still rejects text with numbers, invalid decisions, and stale hashes.
 
