@@ -13,8 +13,6 @@ circuit breaker skips the provider while it is rate-limiting or timing out.
 """
 from __future__ import annotations
 
-import hashlib
-import json
 import logging
 import re
 import time
@@ -26,6 +24,8 @@ from app.ai.client import AIRateLimited, AITimeout, StructuredModel
 from app.ai.prompts import SYSTEM, ExplanationOut, explanation_prompt, recommendation_prompt, recommendation_schema
 from app.config import Settings
 from app.decisions import DecisionSnapshot, DecisionStore, diff, snapshot_fields
+# One canonical profile hash for the whole backend (REPORT C6).
+from app.engine.canonical import profile_hash
 from app.schemas import (
     AIExplanation,
     Change,
@@ -56,11 +56,6 @@ _NUMBER_WORDS = re.compile(
 # Text values safe to show the model. Others (e.g. plan.primary_action_id) can embed
 # debt IDs, so only their direction is described.
 _SAFE_TEXT_FIELDS = {"planning_preference", "decision.ordered_priorities"}
-
-
-def profile_hash(profile: FinancialProfile) -> str:
-    canonical = json.dumps(profile.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(canonical.encode()).hexdigest()
 
 
 def valid_prose(out: ExplanationOut) -> bool:
