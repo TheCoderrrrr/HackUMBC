@@ -407,7 +407,14 @@ struct LiveStatusRow: View {
                     .accessibilityLabel("Updating live calculation")
             }
             Spacer(minLength: 0)
-            if store.retryableError != nil {
+            if let failure = store.evaluationFailure {
+                // Every failure is visible and manually retryable, not just retryable ones (B10).
+                Text(failure.message)
+                    .font(TypeScale.caption)
+                    .foregroundStyle(Palette.textCaption)
+                    .multilineTextAlignment(.trailing)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 Button {
                     store.refreshEvaluation()
                 } label: {
@@ -418,7 +425,7 @@ struct LiveStatusRow: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PressableStyle())
-                .accessibilityHint("Couldn't reach the server. Showing the previous result.")
+                .accessibilityHint("Showing the previous result.")
             }
         }
         .animation(Motion.select, value: store.evaluationLoad.isLoading)

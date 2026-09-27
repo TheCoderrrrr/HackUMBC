@@ -67,7 +67,6 @@ final class AppStore: ObservableObject {
     @Published var profile: Profile = .morgan
     @Published var tab: MainTab = .overview
     @Published var sheet: ActiveSheet?
-    @Published var dataMode: DataMode = .saved
     /// Explore's "Drag to a date" hint shows once after onboarding.
     @Published var showsPlayheadHint = true
 
@@ -152,10 +151,33 @@ final class AppStore: ObservableObject {
     /// `DemoData` fixture while `evaluationLoad` is `.idle`.
     var displayProfile: Profile { profile.applying(evaluationLoad.current) }
 
-    /// Retryable failure to surface as a banner; nil while loading or when nothing can be retried.
-    var retryableError: APIError? {
-        guard case .failed(_, let error) = evaluationLoad, let api = error as? APIError, api.isRetryable else { return nil }
-        return api
+    /// Label for what is on screen, derived from the load state so it can never outlive
+    /// its source: a live/saved calculation, or "Illustrative preview" while the screens
+    /// show hand-typed fixture values — including during the first load (REPORT B1).
+    var dataMode: DataMode {
+        switch evaluationLoad {
+        case .idle: return .preview
+        case .loading(let previous), .failed(let previous, _): return previous?.mode ?? .preview
+        case .loaded(let loaded): return loaded.mode
+        }
+    }
+
+    /// The current evaluation failure with a short message, surfaced for every failure —
+    /// not just retryable ones — so a dead server never fails silently (REPORT B10).
+    /// Retry is always offered: it is a manual re-request, not an automatic one.
+    var evaluationFailure: (message: String, error: Error)? {
+        guard case .failed(_, let error) = evaluationLoad else { return nil }
+        if let api = error as? APIError {
+            switch api {
+            case .cancelled: return nil
+            case .timedOut: return ("The calculation took too long.", error)
+            case .unreachable, .invalidBaseURL: return ("Couldn't reach the server.", error)
+            case .server(_, let body): return (body.message, error)
+            case .unexpectedStatus(let status): return ("The server answered with an error (\(status)).", error)
+            case .invalidResponse: return ("The server's answer didn't match what the app expects.", error)
+            }
+        }
+        return ("Something went wrong.", error)
     }
 
     func select(_ profile: Profile) {
@@ -197,11 +219,9 @@ final class AppStore: ObservableObject {
         let previous = lastLive[profileID]?.relabeled(.lastLive) ?? saved
         guard let client else {
             evaluationLoad = saved.map(EvaluationLoad.loaded) ?? .idle
-            dataMode = saved?.mode ?? .saved
             return
         }
         evaluationLoad = .loading(previous: previous)
-        dataMode = previous?.mode ?? .saved
 
         evaluationTask = Task { [weak self] in
             guard let self else { return }
@@ -216,11 +236,9 @@ final class AppStore: ObservableObject {
                 self.lastLive[profileID] = loaded
                 self.lastLiveDecision = (profileID, evaluation.decisionSummary.decisionID)
                 self.evaluationLoad = .loaded(loaded)
-                self.dataMode = .live
             } catch {
                 guard generation == self.selectionGeneration, !Self.isCancellation(error) else { return }
                 self.evaluationLoad = .failed(previous: previous, error: error)
-                self.dataMode = previous?.mode ?? .saved
             }
         }
     }

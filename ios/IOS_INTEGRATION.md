@@ -36,7 +36,7 @@ What the client does:
 - It accepts HTTPS URLs only. Don't add ATS exceptions.
 - Evaluations time out after 8 seconds; health and profile requests after 5.
 - It never logs request bodies.
-- Backend error responses become `APIError.server(status:body:)`. `error.isRetryable` tells the UI whether to show Retry.
+- Backend error responses become `APIError.server(status:body:)`. A non-2xx answer that isn't the JSON envelope — ngrok's HTML 404/502 pages for a dead tunnel or laptop, detected by the `ngrok-error-code` header or a 404/502/503/504 status — becomes `.unreachable`, so it is retryable and eligible for the saved-preset fallback instead of collapsing into a generic message. DEBUG builds log the status and first 200 bytes of any undecodable body (responses only; request bodies are never logged).
 
 What the repository does:
 
@@ -54,7 +54,7 @@ Each call to `store.select(profile)` runs `refreshEvaluation()`:
 4. Apply the response only if the counter and profile id still match.
 5. On failure, keep the previous result on screen: the last live result, relabeled `lastLive`, or else the saved one.
 
-The store also sets the existing `store.dataMode` to `.saved`, `.live` or `.lastLive`.
+The store derives `store.dataMode` from the load state: `.saved`, `.live` or `.lastLive` when a calculation is on screen, and `.preview` ("Illustrative preview") when only the hand-typed fixtures are showing — including during the first load.
 
 ## 4. What screens should read
 
@@ -63,7 +63,7 @@ switch store.evaluationLoad {
 case .idle:                         // no bundle and no server yet: keep DemoData
 case .loading(let previous):        // show previous (if any) with a small spinner
 case .loaded(let loaded):           // show loaded.evaluation
-case .failed(let previous, let e):  // show previous plus a retry banner if (e as? APIError)?.isRetryable == true
+case .failed(let previous, let e):  // show previous plus store.evaluationFailure's message and a manual Retry
 }
 ```
 
@@ -128,7 +128,7 @@ Questions about the contract or engine: ask Kevin. Questions about the bundle: a
 - **Screens:** `AppStore.displayProfile` is the `DemoData` fixture with the current evaluation applied (`Models/EvaluationDisplay.swift`). Overview, Plan, Explore, onboarding and the sheets read it, so they show `DemoData` while `evaluationLoad` is `.idle`, and engine values otherwise:
   - Overview chart and scrub values use `projections.adaptive`.
   - Explore's comparison chart uses the Current and Adaptive projections; Morgan's milestones use `debt_free_month` and `full_reserve_month`; "Compare scenario" calls `evaluateScenario` (or an exact saved preset offline); the outcome rows show projection values.
-  - `LiveStatusRow` shows a spinner while loading and Retry after a retryable failure.
+  - `LiveStatusRow` shows a spinner while loading, and a short message plus Retry after any failure (retryable or not).
 - **Server URL:** build-time default from the `ServerBaseURL` Info.plist key, set by `SERVER_BASE_URL` in `ios/Config/Server.xcconfig` (empty in the repo = saved-only) and overridden by the git-ignored `ios/Config/Signing.local.xcconfig` on the demo host (see `backend/RUNBOOK.md`). Runtime override in Explore › Modeling assumptions › Live calculation, or with `-serverBaseURL https://…`. DEBUG builds show the active host under the data badge. Requests send `ngrok-skip-browser-warning`.
 - **Preview without a bundle (DEBUG):** `-evaluationFixtures /path/to/contracts/examples` loads `evaluate-<profile>.response.json` as the saved result.
 - **End to end:** verified through the team's fixed ngrok domain (`smoke.py` RESULT: OK). Start it with `backend/scripts/serve_demo.sh your-team.ngrok-free.dev` and set the same domain in `Signing.local.xcconfig`. The offline bundle is committed in `Resources/Demo/`; `backend/tests/test_export.py::test_ios_bundle_matches_the_generated_export` fails if it drifts from `backend/fixtures/generated/`.

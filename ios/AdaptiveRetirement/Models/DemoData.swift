@@ -15,12 +15,16 @@ enum DataMode: String {
     case saved = "Saved demo calculation"
     case live = "Live calculation"
     case lastLive = "Last live calculation"
+    /// Hand-typed fixture values with no engine calculation behind them (REPORT B1).
+    case preview = "Illustrative preview"
 }
 
 enum DecisionOrigin: String {
     case ai = "AI-assisted priorities"
     case rules = "Rules fallback"
     case savedAI = "Saved AI-assisted priorities"
+    /// No decision produced these values; they are hand-typed fixtures (REPORT B1).
+    case none = "Not calculated yet"
 }
 
 struct Debt: Identifiable, Hashable {
@@ -138,7 +142,7 @@ extension Profile {
             checks: [("Full employer match preserved", true), ("Living costs covered", true),
                      ("Starter reserve funded", true), ("Card minimum paid", true)]
         ),
-        origin: .savedAI
+        origin: .none
     )
 
     static let jordan = Profile(
@@ -175,7 +179,7 @@ extension Profile {
             tradeoff: "Paying the 4% loan faster would reduce interest slightly but is unlikely to outpace long-term saving.",
             checks: [("Full employer match preserved", true), ("Living costs covered", true), ("Loan minimum paid", true)]
         ),
-        origin: .savedAI
+        origin: .none
     )
 
     static let casey = Profile(
@@ -211,7 +215,7 @@ extension Profile {
             tradeoff: "A higher balance does not by itself indicate retirement adequacy.",
             checks: [("Full employer match preserved", true), ("Living costs covered", true)]
         ),
-        origin: .savedAI
+        origin: .none
     )
 
     static let all: [Profile] = [.morgan, .jordan, .casey]
