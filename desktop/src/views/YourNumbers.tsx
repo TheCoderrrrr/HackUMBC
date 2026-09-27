@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { APIError, api, errorMessage } from "../api/client";
 import type { DebtInput, ProfileBuild } from "../api/types";
+import type { CatalogEntry } from "../api/funds";
 import { Icon } from "../components/ui";
 import { Term } from "../components/Term";
 import { money, months, percent } from "../data/format";
@@ -31,6 +32,13 @@ export function YourNumbers() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [confirmErase, setConfirmErase] = useState(false);
+  const [funds, setFunds] = useState<CatalogEntry[]>([]);
+  useEffect(() => {
+    if (!liveEnabled) return;
+    const controller = new AbortController();
+    api.fundCatalog(controller.signal).then((catalog) => setFunds(catalog.funds)).catch(() => {});
+    return () => controller.abort();
+  }, [liveEnabled]);
   const { input, missing } = useMemo(() => formToInput(form), [form]);
   const inputJson = input ? JSON.stringify(input) : null;
 
@@ -137,8 +145,30 @@ export function YourNumbers() {
           </Group>
 
           <Group n={3} title="Savings">
-            <Field label="Retirement savings" hint="401(k) and IRA balances today" prefix="$" value={form.retirementBalance}
+            <Field label="Retirement savings" hint={form.fundID ? "balance in the selected target-date fund" : "retirement-account balance today"} prefix="$" value={form.retirementBalance}
               onChange={(v) => set({ retirementBalance: v })} error={errorFor("retirementBalance")} missing={missing.includes("retirementBalance")} />
+            <label className="field" style={{ gridColumn: "1 / -1" }}>
+              <span className="field-label">Your target-date fund</span>
+              <select value={form.fundID} onChange={(e) => set({ fundID: e.target.value, fundBalanceConfirmed: false, fundInPlanMenu: false })}>
+                <option value="">I don't know my fund yet</option>
+                {funds.map((f) => <option key={f.fund_id} value={f.fund_id}>{f.name} ({f.target_year})</option>)}
+              </select>
+            </label>
+            {form.fundID && <>
+              <label className="field">
+                <span className="field-label">Account</span>
+                <select value={form.fundAccountType} onChange={(e) => set({ fundAccountType: e.target.value as "401k" | "ira", fundInPlanMenu: false })}>
+                  <option value="401k">401(k)</option><option value="ira">IRA</option>
+                </select>
+              </label>
+              <label className="field" style={{ justifyContent: "end" }}>
+                <span className="field-label">Balance check</span>
+                <span><input type="checkbox" checked={form.fundBalanceConfirmed} onChange={(e) => set({ fundBalanceConfirmed: e.target.checked })} /> This balance is in this one fund</span>
+              </label>
+              {form.fundAccountType === "401k" && <label className="field" style={{ gridColumn: "1 / -1" }}>
+                <span><input type="checkbox" checked={form.fundInPlanMenu} onChange={(e) => set({ fundInPlanMenu: e.target.checked })} /> I confirmed this fund is offered in my 401(k) plan</span>
+              </label>}
+            </>}
             <Field label="You contribute" hint="of your pay" suffix="%" value={form.contribution} onChange={(v) => set({ contribution: v })}
               error={errorFor("contribution")} missing={missing.includes("contribution")} />
             <Field label={<Term id="emergency-fund">Emergency cash</Term>} hint="savings you can reach quickly" prefix="$" value={form.emergencyCash}

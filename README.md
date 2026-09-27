@@ -4,13 +4,13 @@
 
 # (ARM) - Adaptive Retirement Management
 
-**Retirement plans built from your real finances, not just your birth year.**
+**Use your target-date fund well, with a plan built around your finances.**
 
-<img src="./assets/hero.svg" width="100%" alt="A target-date fund plans from your birth year alone, so everyone that age gets the same plan. ARM uses your income, debt, savings and employer match to show how much to save, where it goes and what it builds." />
+<img src="./assets/hero.svg" width="100%" alt="ARM uses your selected target-date fund, income, debt, savings and employer match to show how to contribute and manage cash alongside it." />
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=FFD43B) ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?style=flat-square&logo=fastapi&logoColor=white) ![Gemini](https://img.shields.io/badge/Gemini-3.5_Flash--Lite-8E75B2?style=flat-square&logo=googlegemini&logoColor=white) ![Tiger Data](https://img.shields.io/badge/Tiger_Data-TimescaleDB-F5A623?style=flat-square&logo=postgresql&logoColor=white) ![React](https://img.shields.io/badge/React-desktop-61DAFB?style=flat-square&logo=react&logoColor=black) ![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS_17+-F05138?style=flat-square&logo=swift&logoColor=white)
 <br/>
-![Backend tests](https://img.shields.io/badge/backend_tests-558_passing-22C55E?style=flat-square) ![Desktop tests](https://img.shields.io/badge/desktop_tests-116_passing-22C55E?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-2563EB?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-EC4899?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_only-0EA5E9?style=flat-square)
+![Engine](https://img.shields.io/badge/engine-deterministic-2563EB?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-EC4899?style=flat-square) ![Demo](https://img.shields.io/badge/demo-synthetic_profiles-0EA5E9?style=flat-square)
 
 <sub><b>HackUMBC 2026</b> · University of Maryland, Baltimore County</sub>
 
@@ -23,14 +23,14 @@
 ## 💡 The idea
 
 > [!IMPORTANT]
-> **A target-date fund only knows your birth year.** Two 35-year-olds retiring in 2058 get the *same* plan, even if one has six months of savings and the other carries **$18,000 of credit-card debt at 25% APR**.
+> **A target-date fund adjusts its investments over time, but it cannot see your cash flow.** Two 35-year-olds using the same 2060 fund may need different contribution, debt and emergency-cash plans.
 
-T. Rowe Price, whose target-date lineup is its largest product line, has said publicly that personalization is the next step for target-date solutions ([research](https://www.troweprice.com/institutional/us/en/insights/articles/2024/q3/make-it-personal-the-next-chapter-for-target-date-solutions-na.html)). **ARM is a working prototype of that idea.** It keeps the fund's stock/bond mix exactly as it is, and adapts the two things the fund ignores:
+T. Rowe Price, whose target-date lineup is its largest product line, has said publicly that personalization is the next step for target-date solutions ([research](https://www.troweprice.com/institutional/us/en/insights/articles/2024/q3/make-it-personal-the-next-chapter-for-target-date-solutions-na.html)). **ARM is a working prototype of that idea.** You identify one target-date fund and confirm its balance. ARM uses its reviewed fee and documented glide path where available, then adapts the choices the fund cannot make for you:
 
 - **How much to contribute:** a rate that fits this person's cash flow after essentials and required debt payments.
 - **Where the next dollar goes:** the employer match, emergency savings, or high-interest debt, in an order that fits their situation.
 
-Then it projects debt, cash and retirement **month by month** until retirement, and shows the tradeoffs openly.
+Then it projects debt, cash and the fund balance **month by month** until retirement, and shows the tradeoffs openly. AI may order the priorities; the engine validates that order and computes every amount. An expandable comparison shows what the default rules would have done with the same inputs.
 
 ---
 
@@ -48,8 +48,8 @@ Then it projects debt, cash and retirement **month by month** until retirement, 
 |---|---:|---:|---:|
 | 💳 Credit card paid off | month 135 (~11 years) | **month 16** | **119 months sooner** |
 | 🔥 Card interest paid | $35,788 | **$3,272** | **$32,516 saved** |
-| 🏦 Retirement balance | $1,320,893 | **$1,462,562** | **+$141,669** |
-| 🏦 In today's dollars | $599,382 | **$663,668** | **+$64,286** |
+| 🏦 Retirement balance | $1,312,515 | **$1,452,666** | **+$140,151** |
+| 🏦 In today's dollars | $595,581 | **$659,177** | **+$63,596** |
 | 🛟 Full 3-month emergency fund | month 9 | month 21 | 12 months later |
 
 > [!NOTE]
@@ -164,7 +164,7 @@ flowchart LR
 
 > *"Identify a real financial problem and show how one or more of these technologies* [ETFs, AI, digital assets] *could be used to solve it responsibly."*
 
-**The problem:** target-date funds, T. Rowe Price's largest product line, personalize on age alone. **Our answer:** personalize contributions and cash priorities *around* the fund, without changing its allocation.
+**The problem:** target-date funds adjust investments by time to retirement, while contribution and cash choices still depend on debt, reserves, income and employer match. **Our answer:** personalize those choices around one confirmed fund and make the AI decision comparable to default rules.
 
 | What "responsibly" means in ARM | Evidence |
 |---|---|
@@ -172,8 +172,8 @@ flowchart LR
 | Every decision is explainable | Order, evidence keys, tradeoffs and constraint checks are returned with each plan and shown under **Why this plan?** |
 | Every decision is honest about its source | Each response is labeled `ai` or `rules_fallback`, with a reason (`TIMEOUT`, `AI_COOLDOWN`, …) |
 | No demographic inference | Prompts contain only computed indicators: no names, IDs or account data |
-| Products stay grounded in filings | The **fund shortlist** ranks 6 target-date share classes (BlackRock LifePath Index 2030/2035/2055/2060, State Street Target Retirement 2030/2055); every fee and allocation cites its SEC filing |
-| Measurable user outcome | Morgan: **$32,516** less interest, card cleared **119 months sooner**, **+$141,669** at 67 |
+| Products stay grounded in filings | The catalog covers 6 target-date share classes. Selected funds bring a dated fee and documented glide path into projections; records without numeric glide paths use a labeled fallback. |
+| Measurable user outcome | Morgan: **$32,516** less interest, card cleared **119 months sooner**, **+$140,151** at 67 |
 
 ### 2. [MLH] Best Use of Gemini API
 
@@ -309,7 +309,7 @@ The iPhone app uses the same API and ships an offline bundle of saved results, s
 
 ## ✅ Engineering quality
 
-- **558 backend tests** (`pytest`): engine, policy, simulation, AI pipeline, history, plan styles, funds, education chat, contracts.
+- **Backend tests** (`pytest`): engine, policy, simulation, AI pipeline, history, plan styles, funds, education chat, contracts.
 - **6/6 real Tiger Data tests**: hypertable, continuous aggregate = chart values, compression, delete, pool reuse, user profiles with private runs (opt-in with `TIGER_DATABASE_URL`).
 - **116 desktop tests** (`vitest`): chart math, sync tests on real engine output, the API↔UI contract test (19 schemas), form conversion, the API client.
 - **8/8 live tests** against a running server, including save/delete and the full *Your numbers* flow through Tiger Data.
@@ -325,13 +325,13 @@ The iPhone app uses the same API and ships an offline bundle of saved results, s
 <td width="33%" valign="top">
 
 ### For savers
-A clear **next step each month**, grounded in their real cash flow. For a profile like Morgan's, that means **$32,516 less interest**, a card paid off **119 months sooner**, and **+$141,669** at retirement (**+$64,286** in today's dollars), with the tradeoffs visible, not hidden.
+A clear **next step each month**, grounded in their real cash flow and selected fund. For a profile like Morgan's, that means **$32,516 less interest**, a card paid off **119 months sooner**, and **+$140,151** at retirement (**+$63,596** in today's dollars), with the tradeoffs visible.
 
 </td>
 <td width="33%" valign="top">
 
 ### For plan providers
-Personalization **without touching the fund**. ARM adapts contributions and cash priorities around an existing target-date product, keeping its allocation and its glide path. Every decision is explainable and every stored plan is auditable (`input_hash`, model and policy versions).
+ARM adapts contributions and cash priorities around an existing target-date product. It uses a documented glide path when the catalog has numeric anchors, and records the fund snapshot alongside each saved plan (`input_hash`, catalog, model and policy versions).
 
 </td>
 <td width="33%" valign="top">
@@ -399,7 +399,7 @@ Money is integer USD cents; rates are decimals. Full schema: [`contracts/openapi
 | Desktop | React, TypeScript, Vite, Vitest | `desktop/` |
 | iPhone | SwiftUI, Swift Charts | `ios/` |
 
-Docs: [backend](docs/BACKEND.md) · [engine handoff](docs/ENGINE_HANDOFF.md) · [scenario history](docs/SCENARIO_HISTORY.md) · [desktop](docs/DESKTOP.md) · [funds](docs/FUNDS.md) · [education chat](docs/EDUCATION_CHAT.md) · [runbook](docs/RUNBOOK.md)
+Docs: [fund-aware plan](docs/FUND_AWARE_PLAN.md) · [backend](docs/BACKEND.md) · [engine handoff](docs/ENGINE_HANDOFF.md) · [scenario history](docs/SCENARIO_HISTORY.md) · [desktop](docs/DESKTOP.md) · [funds](docs/FUNDS.md) · [education chat](docs/EDUCATION_CHAT.md) · [runbook](docs/RUNBOOK.md)
 
 </details>
 
@@ -407,9 +407,9 @@ Docs: [backend](docs/BACKEND.md) · [engine handoff](docs/ENGINE_HANDOFF.md) · 
 
 ## 🧭 Scope and limitations
 
-- **Your own numbers, stored anonymously.** Morgan, Jordan and Casey are fictional. Users can enter their own finances; these are stored in Tiger Data under a random browser key (the server keeps only its hash), with no account, and can be erased with one click.
+- **Your own numbers.** Morgan, Jordan and Casey are fictional. Web profiles can be stored in Tiger Data under an anonymous key; iOS also keeps a local copy and stores to Tiger Data when available.
 - **Illustrative projections.** Steady nominal returns (stocks 6%, bonds 3%), no volatility or withdrawals, labeled hypothetical.
-- **The fund's mix never changes.** ARM adapts contributions and cash priorities, not the target-date allocation.
+- **No trades.** ARM models the fund's changing mix and fee, while adapting contributions and cash priorities. It does not alter the fund or execute transactions.
 - **Out of scope by design:** readiness scores, success probabilities, trading, tax optimization and real bank credentials. Plaid Sandbox is a stretch goal.
 
 ---

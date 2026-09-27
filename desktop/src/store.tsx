@@ -315,7 +315,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!liveEnabled) throw new APIError("unreachable");
       const id = profile.id;
       const previousID = lastDecision.current?.profileID === id ? lastDecision.current.decisionID : null;
-      const evaluation = await api.evaluate({ profile, scenario, previous_decision_id: previousID });
+      const baseID = lastLive.current.get(id)?.evaluation.decision_summary.decision_id ?? null;
+      const evaluation = await api.evaluate({ profile, scenario, previous_decision_id: previousID,
+        base_decision_id: baseID });
       if (evaluation.profile_id === id) {
         lastDecision.current = { profileID: id, decisionID: evaluation.decision_summary.decision_id };
       }

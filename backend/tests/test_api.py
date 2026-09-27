@@ -9,8 +9,8 @@ from .conftest import FakeModel, make_client
 
 def test_health_reports_versions():
     body = make_client().get("/health").json()
-    assert body == {"status": "ok", "schema_version": "1", "model_version": "1.0.0",
-                    "policy_version": "1.0.0", "plaid_enabled": False, "ai_available": False}
+    assert body == {"status": "ok", "schema_version": "1", "model_version": "2.0.0",
+                    "policy_version": "2.0.0", "plaid_enabled": False, "ai_available": False}
 
 
 def test_health_reports_ai_available_when_the_selected_provider_has_a_key():

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { errorMessage } from "../api/client";
 import type { ScreenFact } from "../api/chatContext";
 import type { Evaluation, Projection, Scenario } from "../api/types";
+import type { PlanningPreference } from "../api/types";
+import { parseAmount } from "../data/numbers";
 import { Icon, Stepper } from "../components/ui";
 import { LineChart, type Series } from "../components/LineChart";
 import { pointAtMonth, yearlyBalances, type Display } from "../data/display";
@@ -19,6 +21,8 @@ interface Draft {
   policy: Policy;
   /** Percent, 0–20 in 0.5 steps. */
   fixedRate: number;
+  extraDebt: string;
+  priorityStyle: PlanningPreference | "same";
   preset: Preset | null;
 }
 
@@ -26,10 +30,13 @@ const original = (d: Display): Draft => ({
   retirementAge: d.profile.retirement_age,
   policy: "adaptive",
   fixedRate: d.currentRate * 100,
+  extraDebt: "",
+  priorityStyle: "same",
   preset: "original",
 });
 const sameDraft = (a: Draft, b: Draft) =>
-  a.retirementAge === b.retirementAge && a.policy === b.policy && (a.policy === "adaptive" || a.fixedRate === b.fixedRate);
+  a.retirementAge === b.retirementAge && a.policy === b.policy && (a.policy === "adaptive" || a.fixedRate === b.fixedRate)
+  && a.extraDebt === b.extraDebt && a.priorityStyle === b.priorityStyle;
 
 const SECONDS_PER_MONTH = 0.11;
 
@@ -74,6 +81,7 @@ export function Explore({ display, onContext }: { display: Display; onContext: (
             <div className="stack" style={{ gap: 20 }}>
               <Comparison display={display} custom={custom?.projections.custom ?? null} />
               <Outcomes evaluation={evaluation} custom={custom?.projections.custom ?? null} asOf={profile.as_of_date} />
+              <FundAndRules evaluation={custom ?? evaluation} />
             </div>
           )}
           {view === "timeline" && <Timeline display={display} />}
@@ -89,6 +97,35 @@ export function Explore({ display, onContext }: { display: Display; onContext: (
       </div>
     </div>
   );
+}
+
+function FundAndRules({ evaluation }: { evaluation: Evaluation }) {
+  const fund = evaluation.assumptions.fund_model;
+  const comparison = evaluation.rules_comparison;
+  return <section className="section">
+    <h2 className="h-section">What drives this plan</h2>
+    <p className="body" style={{ marginTop: 8 }}>
+      {fund ? <>{fund.fund_name} · target {fund.target_year} · modeled expense {percent(fund.applied_expense_ratio)}.
+        The {fund.glide_path_mode === "documented" ? "issuer's documented" : "generic fallback"} glide path sets the modeled stock mix.</>
+        : "No fund is selected. Projections use a generic retirement-age glide path."}
+    </p>
+    {fund && <p className="caption" style={{ marginTop: 8 }}>
+      <a href={fund.glide_path_source_url} target="_blank" rel="noreferrer">Glide path source</a> ·{" "}
+      <a href={fund.fee_source_url} target="_blank" rel="noreferrer">Fee source</a> · Catalog {fund.catalog_version}
+      {fund.limitation && <> · {fund.limitation}</>}
+    </p>}
+    {comparison && <details style={{ marginTop: 18 }}>
+      <summary>AI decision compared with default rules</summary>
+      <p className="body" style={{ marginTop: 10 }}>
+        {evaluation.decision_summary.source === "ai" ? "AI chose" : "Default rules chose"} {comparison.ai_priorities.join(" → ")};
+        default rules choose {comparison.rules_priorities.join(" → ")}.
+        {comparison.difference_cents === null ? " The outcome could not be compared." : comparison.outcome === "equal"
+          ? " The projected retirement balance is the same."
+          : ` The projected retirement balance is ${money(Math.abs(comparison.difference_cents))} ${comparison.outcome} than default rules.`}
+      </p>
+      <p className="caption">The comparison changes the decision order only. Fund, cash flow, and return assumptions are held fixed.</p>
+    </details>}
+  </section>;
 }
 
 // ---------- Timeline ----------
@@ -263,6 +300,8 @@ function Comparison({ display, custom }: { display: Display; custom: Projection 
 const scenarioOf = (d: Draft): Scenario => ({
   retirement_age: d.retirementAge,
   employee_contribution_rate: d.policy === "fixed" ? d.fixedRate / 100 : null,
+  extra_monthly_debt_cents: d.extraDebt === "" ? null : Math.round((parseAmount(d.extraDebt) ?? 0) * 100),
+  priority_style: d.priorityStyle === "same" ? null : d.priorityStyle,
 });
 
 function ScenarioControls({ display, onResult }: { display: Display; onResult: (shown: Shown | null) => void }) {
@@ -317,6 +356,8 @@ function ScenarioControls({ display, onResult }: { display: Display; onResult: (
       retirementAge: pendingScenario.retirement_age,
       policy: rate === null ? "adaptive" : "fixed",
       fixedRate: rate === null ? display.currentRate * 100 : rate * 100,
+      extraDebt: pendingScenario.extra_monthly_debt_cents == null ? "" : String(pendingScenario.extra_monthly_debt_cents / 100),
+      priorityStyle: pendingScenario.priority_style ?? "same",
       preset: null,
     };
     setDraft(next);
@@ -395,7 +436,24 @@ function ScenarioControls({ display, onResult }: { display: Display; onResult: (
         </div>
       )}
 
-      <button className="btn-primary full" style={{ marginTop: 22 }} onClick={() => compare()} disabled={busy}>
+      <div className="row" style={{ marginTop: 16 }}>
+        <label className="field" style={{ width: "100%" }}>
+          <span className="field-label">Extra monthly debt payment</span>
+          <input inputMode="decimal" placeholder="Automatic priority" value={draft.extraDebt}
+            onChange={(e) => edit({ extraDebt: e.target.value, preset: null })} />
+        </label>
+      </div>
+      <p className="caption">An entered amount goes to the highest APR debt first, up to the amount owed. ARM won't add more than this budget.</p>
+      <label className="field" style={{ marginTop: 16 }}>
+        <span className="field-label">Priority style</span>
+        <select value={draft.priorityStyle} onChange={(e) => edit({ priorityStyle: e.target.value as Draft["priorityStyle"], preset: null })}>
+          <option value="same">Keep plan style</option><option value="balanced">Balanced</option>
+          <option value="cash_security">Cash security</option><option value="debt_reduction">Debt reduction</option>
+        </select>
+      </label>
+
+      <button className="btn-primary full" style={{ marginTop: 22 }} onClick={() => compare()}
+        disabled={busy || (draft.extraDebt !== "" && parseAmount(draft.extraDebt) === null)}>
         {busy ? <span className="spinner" /> : <Icon name="compare" />} Compare scenario
       </button>
       {compared && status && <p className="caption fade-in" style={{ marginTop: 10 }}>{status}</p>}

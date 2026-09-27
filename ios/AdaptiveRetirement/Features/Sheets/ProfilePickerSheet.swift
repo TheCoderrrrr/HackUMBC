@@ -14,6 +14,14 @@ struct ProfilePickerSheet: View {
                         withAnimation(Motion.select) { store.select(profile) }
                     }
                 }
+                if let manual = store.manualProfile {
+                    ProfileOptionRow(profile: .personal(manual), isSelected: store.profile.id == manual.id) {
+                        store.select(.personal(manual))
+                    }
+                }
+                Button("Enter your own numbers and fund") { store.sheet = .manualProfile }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .padding(.top, Space.m)
 
                 // The saved cash-first demonstration (FRONTEND.md §7): Morgan's inputs with a
                 // cash_security preference and a saved, reviewed AI decision (REPORT B7).

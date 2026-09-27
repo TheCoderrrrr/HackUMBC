@@ -73,8 +73,8 @@ def evaluate(
     template_fn: Callable[..., Any] | None = None,
     evaluation_model: Any = None,
     schema_version: str = "1",
-    model_version: str = "1.0.0",
-    policy_version: str = "1.0.0",
+    model_version: str = "2.0.0",
+    policy_version: str = "2.0.0",
 ) -> Any:
     """Return a complete Evaluation without provider, clock, storage, or IO.
 
@@ -82,7 +82,12 @@ def evaluate(
     agreed module handoffs. A's Pydantic Evaluation validates the final shape.
     """
     if assumptions is None:
-        assumptions = _handoff("app.engine.assumptions", "MODEL_ASSUMPTIONS")
+        if optional(profile, "fund_id"):
+            from app.fund_model import resolve
+            from app.schemas import FinancialProfile
+            assumptions = resolve(profile if isinstance(profile, FinancialProfile) else FinancialProfile.model_validate(profile))
+        else:
+            assumptions = _handoff("app.engine.assumptions", "MODEL_ASSUMPTIONS")
     state_fn = state_fn or _handoff("app.engine.state", "derive_state")
     use_b_plan = plan_fn is None
     use_b_template = template_fn is None
@@ -97,6 +102,17 @@ def evaluate(
             evaluation_model = dict
 
     state = state_fn(_json(profile)) if use_b_plan else state_fn(profile)
+    display_state = state
+    fund_model = optional(assumptions, "fund_model")
+    if fund_model and isinstance(state, dict):
+        from app.fund_model import weight
+        from app.schemas import FundModel
+        model = fund_model if isinstance(fund_model, FundModel) else FundModel.model_validate(fund_model)
+        as_of = get(profile, "as_of_date")
+        from datetime import date
+        if isinstance(as_of, str):
+            as_of = date.fromisoformat(as_of)
+        display_state = {**state, "baseline_equity_weight": weight(model, as_of, 1, state["months_until_retirement"])}
     current = run_simulation(
         profile, "current", None, assumptions, validated_decision,
         allocator=allocator, equity_weight_fn=equity_weight_fn,
@@ -157,7 +173,7 @@ def evaluate(
             model_version=model_version,
             policy_version=policy_version,
         ),
-        "financial_state": _json(state),
+        "financial_state": _json(display_state),
         "plan": _json(plan),
         "assumptions": _json(assumptions),
         "projections": projections,

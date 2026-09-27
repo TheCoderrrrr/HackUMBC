@@ -13,6 +13,24 @@ struct PlanView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                Button {
+                    store.openStyleGuide()
+                } label: {
+                    HStack {
+                        Label("Plan style: \(store.planStyle.label)", systemImage: "slider.horizontal.3")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                    }
+                    .font(TypeScale.labelMedium)
+                    .foregroundStyle(Palette.accent)
+                    .frame(minHeight: 48)
+                }
+                if store.planStyle != store.savedPlanStyle && (store.dataMode == .saved || store.dataMode == .preview) {
+                    Text("Showing the saved \(store.savedPlanStyle.label) calculation. Connect for a \(store.planStyle.label) result.")
+                        .font(TypeScale.caption)
+                        .foregroundStyle(Palette.textSecondary)
+                        .padding(.bottom, Space.l)
+                }
                 contributions
                 divider
                 cashPriorities
@@ -24,6 +42,8 @@ struct PlanView: View {
                 emergency
                 divider
                 allocation
+                divider
+                fundAndRules
             }
             .padding(.horizontal, Space.xl)
             .padding(.top, Space.l)
@@ -49,6 +69,49 @@ struct PlanView: View {
     private var divider: some View {
         Hairline(color: Palette.hairlineStrong)
             .padding(.vertical, Space.xl)
+    }
+
+    private var fundAndRules: some View {
+        let evaluation = store.evaluationLoad.current?.evaluation
+        return VStack(alignment: .leading, spacing: Space.m) {
+            Text("What drives this plan")
+                .font(.geist(22, .medium, relativeTo: .title2))
+                .foregroundStyle(Palette.textPrimary)
+            if let fund = evaluation?.assumptions.fundModel {
+                Text("\(fund.fundName) · target \(fund.targetYear) · modeled fee \(OverviewCopy.percent(fund.appliedExpenseRatio)).")
+                    .font(TypeScale.body)
+                Text(fund.glidePathMode == "documented" ? "The issuer's documented glide path sets the modeled stock mix." : "A generic glide path is used because numeric issuer anchors are unavailable.")
+                    .font(TypeScale.caption)
+                    .foregroundStyle(Palette.textSecondary)
+                if let url = URL(string: fund.glidePathSourceURL) { Link("Glide path source", destination: url) }
+                if let url = URL(string: fund.feeSourceURL) { Link("Fee source", destination: url) }
+                Text("Catalog \(fund.catalogVersion) · fee facts as of \(fund.feeAsOfDate)")
+                    .font(TypeScale.caption)
+                    .foregroundStyle(Palette.textSecondary)
+            } else {
+                Text("No target-date fund is selected. This plan uses a generic retirement-age glide path.")
+                    .font(TypeScale.caption)
+                    .foregroundStyle(Palette.textSecondary)
+            }
+            if let comparison = evaluation?.rulesComparison {
+                DisclosureGroup("AI compared with default rules") {
+                    VStack(alignment: .leading, spacing: Space.s) {
+                        Text("Decision order: \(comparison.aiPriorities.map(\.rawValue).joined(separator: " → "))")
+                        Text("Default rules: \(comparison.rulesPriorities.map(\.rawValue).joined(separator: " → "))")
+                        if let difference = comparison.differenceCents {
+                            Text(difference == 0 ? "The projected retirement balance is the same." :
+                                "Projected retirement balance: \(Money.whole(abs(difference))) \(comparison.outcome) than default rules.")
+                        } else {
+                            Text("The projected outcome could not be compared.")
+                        }
+                        Text("Only the decision order changes; fund, cash flow, and return assumptions stay fixed.")
+                    }
+                    .font(TypeScale.caption)
+                    .foregroundStyle(Palette.textSecondary)
+                }
+                .tint(Palette.accent)
+            }
+        }
     }
 
     // MARK: Retirement contributions

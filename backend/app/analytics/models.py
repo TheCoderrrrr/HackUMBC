@@ -44,6 +44,10 @@ class RunSummary(Strict):
     model_version: str
     policy_version: str
     input_hash: str
+    fund_id: str | None = None
+    fund_name: str | None = None
+    catalog_version: str | None = None
+    glide_path_mode: str | None = None
 
 
 class SaveRunResponse(Strict):

@@ -101,8 +101,10 @@ struct ExploreView: View {
         .onChange(of: store.profile.id) { _, _ in resetForProfile() }
         .onAppear {
             draft = .original(for: store.displayProfile)
+            applyLearnScenario()
             updateChatContext()
         }
+        .onChange(of: store.pendingLearnScenario) { _, _ in applyLearnScenario() }
         .onChange(of: selectedMonth) { _, _ in updateChatContext() }
         .onChange(of: customResult?.inputHash) { _, _ in updateChatContext() }
         .onChange(of: store.displayProfile.evaluation?.inputHash) { _, _ in updateChatContext() }
@@ -372,6 +374,15 @@ struct ExploreView: View {
         customScenario = nil
         scenarioUpdating = false
         scenarioNote = nil
+    }
+
+    private func applyLearnScenario() {
+        guard let pending = store.pendingLearnScenario else { return }
+        draft = pending
+        customResult = nil
+        customScenario = nil
+        scenarioNote = nil
+        store.pendingLearnScenario = nil
     }
 
     private static var debugScrollAnchor: UnitPoint? {

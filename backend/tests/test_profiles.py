@@ -39,6 +39,8 @@ def morgan_form() -> dict:
                   (x.model_dump() for x in m.debts)],
         "contribution_tax_treatment": m.contribution_tax_treatment,
         "estimated_marginal_income_tax_rate": m.estimated_marginal_income_tax_rate,
+        "fund_id": m.fund_id, "fund_balance_confirmed": True,
+        "fund_account_type": m.fund_account_type, "plan_menu_fund_ids": m.plan_menu_fund_ids,
     }
 
 

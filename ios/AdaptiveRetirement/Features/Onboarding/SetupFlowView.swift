@@ -35,6 +35,8 @@ struct SetupFlowView: View {
             switch sheet {
             case .accountPreview: AccountPreviewSheet().presentationDetents([.large])
             case .profilePicker: ProfilePickerSheet().presentationDetents([.large])
+            case .gettingStarted: GettingStartedView().presentationDetents([.large])
+            case .manualProfile: ManualProfileView().presentationDetents([.large])
             default: EmptyView()
             }
         }
@@ -151,7 +153,7 @@ struct OnboardingFlow: View {
 
             // Space stays reserved so the primary button doesn't jump between steps.
             Button(action: showAccountPreview) {
-                Text("Use my accounts")
+                Text("Enter my own numbers")
                     .font(SetupStyle.secondaryAction)
                     .foregroundStyle(Palette.textPrimary)
                     .frame(maxWidth: .infinity, minHeight: 44)
@@ -183,7 +185,7 @@ struct OnboardingFlow: View {
     }
 
     private func showAccountPreview() {
-        store.sheet = .accountPreview
+        store.sheet = .manualProfile
     }
 
     private func back() {

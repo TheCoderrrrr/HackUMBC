@@ -50,6 +50,9 @@ protocol APIClient: Sendable {
     func health() async throws -> API.Health
     func demoProfiles() async throws -> API.DemoProfiles
     func evaluate(_ request: API.EvaluateRequest) async throws -> API.Evaluation
+    func planStyles(_ profile: API.FinancialProfile) async throws -> API.PlanStyles
+    func buildProfile(_ input: API.ManualProfileInput) async throws -> API.ProfileBuild
+    func saveProfile(_ input: API.ManualProfileInput) async throws -> API.ProfileBuild
 
     // Fund shortlist (`backend/app/fund_api.py`)
     func fundCatalog() async throws -> API.Funds.CatalogSummary
@@ -62,6 +65,11 @@ protocol APIClient: Sendable {
     func compare(base: String, other: String) async throws -> API.History.Comparison
 }
 
+extension APIClient {
+    func buildProfile(_ input: API.ManualProfileInput) async throws -> API.ProfileBuild { throw APIError.unreachable }
+    func saveProfile(_ input: API.ManualProfileInput) async throws -> API.ProfileBuild { try await buildProfile(input) }
+}
+
 /// URLSession client for the FastAPI backend. Never logs request bodies or tokens.
 final class LiveAPIClient: APIClient {
     static let evaluationTimeout: TimeInterval = 8
@@ -71,6 +79,7 @@ final class LiveAPIClient: APIClient {
     /// Shared demo key sent as X-Demo-Key when the server sets DEMO_KEY (REPORT C2).
     private let demoKey: String
     private let session: URLSession
+    private let profileKey: String
 
     /// Returns nil unless `baseURLString` is an absolute HTTPS URL with a host.
     init?(baseURLString: String, demoKey: String = "", session: URLSession = .shared) {
@@ -81,6 +90,14 @@ final class LiveAPIClient: APIClient {
         self.baseURL = url
         self.demoKey = demoKey
         self.session = session
+        if let saved = UserDefaults.standard.string(forKey: "arm:profileKey") {
+            self.profileKey = saved
+        } else {
+            let key = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+                + UUID().uuidString.replacingOccurrences(of: "-", with: "")
+            UserDefaults.standard.set(key, forKey: "arm:profileKey")
+            self.profileKey = key
+        }
     }
 
     func health() async throws -> API.Health {
@@ -95,6 +112,20 @@ final class LiveAPIClient: APIClient {
         let body: Data
         do { body = try JSONEncoder().encode(request) } catch { throw APIError.invalidResponse }
         return try await send(path: "v1/evaluate", method: "POST", body: body, timeout: Self.evaluationTimeout)
+    }
+
+    func planStyles(_ profile: API.FinancialProfile) async throws -> API.PlanStyles {
+        struct Request: Encodable { let profile: API.FinancialProfile }
+        return try await send(path: "v1/plan-styles", method: "POST", body: try encoded(Request(profile: profile)),
+                              timeout: Self.evaluationTimeout)
+    }
+
+    func buildProfile(_ input: API.ManualProfileInput) async throws -> API.ProfileBuild {
+        try await send(path: "v1/profiles/build", method: "POST", body: try encoded(input), timeout: Self.requestTimeout)
+    }
+
+    func saveProfile(_ input: API.ManualProfileInput) async throws -> API.ProfileBuild {
+        try await send(path: "v1/profiles/me", method: "PUT", body: try encoded(input), timeout: Self.requestTimeout)
     }
 
     func fundCatalog() async throws -> API.Funds.CatalogSummary {
@@ -146,6 +177,7 @@ final class LiveAPIClient: APIClient {
         if !demoKey.isEmpty {
             request.setValue(demoKey, forHTTPHeaderField: "X-Demo-Key")
         }
+        request.setValue(profileKey, forHTTPHeaderField: "X-Profile-Key")
         if let body {
             request.httpBody = body
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -207,6 +239,7 @@ final class FakeAPIClient: APIClient, @unchecked Sendable {
     var healthResult: Result<API.Health, APIError> = .failure(.unreachable)
     var profilesResult: Result<API.DemoProfiles, APIError> = .failure(.unreachable)
     var evaluationResult: Result<API.Evaluation, APIError> = .failure(.unreachable)
+    var planStylesResult: Result<API.PlanStyles, APIError> = .failure(.unreachable)
     private(set) var evaluateRequests: [API.EvaluateRequest] = []
 
     func health() async throws -> API.Health { try healthResult.get() }
@@ -215,6 +248,7 @@ final class FakeAPIClient: APIClient, @unchecked Sendable {
         evaluateRequests.append(request)
         return try evaluationResult.get()
     }
+    func planStyles(_ profile: API.FinancialProfile) async throws -> API.PlanStyles { try planStylesResult.get() }
 
     var catalogResult: Result<API.Funds.CatalogSummary, APIError> = .failure(.unreachable)
     var shortlistResult: Result<API.Funds.Envelope, APIError> = .failure(.unreachable)

@@ -98,7 +98,7 @@ def _as_mapping(value: Any) -> dict[str, Any]:
 
 
 def _default_allocator(
-    profile: Any, decision: Any,
+    profile: Any, decision: Any, scenario: Any = None,
 ) -> tuple[Allocator, dict[str, Any]]:
     try:
         policy = import_module("app.engine.policy")
@@ -107,6 +107,9 @@ def _default_allocator(
         raise MissingHandoffError("Developer B must provide policy.allocate_month") from exc
     original_profile = _as_mapping(profile)
     original_decision = _as_mapping(decision)
+    custom_decision = dict(original_decision)
+    if scenario is not None and optional(scenario, "priority_style") is not None:
+        custom_decision["ordered_priorities"] = list(policy.default_priorities(optional(scenario, "priority_style")))
     original_state = state_module.derive_state(original_profile)
     original_debts = {debt["id"]: debt for debt in original_profile["debts"]}
 
@@ -134,9 +137,10 @@ def _default_allocator(
                 "debts": month_debts,
             }
         raw = policy.allocate_month(
-            original_profile, original_state, original_decision,
+            original_profile, original_state, custom_decision if strategy == "custom" else original_decision,
             month=month, strategy=strategy,
             employee_contribution_rate=contribution_override,
+            extra_monthly_debt_cents=optional(scenario, "extra_monthly_debt_cents") if strategy == "custom" else None,
         )
         debt_months = tuple(
             DebtMonth(
@@ -266,7 +270,7 @@ def run_simulation(
     using_b = allocator is None
     initial_state = None
     if allocator is None:
-        allocator, initial_state = _default_allocator(profile, decision)
+        allocator, initial_state = _default_allocator(profile, decision, scenario)
     equity_weight_fn = equity_weight_fn or _default_equity_weight()
 
     age = int(get(profile, "age"))
@@ -380,7 +384,7 @@ def run_simulation(
                 raise EngineInvariantError("shortfall cannot be negative")
             if (
                 strategy == "custom"
-                and contribution_override is not None
+                and (contribution_override is not None or optional(scenario, "extra_monthly_debt_cents") is not None)
                 and allocation.block_code != "MISSING_REQUIRED_INPUT"
             ):
                 # Only an explicit fixed rate is rejected with 422. A null-rate custom
@@ -412,13 +416,26 @@ def run_simulation(
             if payment.total_cents < debt.interest_cents:
                 warnings.append(f"NEGATIVE_AMORTIZATION:{debt.id}")
 
-        equity = float(equity_weight_fn(inputs.months_until_retirement))
+        fund_data = optional(assumptions, "fund_model")
+        if fund_data:
+            from app.fund_model import weight
+            from app.schemas import FundModel
+            from datetime import date
+            model = fund_data if isinstance(fund_data, FundModel) else FundModel.model_validate(fund_data)
+            as_of = get(profile, "as_of_date")
+            if isinstance(as_of, str):
+                as_of = date.fromisoformat(as_of)
+            equity = weight(model, as_of, month, inputs.months_until_retirement)
+        else:
+            equity = float(equity_weight_fn(inputs.months_until_retirement))
         if not 0 <= equity <= 1:
             raise EngineInvariantError("invalid equity weight")
         annual_return = (
             equity * float(get(assumptions, "annual_equity_return"))
             + (1 - equity) * float(get(assumptions, "annual_bond_return"))
         )
+        if fund_data:
+            annual_return -= model.applied_expense_ratio
         if annual_return <= -1:
             raise EngineInvariantError("invalid annual investment return")
         retirement_growth = (1 + annual_return) ** (1 / 12)

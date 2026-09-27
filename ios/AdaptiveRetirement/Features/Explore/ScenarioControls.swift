@@ -26,21 +26,28 @@ struct ScenarioDraft: Equatable {
     var policy: Policy = .adaptive
     /// Employee rate in percent, 0…20 in 0.5 steps, used when `policy == .fixed`.
     var fixedRate: Double
+    var extraDebtDollars: String = ""
+    var priorityStyle: API.PlanningPreference? = nil
     var preset: Preset? = .original
 
     /// The fields that change the request; `preset` is only a chip highlight, so editing a
     /// control and reverting it no longer sends an identical request (REPORT E2).
-    var requestShape: RequestShape { RequestShape(age: retirementAge, policy: policy, rate: fixedRate) }
+    var requestShape: RequestShape { RequestShape(age: retirementAge, policy: policy, rate: fixedRate,
+                                                   extraDebt: extraDebtDollars, priorityStyle: priorityStyle) }
 
     struct RequestShape: Equatable {
         let age: Int
         let policy: Policy
         let rate: Double
+        let extraDebt: String
+        let priorityStyle: API.PlanningPreference?
     }
 
     /// The `/v1/evaluate` scenario this draft asks for.
     var apiScenario: API.Scenario {
-        API.Scenario(retirementAge: retirementAge, employeeContributionRate: policy == .fixed ? fixedRate / 100 : nil)
+        API.Scenario(retirementAge: retirementAge, employeeContributionRate: policy == .fixed ? fixedRate / 100 : nil,
+                     extraMonthlyDebtCents: extraDebtDollars.isEmpty ? nil : Int64(((Double(extraDebtDollars) ?? 0) * 100).rounded()),
+                     priorityStyle: priorityStyle)
     }
 
     static func original(for profile: Profile) -> ScenarioDraft {
@@ -71,7 +78,10 @@ struct ScenarioOverlay {
             return (percent.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(percent))%" : String(format: "%.1f%%", percent))
                 + " fixed contribution"
         } ?? "adaptive contribution"
-        return age.map { "Retire at \($0) · \(contribution)" } ?? contribution
+        let base = age.map { "Retire at \($0) · \(contribution)" } ?? contribution
+        let debt = scenario?.extraMonthlyDebtCents.map { " · \(Money.whole($0))/mo extra debt" } ?? ""
+        let style = scenario?.priorityStyle.map { " · \($0.label)" } ?? ""
+        return base + debt + style
     }
 }
 
@@ -300,6 +310,32 @@ struct ScenarioControls: View {
                 .transition(.opacity)
             }
 
+            VStack(alignment: .leading, spacing: Space.s) {
+                Text("Extra monthly debt payment")
+                    .font(.geist(15, .medium, relativeTo: .callout))
+                TextField("Automatic priority", text: Binding(
+                    get: { draft.extraDebtDollars },
+                    set: { draft.extraDebtDollars = $0; draft.preset = nil }
+                ))
+                .keyboardType(.decimalPad)
+                .textFieldStyle(.roundedBorder)
+                Text("An entered budget goes to the highest APR debt first. ARM won't add more.")
+                    .font(.geist(12, .regular, relativeTo: .caption))
+                    .foregroundStyle(Palette.textSecondary)
+            }
+            .padding(.top, Space.m)
+
+            Picker("Priority style", selection: Binding(
+                get: { draft.priorityStyle?.rawValue ?? "same" },
+                set: { draft.priorityStyle = $0 == "same" ? nil : API.PlanningPreference(rawValue: $0); draft.preset = nil }
+            )) {
+                Text("Keep plan style").tag("same")
+                Text("Balanced").tag(API.PlanningPreference.balanced.rawValue)
+                Text("Cash security").tag(API.PlanningPreference.cashSecurity.rawValue)
+                Text("Debt reduction").tag(API.PlanningPreference.debtReduction.rawValue)
+            }
+            .padding(.top, Space.m)
+
             if isEdited || failed {
                 HStack(spacing: Space.m) {
                     if failed {
@@ -376,6 +412,11 @@ struct ScenarioControls: View {
             // Presets resolve instantly (saved or live); stepper edits wait to settle.
             schedule(new, after: new.preset == nil ? Self.settleDelay : .zero)
         }
+        .onAppear {
+            if isEdited && comparedDraft?.requestShape != draft.requestShape {
+                schedule(draft, after: .zero)
+            }
+        }
         .animation(Motion.reveal, value: isEdited)
         .animation(Motion.reveal, value: failed)
         // No cancel on disappear: switching tabs mid-calculation used to leave nothing on
@@ -420,6 +461,13 @@ struct ScenarioControls: View {
 
     /// Exact saved preset when offline; otherwise a live `/v1/evaluate` with the draft as scenario.
     private func compare(_ compared: ScenarioDraft) async {
+        if !compared.extraDebtDollars.isEmpty &&
+            (Double(compared.extraDebtDollars) == nil || (Double(compared.extraDebtDollars) ?? 0) < 0) {
+            status = "Enter a nonnegative dollar amount for extra debt payment."
+            failed = true
+            unavailableNote.wrappedValue = "invalid debt budget"
+            return
+        }
         func current() -> Bool { !Task.isCancelled && comparedDraft?.requestShape == compared.requestShape }
         func show(saved preset: DemoPreset, _ message: String) -> Bool {
             guard let saved = store.savedEvaluation(for: profile.id, preset: preset) else { return false }

@@ -282,6 +282,7 @@ function RunRow({ run, onDeleted, onError }: {
           Saved {new Date(run.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
           {run.final_retirement_balance_cents !== null && <> · {money(run.final_retirement_balance_cents)} at {run.retirement_age}</>}
           {" · "}{run.decision_source === "ai" ? "AI decision" : "Rules decision"}
+          {run.fund_name && <> · {run.fund_name} (catalog {run.catalog_version})</>}
         </span>
       </span>
       {confirming ? (
@@ -302,4 +303,3 @@ function RunRow({ run, onDeleted, onError }: {
 function keyFor(profileID: string): string | null {
   return profileID === MY_ID ? peekProfileKey() : null;
 }
-

@@ -37,6 +37,10 @@ def run_label(profile: FinancialProfile, scenario: Scenario | None, style: str |
         rate = scenario.employee_contribution_rate
         contribution = "adaptive contribution" if rate is None else f"{rate * 100:g}% fixed contribution"
         label = f"Retire at {scenario.retirement_age} · {contribution}"
+        if scenario.extra_monthly_debt_cents is not None:
+            label += f" · ${scenario.extra_monthly_debt_cents / 100:,.0f}/mo extra debt"
+        if scenario.priority_style:
+            label += f" · {STYLE_LABELS[scenario.priority_style]}"
     return f"{label} · {STYLE_LABELS[style]}" if style else label
 
 

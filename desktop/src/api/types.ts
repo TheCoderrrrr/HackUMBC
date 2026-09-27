@@ -38,18 +38,25 @@ export interface FinancialProfile {
   employer_match: { status: "confirmed" | "none" | "unknown"; fully_vested: boolean; tiers: MatchTier[] };
   debts: Debt[];
   planning_preference?: PlanningPreference;
+  fund_id?: string | null;
+  fund_balance_confirmed?: boolean;
+  fund_account_type?: "401k" | "ira" | null;
+  plan_menu_fund_ids?: string[] | null;
   provenance?: Record<string, unknown>;
 }
 
 export interface Scenario {
   retirement_age: number;
   employee_contribution_rate: number | null;
+  extra_monthly_debt_cents?: number | null;
+  priority_style?: PlanningPreference | null;
 }
 
 export interface EvaluateRequest {
   profile: FinancialProfile;
   scenario: Scenario | null;
   previous_decision_id: string | null;
+  base_decision_id?: string | null;
 }
 
 export interface FinancialState {
@@ -138,6 +145,14 @@ export interface ModelAssumptions {
   returns_net_of_fees: boolean;
   glide_path: { years_to_retirement: number; equity_weight: number }[];
   limitations: string[];
+  fund_model?: {
+    fund_id: string; fund_name: string; catalog_version: string; share_class_id: string;
+    target_year: number; applied_expense_ratio: number; fee_as_of_date: string;
+    fee_source_url: string; glide_path_source_url: string;
+    glide_path_mode: "documented" | "generic_fallback";
+    glide_path: { years_to_retirement: number; equity_weight: number }[];
+    limitation: string | null;
+  } | null;
 }
 
 export interface Evaluation {
@@ -151,6 +166,11 @@ export interface Evaluation {
   assumptions: ModelAssumptions;
   projections: { current: Projection; adaptive: Projection; custom: Projection | null };
   warnings: string[];
+  rules_comparison?: {
+    basis: "adaptive" | "custom"; rules_priorities: Priority[]; ai_priorities: Priority[];
+    rules_retirement_balance_cents: number | null; ai_retirement_balance_cents: number | null;
+    difference_cents: number | null; outcome: "higher" | "equal" | "lower" | "unavailable";
+  } | null;
   decision_summary: {
     decision_id: string;
     source: "ai" | "rules_fallback";
@@ -203,6 +223,10 @@ export interface RunSummary {
   model_version: string;
   policy_version: string;
   input_hash: string;
+  fund_id?: string | null;
+  fund_name?: string | null;
+  catalog_version?: string | null;
+  glide_path_mode?: string | null;
 }
 
 export interface YearValues {
@@ -290,6 +314,10 @@ export interface ProfileInput {
   contribution_tax_treatment?: "traditional" | "roth";
   estimated_marginal_income_tax_rate?: number;
   planning_preference?: PlanningPreference;
+  fund_id?: string | null;
+  fund_balance_confirmed?: boolean;
+  fund_account_type?: "401k" | "ira" | null;
+  plan_menu_fund_ids?: string[] | null;
 }
 
 export interface ProfileBuild {
@@ -302,4 +330,3 @@ export interface StoredProfile {
   form: ProfileInput;
   profile: FinancialProfile;
 }
-

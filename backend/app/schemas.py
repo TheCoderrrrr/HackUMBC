@@ -105,7 +105,25 @@ class FinancialProfile(Strict):
     employer_match: EmployerMatch
     debts: list[Debt] = Field(max_length=20)
     planning_preference: PlanningPreference = "balanced"
+    fund_id: str | None = None
+    fund_balance_confirmed: bool = False
+    fund_account_type: Literal["401k", "ira"] | None = None
+    plan_menu_fund_ids: list[str] | None = Field(default=None, max_length=50)
     provenance: dict[str, Provenance]
+
+    @model_validator(mode="after")
+    def _fund_context(self) -> FinancialProfile:
+        if self.fund_balance_confirmed and not self.fund_id:
+            raise ValueError("Choose a target-date fund before confirming its balance.")
+        if self.fund_id and not self.fund_balance_confirmed:
+            raise ValueError("Confirm that the retirement balance is in the selected fund.")
+        if self.fund_id and not self.fund_account_type:
+            raise ValueError("Choose the account type for the selected fund.")
+        if len(self.plan_menu_fund_ids or []) != len(set(self.plan_menu_fund_ids or [])):
+            raise ValueError("Plan menu fund IDs must be unique.")
+        if self.fund_id and self.plan_menu_fund_ids is not None and self.fund_id not in self.plan_menu_fund_ids:
+            raise ValueError("The selected fund is not in the entered plan menu.")
+        return self
 
     @field_validator("debts")
     @classmethod
@@ -134,12 +152,15 @@ class FinancialProfile(Strict):
 class Scenario(Strict):
     retirement_age: int = Field(le=80)
     employee_contribution_rate: Rate | None = Field(default=None, ge=0, le=1)
+    extra_monthly_debt_cents: Cents | None = Field(default=None, ge=0)
+    priority_style: PlanningPreference | None = None
 
 
 class EvaluateRequest(Strict):
     profile: FinancialProfile
     scenario: Scenario | None = None
     previous_decision_id: str | None = Field(default=None, max_length=128)
+    base_decision_id: str | None = Field(default=None, max_length=128)
     # scenario.retirement_age > profile.age is checked in api.evaluate so the error
     # can point at "scenario.retirement_age".
 
@@ -255,6 +276,22 @@ class ModelAssumptions(Strict):
     returns_net_of_fees: bool
     glide_path: list[GlidePathAnchor]
     limitations: list[str]
+    fund_model: FundModel | None = None
+
+
+class FundModel(Strict):
+    fund_id: str
+    fund_name: str
+    catalog_version: str
+    share_class_id: str
+    target_year: int
+    applied_expense_ratio: float
+    fee_as_of_date: date
+    fee_source_url: str
+    glide_path_source_url: str
+    glide_path_mode: Literal["documented", "generic_fallback"]
+    glide_path: list[GlidePathAnchor]
+    limitation: str | None = None
 
 
 # --- AI decision and explanation ---------------------------------------------
@@ -325,6 +362,17 @@ class EvaluationCore(Strict):
 class Evaluation(EvaluationCore):
     decision_summary: DecisionSummary
     explanation: AIExplanation
+    rules_comparison: RulesComparison | None = None
+
+
+class RulesComparison(Strict):
+    basis: Literal["adaptive", "custom"]
+    rules_priorities: list[Priority]
+    ai_priorities: list[Priority]
+    rules_retirement_balance_cents: Cents | None
+    ai_retirement_balance_cents: Cents | None
+    difference_cents: Cents | None
+    outcome: Literal["higher", "equal", "lower", "unavailable"]
 
 
 # --- Other responses -------------------------------------------------------------
