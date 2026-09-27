@@ -2,15 +2,17 @@
 
 <img src="./assets/logo.svg" width="128" alt="Adaptive Retirement logo" />
 
+**A retirement plan that reads your paycheck, debt and savings, not just your birth year, and tells you where your next dollar should go.**
+
 # Adaptive Retirement
 
 ### Target Date Fund 2.0: same retirement date, different financial lives.
 
-**Bounded AI reads a participant's real cash flow, debt and savings. Python turns it into an affordable,<br/>explainable plan for where every next dollar should go.**
+<img src="./assets/hero.svg" width="100%" alt="Morgan, 35, owes $18,000 on a 25% APR card. With current habits the card is paid off in month 135; the adaptive plan pays it off in month 16, saves $32,516 in interest and adds $141,669 at retirement." />
 
-![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white) ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?style=for-the-badge&logo=fastapi&logoColor=white) ![Gemini](https://img.shields.io/badge/Gemini-Flash_Lite-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white) ![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS_17+-0D96F6?style=for-the-badge&logo=swift&logoColor=white)
+![Debt-free sooner](https://img.shields.io/badge/debt--free-119_months_sooner-06B6D4?style=for-the-badge&labelColor=0B1220) ![Interest saved](https://img.shields.io/badge/interest_saved-%2432%2C516-10B981?style=for-the-badge&labelColor=0B1220) ![More at retirement](https://img.shields.io/badge/at_67-%2B%24141%2C669-A855F7?style=for-the-badge&labelColor=0B1220) ![Allocation](https://img.shields.io/badge/fund_allocation-unchanged-F59E0B?style=for-the-badge&labelColor=0B1220)
 <br/>
-![Tests](https://img.shields.io/badge/backend_tests-341_passing-2EA44F?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-1D4ED8?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-6366F1?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_only-6B7280?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=FFD43B) ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?style=flat-square&logo=fastapi&logoColor=white) ![OpenAI](https://img.shields.io/badge/OpenAI-GPT--6_Luna-412991?style=flat-square&logo=openai&logoColor=white) ![Gemini](https://img.shields.io/badge/Gemini-Flash_Lite-8E75B2?style=flat-square&logo=googlegemini&logoColor=white) ![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS_17+-F05138?style=flat-square&logo=swift&logoColor=white) ![Tests](https://img.shields.io/badge/tests-341_passing-22C55E?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-2563EB?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-EC4899?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_only-0EA5E9?style=flat-square)
 
 **HackUMBC 2026** · University of Maryland, Baltimore County
 
