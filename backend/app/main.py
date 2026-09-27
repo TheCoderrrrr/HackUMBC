@@ -5,6 +5,7 @@ import logging
 import time
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.gzip import GZipMiddleware
 
 from app.ai.client import StructuredModel, build_model
 from app.ai.pipeline import EvaluationPipeline
@@ -28,6 +29,9 @@ def create_app(settings: Settings | None = None, model: StructuredModel | None =
         model = build_model(settings)
 
     app = FastAPI(title="Adaptive Retirement Management (ARM) API", version="1.0.0")
+    # Evaluations are 110–190 KB of monthly points and gzip ~85–90%; that headroom keeps
+    # tunnel + cellular transfers well inside the app's 8 s timeout (REPORT A6).
+    app.add_middleware(GZipMiddleware, minimum_size=1024)
     app.state.settings = settings
     app.state.evaluate_limiter = RateLimiter(settings.evaluations_per_minute)
     app.state.pipeline = EvaluationPipeline(
