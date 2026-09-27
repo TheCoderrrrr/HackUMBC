@@ -22,7 +22,7 @@ def create_app(settings: Settings | None = None, model: StructuredModel | None =
     if model is None:
         model = build_model(settings)
 
-    app = FastAPI(title="Adaptive Retirement API", version="1.0.0")
+    app = FastAPI(title="Adaptive Retirement Management (ARM) API", version="1.0.0")
     app.state.settings = settings
     app.state.evaluate_limiter = RateLimiter(settings.evaluations_per_minute)
     app.state.pipeline = EvaluationPipeline(

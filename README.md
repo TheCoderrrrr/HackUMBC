@@ -1,12 +1,12 @@
 <div align="center">
 
-<img src="./assets/logo.svg" width="128" alt="Adaptive Retirement logo" />
+<img src="./assets/logo.svg" width="128" alt="ARM logo" />
 
-# Adaptive Retirement
+# Adaptive Retirement Management (ARM)
 
 **Retirement plans built from your real finances, not just your birth year.**
 
-<img src="./assets/hero.svg" width="100%" alt="A target-date fund plans from your birth year alone, so everyone that age gets the same plan. Adaptive Retirement uses your income, debt, savings and employer match to show how much to save, where it goes and what it builds." />
+<img src="./assets/hero.svg" width="100%" alt="A target-date fund plans from your birth year alone, so everyone that age gets the same plan. ARM uses your income, debt, savings and employer match to show how much to save, where it goes and what it builds." />
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=FFD43B) ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?style=flat-square&logo=fastapi&logoColor=white) ![OpenAI](https://img.shields.io/badge/OpenAI-GPT--6_Luna-412991?style=flat-square&logo=openai&logoColor=white) ![Gemini](https://img.shields.io/badge/Gemini-Flash_Lite-8E75B2?style=flat-square&logo=googlegemini&logoColor=white) ![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS_17+-F05138?style=flat-square&logo=swift&logoColor=white) ![Tests](https://img.shields.io/badge/tests-341_passing-22C55E?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-2563EB?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-EC4899?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_only-0EA5E9?style=flat-square)
 
@@ -23,7 +23,7 @@
 > [!IMPORTANT]
 > **A target-date fund only knows your birth year.** Two 35-year-olds retiring in 2058 get the *same* plan, even if one has six months of savings and the other carries **$18,000 of credit-card debt at 25% APR**.
 
-T. Rowe Price, whose target-date lineup is its largest product line, has publicly said that personalization is the next step for target-date solutions ([research](https://www.troweprice.com/institutional/us/en/insights/articles/2024/q3/make-it-personal-the-next-chapter-for-target-date-solutions-na.html)). **Adaptive Retirement** is a working prototype of that idea:
+T. Rowe Price, whose target-date lineup is its largest product line, has publicly said that personalization is the next step for target-date solutions ([research](https://www.troweprice.com/institutional/us/en/insights/articles/2024/q3/make-it-personal-the-next-chapter-for-target-date-solutions-na.html)). **Adaptive Retirement Management (ARM)** is a working prototype of that idea:
 
 <table>
 <tr>
@@ -301,7 +301,7 @@ BACKEND.md · FRONTEND.md             full specifications
 
 ## 🆚 Why this beats a standard target-date default
 
-| Standard target-date fund | Adaptive Retirement |
+| Standard target-date fund | ARM |
 |---|---|
 | ❌ Uses age only | ✅ Uses cash flow, debt, APRs, savings and employer match |
 | ❌ Same plan for everyone born the same year | ✅ Same allocation, **personal contributions and cash priorities** |
@@ -334,7 +334,7 @@ No human sign-off step (team decision): the saved AI text is demo placeholder co
 
 <div align="center">
 
-**Adaptive Retirement: a target-date plan that understands more than your retirement date.**
+**Adaptive Retirement Management (ARM): a target-date plan that understands more than your retirement date.**
 
 <sub>Educational prototype using synthetic data. Morgan, Jordan and Casey are fictional. Not affiliated with or endorsed by T. Rowe Price.</sub>
 

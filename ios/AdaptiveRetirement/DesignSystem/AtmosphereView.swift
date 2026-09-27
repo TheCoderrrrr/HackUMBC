@@ -116,7 +116,7 @@ struct FrostedSetupSurface: View {
 #Preview("Splash field") {
     ZStack {
         AtmosphereView()
-        Text("Adaptive").font(TypeScale.wordmark).foregroundStyle(.white)
+        Text("ARM").font(TypeScale.wordmark).foregroundStyle(.white)
     }
     .onAppear(perform: FontRegistry.registerAll)
 }

@@ -1,1 +1,1 @@
-"""Adaptive Retirement backend application."""
+"""Adaptive Retirement Management (ARM) backend application."""
