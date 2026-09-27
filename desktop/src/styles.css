@@ -929,37 +929,38 @@ p.lesson-apply { padding-top: 16px; }
 .mix-legend b { color: var(--text); font-weight: 500; }
 
 /* ---------- Getting started: welcome, this month, menu tour ---------- */
-.guide-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 20px; }
-.guide-fact { display: grid; gap: 2px; padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.03); box-shadow: inset 0 0 0 0.75px var(--hairline); }
-.guide-fact b { font-size: 20px; font-weight: 600; letter-spacing: -0.4px; color: var(--text); }
-.guide-next { display: flex; align-items: center; gap: 12px; margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(168, 230, 161, 0.06); box-shadow: inset 0 0 0 0.75px rgba(168, 230, 161, 0.3); }
-.guide-next > span:last-child { display: grid; gap: 1px; }
-.guide-next b { font-size: 15px; font-weight: 600; color: var(--text); }
-.guide-map { list-style: none; counter-reset: gm; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
-.guide-map li { counter-increment: gm; display: grid; gap: 2px; padding: 12px 14px 12px 46px; position: relative; border-radius: 14px; background: rgba(255, 255, 255, 0.025); }
-.guide-map li::before { content: counter(gm); position: absolute; left: 14px; top: 13px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-size: 11.5px; font-weight: 600; color: var(--text-2); box-shadow: inset 0 0 0 1px var(--hairline-strong); }
-.guide-map b { font-size: 14.5px; font-weight: 600; color: var(--text); }
+.guide-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 22px; }
+.guide-fact { display: grid; gap: 4px; padding: 14px 16px; border-radius: 14px; background: rgba(255, 255, 255, 0.03); }
+.guide-fact b { font-size: 21px; font-weight: 600; letter-spacing: -0.4px; color: var(--text); }
+.guide-next { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 14px 16px; border-radius: 16px; background: rgba(168, 230, 161, 0.06); box-shadow: inset 0 0 0 0.75px rgba(168, 230, 161, 0.3); }
+.guide-next > span:last-child { display: grid; gap: 2px; }
+.guide-next b { font-size: 16px; font-weight: 600; color: var(--text); }
+.guide-next + .guide-learn { margin-top: 12px; }
 
-.month-bar { display: flex; gap: 3px; height: 16px; margin-top: 20px; }
-.month-seg { min-width: 6px; border-radius: 5px; filter: grayscale(1) brightness(0.55); opacity: 0.6; transition: filter 0.5s var(--reveal), opacity 0.5s var(--reveal), transform 0.3s var(--reveal); }
-.month-seg.filled { filter: none; opacity: 1; }
-.month-seg.current { transform: scaleY(1.35); box-shadow: 0 0 14px rgba(168, 230, 161, 0.35); }
-.month-meter { display: flex; align-items: baseline; gap: 8px; margin-top: 10px; }
-.month-meter b { font-size: 17px; font-weight: 600; color: var(--text); }
-.month-walk { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 14px; margin-top: 16px; align-items: start; }
-.month-steps { list-style: none; display: grid; gap: 6px; }
-.month-steps button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 14px; border-radius: 14px; text-align: left;
-  background: rgba(255, 255, 255, 0.025); box-shadow: inset 0 0 0 0.75px var(--hairline); transition: background 0.15s, box-shadow 0.15s; }
-.month-steps button:hover { background: rgba(255, 255, 255, 0.05); }
-.month-steps button.on { background: rgba(168, 230, 161, 0.08); box-shadow: inset 0 0 0 1.25px rgba(168, 230, 161, 0.55); }
-.month-num { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-size: 11.5px; font-weight: 600; color: var(--text-2); box-shadow: inset 0 0 0 1px var(--hairline-strong); }
-.month-steps button.on .month-num, .month-steps button.done .month-num { color: #101114; background: var(--accent); box-shadow: none; }
-.month-title { font-size: 14px; font-weight: 500; color: var(--text); }
-.month-amt { margin-left: auto; font-size: 14px; font-weight: 600; color: var(--text); }
-.month-why { padding: 16px 18px; border-radius: 16px; background: rgba(255, 255, 255, 0.035); box-shadow: inset 0 0 0 0.75px var(--hairline-strong); }
-.month-why-amt { font-size: 26px; font-weight: 600; letter-spacing: -0.6px; color: var(--accent); margin: 6px 0 8px; }
-.month-why .body b { color: var(--text); font-weight: 500; }
-@media (prefers-reduced-motion: reduce) { .month-seg { transition: none; } }
+/* This month's money as a pie: a chosen slice grows outward and glows; the rest dim. */
+.pie-page { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 32px; align-items: center; margin-top: 22px; }
+.pie { position: relative; flex: none; }
+.pie svg { display: block; overflow: visible; }
+.pie-slice { cursor: pointer; stroke: var(--sheet); stroke-width: 2; transition: d 0.35s var(--reveal), opacity 0.25s ease, filter 0.3s ease; }
+.pie-slice:hover { filter: brightness(1.12); }
+.pie-slice.dim { opacity: 0.35; }
+.pie-slice.on { filter: brightness(1.18) drop-shadow(0 0 10px var(--glow)) drop-shadow(0 0 22px var(--glow)); }
+.pie-center { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 2px; text-align: center; pointer-events: none; }
+.pie-center b { font-size: 24px; font-weight: 600; letter-spacing: -0.5px; color: var(--text); }
+.pie-center span { font-size: 12px; color: var(--caption); max-width: 110px; }
+.pie-center span.num { font-size: 13px; color: var(--text-2); }
+.pie-legend { list-style: none; display: grid; gap: 4px; }
+.pie-legend button { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto 52px; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 12px; text-align: left; transition: background 0.15s, box-shadow 0.2s; }
+.pie-legend button:hover { background: rgba(255, 255, 255, 0.04); }
+.pie-legend button.on { background: color-mix(in srgb, var(--glow) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--glow) 55%, transparent); }
+.pie-legend i { width: 10px; height: 10px; border-radius: 3px; }
+.pie-legend-text { display: grid; gap: 1px; min-width: 0; }
+.pie-legend-text b { font-size: 14px; font-weight: 500; color: var(--text); }
+.pie-legend-amt { font-size: 14px; font-weight: 600; color: var(--text); }
+.pie-legend-pct { font-size: 13px; color: var(--caption); text-align: right; }
+.pie-foot { margin-top: 18px; }
+@media (prefers-reduced-motion: reduce) { .pie-slice { transition: none; } }
+@media (max-width: 760px) { .pie-page { grid-template-columns: 1fr; justify-items: center; } .pie-legend { width: 100%; } }
 
 .guide.touring { left: calc(50% + 132px); width: min(820px, calc(100vw - 300px)); }
 .menu-tour { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 14px; margin-top: 18px; align-items: start; }
@@ -980,4 +981,4 @@ body[data-tour="ask"] .chat-launcher { z-index: 25; }
 @keyframes tourPulse { 50% { box-shadow: 0 0 0 2px #a8e6a1, 0 0 30px rgba(168, 230, 161, 0.6); } }
 @media (prefers-reduced-motion: reduce) { .tour-on { animation: none; } }
 @media (max-width: 1100px) { .guide.touring { left: 50%; width: min(920px, calc(100vw - 32px)); } }
-@media (max-width: 760px) { .guide-facts { grid-template-columns: 1fr 1fr; } .guide-map, .month-walk, .menu-tour { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .guide-facts { grid-template-columns: 1fr 1fr; } .menu-tour { grid-template-columns: 1fr; } }

@@ -1,18 +1,16 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Icon } from "../components/ui";
-import { Term } from "../components/Term";
-import { monthBudget, monthStepCents, type Display } from "../data/display";
+import { budgetSlices, monthBudget, type Display } from "../data/display";
 import { money, moneyExact, months, percent } from "../data/format";
-import { PRIORITY_LABEL, STYLE_INFO } from "../data/styles";
 import { useStore, type Tab } from "../store";
 
 const STEPS = 3;
 
 /**
  * Getting started (a modal dialog, shown once per browser and anytime from the sidebar). Three
- * pages, all built from the selected person's live result: a welcome with their snapshot, this
- * month's money step by step (interactive), and a tour of every menu item that lights it up in
- * the real sidebar. Every page can be skipped. The plan style itself is set from Plan style.
+ * pages, all built from the selected person's live result: a welcome with their snapshot, a pie of
+ * this month's money (click a slice or line to highlight it), and a tour of every menu item that
+ * lights it up in the real sidebar. Every page can be skipped. The plan style is set from Plan style.
  */
 export function Guide() {
   const { guideOpen, closeGuide, profile, display, setTab } = useStore();
@@ -116,16 +114,16 @@ function WelcomePage({ display, name, onLearn }: { display: Display | null; name
   return (
     <>
       <p className="body guide-lead">
-        A <Term id="target-date-fund">target-date fund</Term> plans from your birth year alone. ARM keeps your fund as it is and works
-        out, from {name}'s own numbers, how much to save each month and where every extra dollar should go.
+        ARM keeps your retirement fund as it is and works out, from {name}'s own numbers, how much to save and where each
+        extra dollar should go.
       </p>
       {display && (
         <>
           <div className="guide-facts">
             <Fact label="Take-home pay" value={`${money(display.profile.monthly_take_home_cents)}/mo`} />
-            <Fact label="Debt" value={debt ? money(debt) : "None"} sub={debt ? `Highest ${percent(Math.max(...display.debts.map((d) => d.apr)))} APR` : undefined} />
-            <Fact label="Emergency fund" value={months(display.emergencyMonths)} sub={`Target ${display.fullMonths} months`} />
-            <Fact label="Saving now" value={percent(display.currentRate)} sub="of pay" />
+            <Fact label="Debt" value={debt ? money(debt) : "None"} />
+            <Fact label="Emergency fund" value={months(display.emergencyMonths)} />
+            <Fact label="Saving now" value={`${percent(display.currentRate)} of pay`} />
           </div>
           <div className="guide-next">
             <span className="guide-icon"><Icon name="flag" /></span>
@@ -133,10 +131,6 @@ function WelcomePage({ display, name, onLearn }: { display: Display | null; name
           </div>
         </>
       )}
-      <ol className="guide-map">
-        <li><b>This month's money</b><span className="caption">Step through where each dollar goes, with real amounts.</span></li>
-        <li><b>Your menu</b><span className="caption">What each page does and what to try first.</span></li>
-      </ol>
       <button className="guide-learn" onClick={onLearn}>
         <span className="guide-icon"><Icon name="learn" /></span>
         <span>
@@ -149,122 +143,107 @@ function WelcomePage({ display, name, onLearn }: { display: Display | null; name
   );
 }
 
-function Fact({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="guide-fact">
       <span className="caption">{label}</span>
       <b className="num">{value}</b>
-      {sub && <span className="caption">{sub}</span>}
     </div>
   );
 }
 
-// ---------- 2. This month's money, step by step ----------
+// ---------- 2. This month's money as a pie ----------
 
-interface MonthStep {
-  key: string;
-  title: ReactNode;
-  label: string;
-  color: string;
-  why: ReactNode;
+const SLICE_COLOR: Record<string, string> = {
+  living: "#9aa0b5",
+  minimums: "#7f8fbf",
+  retirement: "#7fd18a",
+  debt: "#6ea8ff",
+  emergency: "#5ccdb8",
+  remaining: "#e0c27a",
+};
+
+const SIZE = 260;
+const C = SIZE / 2;
+const OUTER = 104;
+const INNER = 62;
+const POP = 12; // how far a chosen slice grows outward
+
+/** An annular slice from `start` to `end` (fractions of a turn, clockwise from 12 o'clock). */
+function slicePath(start: number, end: number, outer: number, inner: number): string {
+  // A full circle can't be one arc; split it in two.
+  if (end - start >= 0.9999) return slicePath(0, 0.5, outer, inner) + slicePath(0.5, 1, outer, inner);
+  const point = (turn: number, r: number) => {
+    const a = turn * 2 * Math.PI - Math.PI / 2;
+    return `${(C + r * Math.cos(a)).toFixed(3)} ${(C + r * Math.sin(a)).toFixed(3)}`;
+  };
+  const large = end - start > 0.5 ? 1 : 0;
+  return `M ${point(start, outer)} A ${outer} ${outer} 0 ${large} 1 ${point(end, outer)} `
+    + `L ${point(end, inner)} A ${inner} ${inner} 0 ${large} 0 ${point(start, inner)} Z`;
 }
 
-const PLAY_MS = 1400;
-
-/** The engine's waterfall with this person's real amounts; click a step or play it through in order. */
+/** Where this month's money goes, as a pie. Clicking a slice or a line makes that slice glow and grow. */
 function MonthPage({ display }: { display: Display }) {
-  const { style, openStyle } = useStore();
+  const { openStyle } = useStore();
   const budget = monthBudget(display);
-  const order = display.evaluation.decision_summary.ordered_priorities;
-  const target = display.evaluation.assumptions.retirement_total_saving_target;
-  const fullMatch = display.evaluation.financial_state.employee_rate_for_full_match;
-  const [active, setActive] = useState(0);
-  const [playing, setPlaying] = useState(false);
-
-  const steps: MonthStep[] = [
-    { key: "essentials", title: "Essentials and minimum payments", label: "Essentials and minimum payments", color: "var(--band-minimum)",
-      why: <>Rent, food, bills and every debt's minimum come first, always. Nothing optional is planned until these are covered.</> },
-    { key: "retirement", title: <><Term id="employer-match">Employer match</Term> and retirement saving</>, label: "Employer match and retirement saving", color: "var(--band-retirement)",
-      why: fullMatch !== null
-        ? <>Enough to keep the full match{display.employerCents ? <> (your employer adds <b>{moneyExact(display.employerCents)}</b> a month on top)</> : null},
-          then more toward a combined {percent(target)} of pay once the next step's goals are handled.</>
-        : <>No employer match here, so this is your own contribution, rising toward a combined {percent(target)} of pay once the next step's goals are handled.</> },
-    { key: "style", title: <>Your <Term id="plan-style">plan style</Term>'s goals</>, label: "Your plan style's goals", color: "var(--band-debt)",
-      why: <>{STYLE_INFO[style].label} puts these in this order right now: <b>{order.map((p) => PRIORITY_LABEL[p]).join(" → ")}</b>. It's the one
-        step you choose. (If cash is below a small safety reserve, topping that up comes before the match; it's counted here.)</> },
-    { key: "left", title: "Anything left is yours", label: "Anything left", color: "var(--band-remaining)",
-      why: <>Spend it, save it, or put it toward other goals.</> },
-  ];
-  const cents = monthStepCents(budget.lines);
-  const amount = (s: MonthStep) => cents[steps.indexOf(s)];
-
-  useEffect(() => {
-    if (!playing) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setActive(steps.length - 1);
-      setPlaying(false);
-      return;
-    }
-    const timer = window.setInterval(() => setActive((a) => {
-      if (a >= steps.length - 1) { setPlaying(false); return a; }
-      return a + 1;
-    }), PLAY_MS);
-    return () => window.clearInterval(timer);
-  }, [playing]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const play = () => { setActive(0); setPlaying(true); };
-  const current = steps[active];
-  const funded = steps.slice(0, active + 1).reduce((s, st) => s + amount(st), 0);
+  const slices = budgetSlices(budget.lines);
+  const [picked, setPicked] = useState<string | null>(null);
+  const chosen = slices.find((s) => s.key === picked) ?? null;
+  const toggle = (key: string) => setPicked((p) => (p === key ? null : key));
+  const pct = (share: number) => `${(Math.round(share * 1000) / 10).toFixed(1)}%`;
 
   return (
     <>
       <p className="body guide-lead">
         <b className="strong">{moneyExact(budget.toPlanCents)}</b> to plan with each month: take-home pay
-        {budget.currentContributionCents > 0 && <> plus the {moneyExact(budget.currentContributionCents)} already going to your 401(k)</>}.
-        ARM funds it in this order. Click a step, or play the month.
+        {budget.currentContributionCents > 0 && <> plus what already goes to the 401(k)</>}. Click a slice or a line to see it.
       </p>
 
-      <div className="month-bar" role="img" aria-label={steps.map((s) => `${s.label} ${moneyExact(amount(s))}`).join(", ")}>
-        {steps.map((s, i) => amount(s) > 0 && (
-          <span key={s.key} className={`month-seg ${i <= active ? "filled" : ""} ${i === active ? "current" : ""}`}
-            style={{ flexGrow: amount(s), background: s.color }} />
-        ))}
-      </div>
-      <div className="month-meter">
-        <span className="caption">Funded so far</span>
-        <b className="num">{moneyExact(funded)}</b>
-        <span className="caption">of {moneyExact(budget.toPlanCents)}</span>
-        <button className="pill small neutral" onClick={play} disabled={playing} style={{ marginLeft: "auto" }}>
-          <Icon name={playing ? "pause" : "play"} size={13} /> {playing ? "Playing…" : "Play the month"}
-        </button>
-      </div>
+      <div className="pie-page">
+        <div className="pie" style={{ width: SIZE, height: SIZE }}>
+          <svg viewBox={`0 0 ${SIZE} ${SIZE}`} width={SIZE} height={SIZE} role="img"
+            aria-label={slices.map((s) => `${s.label} ${pct(s.share)}`).join(", ")}>
+            {slices.map((s) => {
+              const on = s.key === picked;
+              return (
+                <path key={s.key} d={slicePath(s.start, s.end, on ? OUTER + POP : OUTER, INNER)} fill={SLICE_COLOR[s.key] ?? "#888"}
+                  className={`pie-slice ${on ? "on" : picked ? "dim" : ""}`}
+                  style={{ ["--glow" as string]: SLICE_COLOR[s.key] ?? "#888" }}
+                  onClick={() => toggle(s.key)} />
+              );
+            })}
+          </svg>
+          <div className="pie-center" aria-live="polite">
+            {chosen ? (
+              <><b className="num">{pct(chosen.share)}</b><span className="num">{moneyExact(chosen.cents)}</span><span>{chosen.label}</span></>
+            ) : (
+              <><b className="num">{moneyExact(budget.totalCents)}</b><span>this month</span></>
+            )}
+          </div>
+        </div>
 
-      <div className="month-walk">
-        <ol className="month-steps">
-          {steps.map((s, i) => (
+        <ul className="pie-legend">
+          {slices.map((s) => (
             <li key={s.key}>
-              <button className={i === active ? "on" : i < active ? "done" : ""} aria-current={i === active ? "step" : undefined}
-                onClick={() => { setPlaying(false); setActive(i); }}>
-                <span className="month-num">{i + 1}</span>
-                <span className="month-title">{s.title}</span>
-                <span className="num month-amt">{moneyExact(amount(s))}</span>
+              <button className={s.key === picked ? "on" : ""} aria-pressed={s.key === picked} onClick={() => toggle(s.key)}
+                style={{ ["--glow" as string]: SLICE_COLOR[s.key] ?? "#888" }}>
+                <i style={{ background: SLICE_COLOR[s.key] }} />
+                <span className="pie-legend-text"><b>{s.label}</b>{s.key === picked && <span className="caption">{s.note}</span>}</span>
+                <span className="num pie-legend-amt">{moneyExact(s.cents)}</span>
+                <span className="num pie-legend-pct">{pct(s.share)}</span>
               </button>
             </li>
           ))}
-        </ol>
-        <div className="month-why fade-in" key={current.key} aria-live="polite">
-          <p className="eyebrow" style={{ padding: 0 }}>Step {active + 1}</p>
-          <p className="h-card" style={{ marginTop: 4 }}>{current.title}</p>
-          <p className="month-why-amt num">{moneyExact(amount(current))}<span className="caption"> this month</span></p>
-          <p className="body small">{current.why}</p>
-          {current.key === "style" && (
-            <button className="link" style={{ marginTop: 10 }} onClick={openStyle}>Compare plan styles</button>
-          )}
-        </div>
+        </ul>
       </div>
+
+      <p className="caption pie-foot">
+        Your plan style decides whether extra debt payments or emergency savings come first.{" "}
+        <button className="link" onClick={openStyle}>Compare plan styles</button>
+      </p>
       {budget.totalCents !== budget.toPlanCents && (
-        <p className="caption" style={{ marginTop: 10 }}>
-          Essentials and minimums are more than the money available, so the other steps can't be funded yet.
+        <p className="caption" style={{ marginTop: 6 }}>
+          Essentials and minimums are more than the money available, so nothing else can be funded yet.
         </p>
       )}
     </>

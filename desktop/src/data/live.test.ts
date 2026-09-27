@@ -127,7 +127,8 @@ describe.skipIf(!API)("live backend", async () => {
       const run = listed.find((r) => r.run_id === runID)!;
       expect(run.planning_preference).toBe("debt_reduction");
       const restored = restoreRun(run, base.retirement_age);
-      expect(restored).toEqual({ style: "debt_reduction", scenario });
+      expect(restored.style).toBe("debt_reduction");
+      expect(restored.scenario).toMatchObject(scenario); // options left unset come back as null
       const reopened = await post<Evaluation>("/v1/evaluate", { profile: { ...base, planning_preference: restored.style }, scenario: restored.scenario });
       expect(reopened.input_hash).toBe(run.input_hash);
       expect(reopened.projections.custom?.retirement_balance_nominal_cents).toBe(run.final_retirement_balance_cents);

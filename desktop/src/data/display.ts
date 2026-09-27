@@ -244,15 +244,25 @@ export function explanationSteps(display: Display): { title: string; detail: str
   return steps;
 }
 
-/**
- * Getting started walks this month's budget in four steps: essentials, match and retirement,
- * the plan style's goals, and what's left. Every budget line belongs to exactly one step.
- */
-export const MONTH_STEP_LINES = [["living", "minimums"], ["retirement"], ["debt", "emergency"], ["remaining"]] as const;
+export interface BudgetSlice extends BudgetLine {
+  /** Fraction of the month's lines, 0–1. */
+  share: number;
+  /** Where the slice starts and ends around the pie, as fractions of a turn. */
+  start: number;
+  end: number;
+}
 
-/** Cents per step of MONTH_STEP_LINES. */
-export function monthStepCents(lines: BudgetLine[]): number[] {
-  return MONTH_STEP_LINES.map((keys) => lines.filter((l) => (keys as readonly string[]).includes(l.key)).reduce((s, l) => s + l.cents, 0));
+/** This month's budget lines as pie slices (only funded lines); the shares add up to exactly one turn. */
+export function budgetSlices(lines: BudgetLine[]): BudgetSlice[] {
+  const funded = lines.filter((l) => l.cents > 0);
+  const total = funded.reduce((s, l) => s + l.cents, 0);
+  let covered = 0;
+  return funded.map((l, i) => {
+    const start = covered / total;
+    covered += l.cents;
+    const end = i === funded.length - 1 ? 1 : covered / total;
+    return { ...l, share: l.cents / total, start, end };
+  });
 }
 
 export interface BudgetLine {
