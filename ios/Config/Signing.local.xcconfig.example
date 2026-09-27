@@ -12,3 +12,6 @@ BUNDLE_ID_SUFFIX = .yourname
 // Server.xcconfig) means the app runs on bundled saved calculations only.
 // The $()/ keeps the // in https:// from starting a comment.
 // SERVER_BASE_URL = https:/$()/your-team.ngrok-free.dev
+
+// Optional: the shared demo key when the server sets DEMO_KEY in backend/.env.
+// DEMO_KEY = your-shared-key

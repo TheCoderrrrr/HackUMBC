@@ -12,7 +12,7 @@ enum OnboardingStep: Int, CaseIterable, Comparable {
 }
 
 enum MainTab: Hashable {
-    case overview, plan, explore
+    case overview, plan, explore, funds
 }
 
 enum ActiveSheet: String, Identifiable {
@@ -78,6 +78,8 @@ final class AppStore: ObservableObject {
     @Published private(set) var evaluationLoad: EvaluationLoad = .idle
     /// Public HTTPS base URL, e.g. the ngrok tunnel. Empty means saved data only.
     @Published private(set) var serverBaseURL: String
+    /// Bumped whenever the server changes, so Funds and History reload against the new one.
+    @Published private(set) var serverGeneration = 0
 
     static let serverBaseURLKey = "serverBaseURL"
     /// Build-time default from the `ServerBaseURL` Info.plist key (set by
@@ -86,6 +88,14 @@ final class AppStore: ObservableObject {
     /// the build or saves one in Explore › Modeling assumptions.
     static var defaultServerBaseURL: String {
         (Bundle.main.object(forInfoDictionaryKey: "ServerBaseURL") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    /// Shared demo key from the `DemoKey` Info.plist key (set by `Config/Server.xcconfig`,
+    /// overridden by the git-ignored `Signing.local.xcconfig`). Sent as `X-Demo-Key` when
+    /// the demo server requires it (REPORT C2); the committed default is empty.
+    static var defaultDemoKey: String {
+        (Bundle.main.object(forInfoDictionaryKey: "DemoKey") as? String)?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 
@@ -102,7 +112,7 @@ final class AppStore: ObservableObject {
         self.demo = demo
         let url = defaults.string(forKey: Self.serverBaseURLKey) ?? Self.defaultServerBaseURL
         self.serverBaseURL = url
-        self.client = client ?? LiveAPIClient(baseURLString: url)
+        self.client = client ?? LiveAPIClient(baseURLString: url, demoKey: Self.defaultDemoKey)
         #if DEBUG
         applyDebugLaunchArguments()
         #endif
@@ -141,6 +151,7 @@ final class AppStore: ObservableObject {
         case "overview": phase = .main; tab = .overview
         case "plan": phase = .main; tab = .plan
         case "explore": phase = .main; tab = .explore
+        case "funds": phase = .main; tab = .funds
         case "picker": phase = .main; sheet = .profilePicker
         case "snapshot": phase = .main; sheet = .snapshot
         case "explanation": phase = .main; sheet = .explanation
@@ -195,16 +206,20 @@ final class AppStore: ObservableObject {
 
     var isLiveEnabled: Bool { client != nil }
 
+    /// The configured client for the Funds and History screens; nil means saved data only.
+    var apiClient: APIClient? { client }
+
     /// Changing the server resets live state but keeps bundled profiles (FRONTEND.md §8).
     /// Returns false, and changes nothing, unless the URL is empty or absolute HTTPS.
     @discardableResult
     func setServerBaseURL(_ string: String, defaults: UserDefaults = .standard) -> Bool {
         let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
-        let newClient = LiveAPIClient(baseURLString: trimmed)
+        let newClient = LiveAPIClient(baseURLString: trimmed, demoKey: Self.defaultDemoKey)
         guard trimmed.isEmpty || newClient != nil else { return false }
         serverBaseURL = trimmed
         defaults.set(trimmed, forKey: Self.serverBaseURLKey)
         client = newClient
+        serverGeneration += 1
         lastLive = [:]
         lastLiveDecision = nil
         serverProfiles = [:]
@@ -270,6 +285,11 @@ final class AppStore: ObservableObject {
         guard let artifact = try? demo.artifact(profileID: profileID, preset: preset) else { return nil }
         return LoadedEvaluation(evaluation: artifact.evaluation, mode: .saved,
                                 apiProfile: try? demo.profiles()[profileID])
+    }
+
+    /// The saved artifact itself, for callers that also need the scenario it was exported with.
+    func savedArtifact(for profileID: String, preset: DemoPreset) -> DemoArtifact? {
+        try? demo.artifact(profileID: profileID, preset: preset)
     }
 
     private func apiProfile(for id: String, client: APIClient) async throws -> API.FinancialProfile {

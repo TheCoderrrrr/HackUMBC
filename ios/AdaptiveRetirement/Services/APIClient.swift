@@ -26,10 +26,40 @@ enum APIError: Error, Equatable {
     }
 }
 
+extension APIError {
+    /// Short copy for a failed request on the Funds and History screens. A server envelope is
+    /// a real answer, so its own message is shown.
+    var userMessage: String {
+        switch self {
+        case .server(_, let body): return body.message
+        case .timedOut: return "The server took too long. Try again."
+        case .unreachable, .invalidBaseURL: return "Couldn't reach the server."
+        case .unexpectedStatus(let status): return "The server answered with an error (\(status))."
+        case .invalidResponse: return "The server's answer didn't match what the app expects."
+        case .cancelled: return "The request was cancelled."
+        }
+    }
+
+    /// `userMessage` for any error, including non-`APIError` failures.
+    static func userMessage(for error: Error) -> String {
+        (error as? APIError)?.userMessage ?? "Something went wrong."
+    }
+}
+
 protocol APIClient: Sendable {
     func health() async throws -> API.Health
     func demoProfiles() async throws -> API.DemoProfiles
     func evaluate(_ request: API.EvaluateRequest) async throws -> API.Evaluation
+
+    // Fund shortlist (`backend/app/fund_api.py`)
+    func fundCatalog() async throws -> API.Funds.CatalogSummary
+    func fundShortlist(_ query: API.Funds.Query) async throws -> API.Funds.Envelope
+
+    // Scenario history on Tiger Data (`backend/app/analytics/router.py`)
+    func historyStatus() async throws -> API.History.Status
+    func saveRun(_ request: API.History.SaveRunRequest) async throws -> API.History.SaveRunResponse
+    func runs(profileID: String) async throws -> API.History.RunList
+    func compare(base: String, other: String) async throws -> API.History.Comparison
 }
 
 /// URLSession client for the FastAPI backend. Never logs request bodies or tokens.
@@ -38,15 +68,18 @@ final class LiveAPIClient: APIClient {
     static let requestTimeout: TimeInterval = 5
 
     let baseURL: URL
+    /// Shared demo key sent as X-Demo-Key when the server sets DEMO_KEY (REPORT C2).
+    private let demoKey: String
     private let session: URLSession
 
     /// Returns nil unless `baseURLString` is an absolute HTTPS URL with a host.
-    init?(baseURLString: String, session: URLSession = .shared) {
+    init?(baseURLString: String, demoKey: String = "", session: URLSession = .shared) {
         let trimmed = baseURLString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let url = URL(string: trimmed), url.scheme?.lowercased() == "https", url.host != nil else {
             return nil
         }
         self.baseURL = url
+        self.demoKey = demoKey
         self.session = session
     }
 
@@ -64,14 +97,55 @@ final class LiveAPIClient: APIClient {
         return try await send(path: "v1/evaluate", method: "POST", body: body, timeout: Self.evaluationTimeout)
     }
 
+    func fundCatalog() async throws -> API.Funds.CatalogSummary {
+        try await send(path: "v1/funds/catalog", method: "GET", body: nil, timeout: Self.requestTimeout)
+    }
+
+    func fundShortlist(_ query: API.Funds.Query) async throws -> API.Funds.Envelope {
+        try await send(path: "v1/funds/shortlist", method: "POST", body: try encoded(query), timeout: Self.requestTimeout)
+    }
+
+    /// The server's status check pings the database with a 5 s connect timeout, so this
+    /// gets the longer deadline.
+    func historyStatus() async throws -> API.History.Status {
+        try await send(path: "v1/history/status", method: "GET", body: nil, timeout: Self.evaluationTimeout)
+    }
+
+    /// 201 for a new run, 200 when the same `input_hash` was already saved; `created` says which.
+    func saveRun(_ request: API.History.SaveRunRequest) async throws -> API.History.SaveRunResponse {
+        try await send(path: "v1/history/runs", method: "POST", body: try encoded(request), timeout: Self.evaluationTimeout)
+    }
+
+    func runs(profileID: String) async throws -> API.History.RunList {
+        try await send(path: "v1/history/runs", method: "GET", query: [URLQueryItem(name: "profile_id", value: profileID)],
+                       body: nil, timeout: Self.requestTimeout)
+    }
+
+    func compare(base: String, other: String) async throws -> API.History.Comparison {
+        try await send(path: "v1/history/compare", method: "GET",
+                       query: [URLQueryItem(name: "base", value: base), URLQueryItem(name: "other", value: other)],
+                       body: nil, timeout: Self.requestTimeout)
+    }
+
+    private func encoded(_ value: some Encodable) throws -> Data {
+        do { return try JSONEncoder().encode(value) } catch { throw APIError.invalidResponse }
+    }
+
+    /// Query items go through `URLComponents`: `appendingPathComponent` would percent-encode a `?`.
     private func send<Response: Decodable>(
-        path: String, method: String, body: Data?, timeout: TimeInterval
+        path: String, method: String, query: [URLQueryItem] = [], body: Data?, timeout: TimeInterval
     ) async throws -> Response {
-        var request = URLRequest(url: baseURL.appendingPathComponent(path), timeoutInterval: timeout)
+        var components = URLComponents(url: baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false)
+        if !query.isEmpty { components?.queryItems = query }
+        guard let url = components?.url else { throw APIError.invalidBaseURL }
+        var request = URLRequest(url: url, timeoutInterval: timeout)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         // ngrok's free tier can interpose a browser warning page; this header opts out.
         request.setValue("1", forHTTPHeaderField: "ngrok-skip-browser-warning")
+        if !demoKey.isEmpty {
+            request.setValue(demoKey, forHTTPHeaderField: "X-Demo-Key")
+        }
         if let body {
             request.httpBody = body
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -141,5 +215,19 @@ final class FakeAPIClient: APIClient, @unchecked Sendable {
         evaluateRequests.append(request)
         return try evaluationResult.get()
     }
+
+    var catalogResult: Result<API.Funds.CatalogSummary, APIError> = .failure(.unreachable)
+    var shortlistResult: Result<API.Funds.Envelope, APIError> = .failure(.unreachable)
+    var historyStatusResult: Result<API.History.Status, APIError> = .failure(.unreachable)
+    var saveRunResult: Result<API.History.SaveRunResponse, APIError> = .failure(.unreachable)
+    var runsResult: Result<API.History.RunList, APIError> = .failure(.unreachable)
+    var compareResult: Result<API.History.Comparison, APIError> = .failure(.unreachable)
+
+    func fundCatalog() async throws -> API.Funds.CatalogSummary { try catalogResult.get() }
+    func fundShortlist(_ query: API.Funds.Query) async throws -> API.Funds.Envelope { try shortlistResult.get() }
+    func historyStatus() async throws -> API.History.Status { try historyStatusResult.get() }
+    func saveRun(_ request: API.History.SaveRunRequest) async throws -> API.History.SaveRunResponse { try saveRunResult.get() }
+    func runs(profileID: String) async throws -> API.History.RunList { try runsResult.get() }
+    func compare(base: String, other: String) async throws -> API.History.Comparison { try compareResult.get() }
 }
 #endif

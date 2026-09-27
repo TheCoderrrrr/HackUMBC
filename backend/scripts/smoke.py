@@ -17,12 +17,16 @@ from __future__ import annotations
 
 import gzip
 import json
+import os
 import sys
 import time
 import urllib.error
 import urllib.request
 
 IOS_TIMEOUT_S = 8.0
+
+# When the server sets DEMO_KEY, /v1/* requires the shared header (REPORT C2).
+DEMO_KEY = os.environ.get("DEMO_KEY", "").strip()
 
 
 class BadBodyError(Exception):
@@ -40,11 +44,14 @@ class BadBodyError(Exception):
 
 def call(base: str, path: str, body=None) -> tuple[int, dict, int]:
     data = json.dumps(body).encode() if body is not None else None
+    headers = {"content-type": "application/json",
+               # the app sends this too; opts out of ngrok's browser warning
+               "ngrok-skip-browser-warning": "1",
+               "accept-encoding": "gzip"}
+    if DEMO_KEY:
+        headers["x-demo-key"] = DEMO_KEY
     req = urllib.request.Request(base + path, data=data, method="POST" if data else "GET",
-                                 headers={"content-type": "application/json",
-                                          # the app sends this too; opts out of ngrok's browser warning
-                                          "ngrok-skip-browser-warning": "1",
-                                          "accept-encoding": "gzip"})
+                                 headers=headers)
     started = time.perf_counter()
     try:
         with urllib.request.urlopen(req, timeout=IOS_TIMEOUT_S) as res:

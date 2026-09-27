@@ -4,5 +4,7 @@
 <dict>
 	<key>ServerBaseURL</key>
 	<string>$(SERVER_BASE_URL)</string>
+	<key>DemoKey</key>
+	<string>$(DEMO_KEY)</string>
 </dict>
 </plist>

@@ -53,6 +53,31 @@ def test_chunked_body_under_the_limit_passes(morgan):
     assert res.status_code == 200
 
 
+def test_demo_key_required_on_v1_when_configured(morgan):
+    # REPORT C2: the public tunnel URL no longer spends the team's AI budget.
+    client = make_client(demo_key="s3cret")
+    assert client.get("/health").status_code == 200  # health stays open for smoke checks
+    body = {"profile": morgan}
+    missing = client.post("/v1/evaluate", json=body)
+    assert missing.status_code == 401
+    assert missing.json()["error"]["code"] == "INVALID_DEMO_KEY"
+    assert client.get("/v1/demo-profiles").status_code == 401
+    wrong = client.post("/v1/evaluate", json=body, headers={"x-demo-key": "nope"})
+    assert wrong.status_code == 401
+    ok = client.post("/v1/evaluate", json=body, headers={"x-demo-key": "s3cret"})
+    assert ok.status_code == 200
+
+
+def test_rate_limit_is_per_client(morgan):
+    # REPORT C2: one caller's burst can't push the demo phone into 429.
+    client = make_client(evaluations_per_minute=2)
+    body = {"profile": morgan}
+    assert client.post("/v1/evaluate", json=body, headers={"x-demo-key": "a"}).status_code == 200
+    assert client.post("/v1/evaluate", json=body, headers={"x-demo-key": "a"}).status_code == 200
+    assert client.post("/v1/evaluate", json=body, headers={"x-demo-key": "a"}).status_code == 429
+    assert client.post("/v1/evaluate", json=body, headers={"x-demo-key": "b"}).status_code == 200
+
+
 def test_evaluate_returns_full_contract(morgan):
     res = make_client(FakeModel()).post("/v1/evaluate", json={"profile": morgan, "scenario": None})
     assert res.status_code == 200

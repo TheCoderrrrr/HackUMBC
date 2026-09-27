@@ -45,6 +45,13 @@ def create_app(settings: Settings | None = None, model: StructuredModel | None =
 
     @app.middleware("http")
     async def guard_and_log(request: Request, call_next):
+        # When DEMO_KEY is set, /v1/* requires the shared header — the tunnel URL is
+        # public, and every evaluation can spend the team's AI budget (REPORT C2).
+        # /health stays open for smoke checks.
+        if settings.demo_key and request.url.path.startswith("/v1/"):
+            if request.headers.get("x-demo-key") != settings.demo_key:
+                return envelope(401, "INVALID_DEMO_KEY",
+                                "This demo server requires a key. Check the app's build settings.")
         length = request.headers.get("content-length")
         if length and length.isdigit() and int(length) > settings.max_body_bytes:
             return envelope(413, "PAYLOAD_TOO_LARGE", "Request body is larger than 128 KiB.")

@@ -13,3 +13,8 @@
 // choice is saved on the phone and wins over this build-time default.
 
 SERVER_BASE_URL =
+
+// Shared demo key for the public tunnel (REPORT C2). When the server sets DEMO_KEY in
+// backend/.env, /v1/* requires the X-Demo-Key header; the app sends this value. Empty
+// committed default; the demo host sets it in git-ignored Signing.local.xcconfig.
+DEMO_KEY =
