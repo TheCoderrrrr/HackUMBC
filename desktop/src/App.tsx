@@ -80,12 +80,12 @@ export function App() {
           )}
 
           <Suspense fallback={<PageLoading />}>
-            {tab === "funds" && <Funds />}
+            {tab === "funds" && <Funds onContext={setFundContext} />}
             {showNumbers && <YourNumbers />}
             {!showNumbers && !display && tab !== "funds" && <EmptyState />}
             {!showNumbers && display && tab === "overview" && <Overview display={display} />}
             {!showNumbers && display && tab === "plan" && <Plan display={display} />}
-            {!showNumbers && display && tab === "explore" && <Explore display={display} />}
+            {!showNumbers && display && tab === "explore" && <Explore display={display} onContext={setExploreContext} />}
             {!showNumbers && display && tab === "learn" && <Learn display={display} />}
           </Suspense>
         </div>

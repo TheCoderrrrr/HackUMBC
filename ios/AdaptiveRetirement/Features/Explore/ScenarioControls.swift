@@ -80,7 +80,7 @@ struct ScenarioOverlay {
         } ?? "adaptive contribution"
         let base = age.map { "Retire at \($0) · \(contribution)" } ?? contribution
         let debt = scenario?.extraMonthlyDebtCents.map { " · \(Money.whole($0))/mo extra debt" } ?? ""
-        let style = scenario?.priorityStyle.map { " · \($0.label)" } ?? ""
+        let style = scenario?.priorityStyle.map { " · \($0.label) override" } ?? ""
         return base + debt + style
     }
 }
@@ -242,6 +242,8 @@ struct ScenarioControls: View {
     @State private var comparedDraft: ScenarioDraft?
     @State private var status: String?
     @State private var failed = false
+    /// The pinned base decision expired; compare again only after a live plan refresh.
+    @State private var needsBaseRefresh = false
     @State private var compareTask: Task<Void, Never>?
 
     /// Wait for the steppers to settle before asking the server, so a run of taps sends one request.
@@ -325,21 +327,43 @@ struct ScenarioControls: View {
             }
             .padding(.top, Space.m)
 
-            Picker("Priority style", selection: Binding(
-                get: { draft.priorityStyle?.rawValue ?? "same" },
-                set: { draft.priorityStyle = $0 == "same" ? nil : API.PlanningPreference(rawValue: $0); draft.preset = nil }
-            )) {
-                Text("Keep plan style").tag("same")
-                Text("Balanced (user override)").tag(API.PlanningPreference.balanced.rawValue)
-                Text("Cash security (user override)").tag(API.PlanningPreference.cashSecurity.rawValue)
-                Text("Debt reduction (user override)").tag(API.PlanningPreference.debtReduction.rawValue)
+            VStack(alignment: .leading, spacing: Space.s) {
+                HStack(spacing: Space.s) {
+                    Text("Priority style")
+                        .font(.geist(15, .medium, relativeTo: .callout))
+                        .foregroundStyle(Palette.textPrimary)
+                    if draft.priorityStyle != nil {
+                        Text("User override")
+                            .font(.geist(11, .medium, relativeTo: .caption2))
+                            .foregroundStyle(Palette.accent)
+                            .padding(.horizontal, 8)
+                            .frame(minHeight: 22)
+                            .glassCapsule(tint: Palette.accent, interactive: false)
+                    }
+                }
+                Picker("Priority style", selection: Binding(
+                    get: { draft.priorityStyle?.rawValue ?? "same" },
+                    set: { draft.priorityStyle = $0 == "same" ? nil : API.PlanningPreference(rawValue: $0); draft.preset = nil }
+                )) {
+                    Text("Keep plan style").tag("same")
+                    Text("Balanced (user override)").tag(API.PlanningPreference.balanced.rawValue)
+                    Text("Cash security (user override)").tag(API.PlanningPreference.cashSecurity.rawValue)
+                    Text("Debt reduction (user override)").tag(API.PlanningPreference.debtReduction.rawValue)
+                }
+                .labelsHidden()
+                Text(priorityCaption)
+                    .font(.geist(12, .regular, relativeTo: .caption))
+                    .foregroundStyle(Palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.top, Space.m)
 
             if isEdited || failed {
                 HStack(spacing: Space.m) {
                     if failed {
-                        Button("Try again") { schedule(draft, after: .zero) }
+                        Button(needsBaseRefresh ? "Refresh plan" : "Try again") {
+                            schedule(draft, after: .zero, refreshBase: needsBaseRefresh)
+                        }
                             .font(.geist(15, .medium, relativeTo: .callout))
                             .foregroundStyle(Palette.accent)
                             .buttonStyle(PressableStyle())
@@ -419,12 +443,21 @@ struct ScenarioControls: View {
         }
         .animation(Motion.reveal, value: isEdited)
         .animation(Motion.reveal, value: failed)
+        .animation(Motion.reveal, value: needsBaseRefresh)
+        .animation(Motion.reveal, value: draft.priorityStyle)
         // No cancel on disappear: switching tabs mid-calculation used to leave nothing on
         // return (REPORT A7). The request finishes and the result is there when you come back.
     }
 
     private var isEdited: Bool {
         draft.requestShape != ScenarioDraft.original(for: profile).requestShape
+    }
+
+    private var priorityCaption: String {
+        if let style = draft.priorityStyle {
+            return "This scenario uses \(style.label) instead of the saved plan style. Fund, fees, and return assumptions stay the same."
+        }
+        return "Keep the saved plan's cash-priority order."
     }
 
     /// Drops any scenario: the draft is the plan again.
@@ -434,6 +467,7 @@ struct ScenarioControls: View {
         comparedDraft = nil
         status = nil
         failed = false
+        needsBaseRefresh = false
         result = nil
         unavailableNote.wrappedValue = nil
         isUpdating.wrappedValue = false
@@ -441,10 +475,11 @@ struct ScenarioControls: View {
 
     /// Recalculates `compared` after `delay`, replacing any pending or in-flight request. The
     /// previous result stays on screen, marked as updating, until the new one arrives.
-    private func schedule(_ compared: ScenarioDraft, after delay: Duration) {
+    private func schedule(_ compared: ScenarioDraft, after delay: Duration, refreshBase: Bool = false) {
         compareTask?.cancel()
         comparedDraft = compared
         failed = false
+        needsBaseRefresh = false
         unavailableNote.wrappedValue = nil
         isUpdating.wrappedValue = true
         compareTask = Task {
@@ -452,7 +487,7 @@ struct ScenarioControls: View {
                 try? await Task.sleep(for: delay)
                 guard !Task.isCancelled else { return }
             }
-            await compare(compared)
+            await compare(compared, refreshBaseFirst: refreshBase)
             guard !Task.isCancelled, comparedDraft?.requestShape == compared.requestShape else { return }
             compareTask = nil
             isUpdating.wrappedValue = false
@@ -460,7 +495,7 @@ struct ScenarioControls: View {
     }
 
     /// Exact saved preset when offline; otherwise a live `/v1/evaluate` with the draft as scenario.
-    private func compare(_ compared: ScenarioDraft) async {
+    private func compare(_ compared: ScenarioDraft, refreshBaseFirst: Bool = false) async {
         if !compared.extraDebtDollars.isEmpty &&
             (Double(compared.extraDebtDollars) == nil || (Double(compared.extraDebtDollars) ?? 0) < 0) {
             status = "Enter a nonnegative dollar amount for extra debt payment."
@@ -485,15 +520,48 @@ struct ScenarioControls: View {
         }
         let scenario = compared.apiScenario
         do {
+            if refreshBaseFirst {
+                status = "Refreshing the plan, then comparing…"
+                try await store.refreshLiveBase()
+                guard current() else { return }
+            }
             let loaded = try await store.evaluateScenario(scenario)
             guard current() else { return }
             result = loaded.evaluation
             resultScenario.wrappedValue = scenario
             status = loaded.evaluation.projections.custom?.feasible == false
                 ? "This scenario can't be funded as entered. See the outcomes below."
-                : "Live calculation · updates as you change the controls."
+                : refreshBaseFirst
+                    ? "Live calculation · the plan was refreshed first."
+                    : "Live calculation · updates as you change the controls."
         } catch {
             guard current() else { return }
+            if (error as? APIError) == .cancelled { return }
+            // A stale pin is recoverable: refresh the live plan once, then retry.
+            if !refreshBaseFirst, (error as? APIError)?.isStaleBaseDecision == true {
+                status = "The plan on the server changed. Refreshing, then comparing…"
+                do {
+                    try await store.refreshLiveBase()
+                    guard current() else { return }
+                    let loaded = try await store.evaluateScenario(scenario)
+                    guard current() else { return }
+                    result = loaded.evaluation
+                    resultScenario.wrappedValue = scenario
+                    status = loaded.evaluation.projections.custom?.feasible == false
+                        ? "This scenario can't be funded as entered. See the outcomes below."
+                        : "Live calculation · the plan was refreshed first."
+                    return
+                } catch {
+                    guard current() else { return }
+                    if (error as? APIError) == .cancelled { return }
+                    result = nil
+                    failed = true
+                    needsBaseRefresh = true
+                    unavailableNote.wrappedValue = "plan needs a refresh"
+                    status = "Refresh the plan, then compare again. The previous comparison is no longer valid."
+                    return
+                }
+            }
             // A transport failure shouldn't hide a saved preset the draft matches:
             // show it and say so, instead of an error that suggests retrying (A3).
             if Self.isTransport(error), let preset = compared.preset?.demoPreset,
@@ -501,8 +569,13 @@ struct ScenarioControls: View {
             // The old line no longer matches the controls, so it goes.
             result = nil
             failed = true
-            unavailableNote.wrappedValue = Self.isTransport(error) ? "couldn't reach the server" : "couldn't be calculated"
-            status = Self.message(for: error)
+            needsBaseRefresh = (error as? APIError)?.isStaleBaseDecision == true
+            unavailableNote.wrappedValue = needsBaseRefresh
+                ? "plan needs a refresh"
+                : Self.isTransport(error) ? "couldn't reach the server" : "couldn't be calculated"
+            status = needsBaseRefresh
+                ? "Refresh the plan, then compare again. The previous comparison is no longer valid."
+                : Self.message(for: error)
         }
     }
 
@@ -696,8 +769,14 @@ struct OutcomeRows: View {
             Row(title: "Retirement-account balance", lines: s.map { name, p in
                 line(name, p) { Self.money($0.retirementBalanceNominalCents) }
             }),
-            Row(title: "Debt-free timing & total interest", lines: s.map { name, p in
-                line(name, p) { "\(Self.month($0.debtFreeMonth)) · \(Self.money($0.cumulativeDebtInterestCents))" }
+            Row(title: "In today's dollars", lines: s.map { name, p in
+                line(name, p) { Self.money($0.retirementBalanceTodayCents) }
+            }),
+            Row(title: "Debt-free", lines: s.map { name, p in
+                line(name, p) { Self.debtFree($0.debtFreeMonth) }
+            }),
+            Row(title: "Total debt interest", lines: s.map { name, p in
+                line(name, p) { Self.money($0.cumulativeDebtInterestCents) }
             }),
             Row(title: "Emergency-reserve milestones", lines: s.map { name, p in
                 line(name, p) { "Starter \(Self.month($0.starterReserveMonth)) · Full \(Self.month($0.fullReserveMonth))" }
@@ -713,6 +792,11 @@ struct OutcomeRows: View {
     /// Month 0 is today; later months become a calendar label ("Jan 2028").
     private static func month(_ month: Int?) -> String {
         guard let month else { return "—" }
+        return month == 0 ? "Now" : ExploreTimeline.label(forMonth: month)
+    }
+
+    private static func debtFree(_ month: Int?) -> String {
+        guard let month else { return "Not paid off before retirement" }
         return month == 0 ? "Now" : ExploreTimeline.label(forMonth: month)
     }
 }

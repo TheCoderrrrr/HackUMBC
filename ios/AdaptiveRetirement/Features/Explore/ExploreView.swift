@@ -67,6 +67,14 @@ struct ExploreView: View {
                     Hairline(color: Palette.hairlineStrong)
                         .padding(.top, 19)
                         .padding(.bottom, 20)
+                    FundAndRulesSection(
+                        evaluation: customResult ?? store.displayProfile.evaluation,
+                        scenario: customResult == nil ? nil : customScenario,
+                        title: customResult == nil ? "What drives this plan" : "What drives this comparison"
+                    )
+                    Hairline(color: Palette.hairlineStrong)
+                        .padding(.top, 19)
+                        .padding(.bottom, 20)
                     ScenarioHistorySection(model: history, profile: store.displayProfile,
                                            scenarioResult: customResult,
                                            scenario: customResult == nil ? nil : customScenario)
@@ -131,6 +139,25 @@ struct ExploreView: View {
             facts.append(EducationScreenFact(label: "compared_feasible", value: String(result.feasible)))
             if let amount = result.retirementBalanceTodayCents {
                 facts.append(EducationScreenFact(label: "compared_projected_retirement_balance", value: Money.exact(amount)))
+            }
+            if let style = scenario.priorityStyle {
+                facts.append(EducationScreenFact(label: "compared_priority_style", value: "user override · \(style.label)"))
+            }
+            if let extra = scenario.extraMonthlyDebtCents {
+                facts.append(EducationScreenFact(label: "compared_extra_monthly_debt", value: Money.whole(extra)))
+            }
+        }
+        let shown = customResult ?? store.displayProfile.evaluation
+        if let fund = shown?.assumptions.fundModel {
+            facts.append(EducationScreenFact(label: "fund_name", value: fund.fundName))
+            facts.append(EducationScreenFact(label: "fund_target_year", value: String(fund.targetYear)))
+            facts.append(EducationScreenFact(label: "fund_modeled_fee", value: FundCopy.fee(fund.appliedExpenseRatio)))
+            facts.append(EducationScreenFact(label: "glide_path_mode", value: fund.glidePathMode))
+        }
+        if let comparison = shown?.rulesComparison {
+            facts.append(EducationScreenFact(label: "rules_comparison_outcome", value: comparison.outcome))
+            if let difference = comparison.differenceCents {
+                facts.append(EducationScreenFact(label: "rules_comparison_difference", value: Money.whole(abs(difference))))
             }
         }
         store.chatScreenFacts[.explore] = facts

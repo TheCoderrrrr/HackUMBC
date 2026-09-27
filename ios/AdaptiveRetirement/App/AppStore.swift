@@ -413,6 +413,28 @@ final class AppStore: ObservableObject {
         return LoadedEvaluation(evaluation: evaluation, mode: .live, apiProfile: styledProfile)
     }
 
+    /// Reloads the live base plan so a later scenario can pin a current `base_decision_id`.
+    /// Explore calls this when the server rejects a stale pin (`BASE_DECISION_NOT_FOUND`).
+    func refreshLiveBase() async throws {
+        guard let client else { throw APIError.unreachable }
+        let profileID = profile.id
+        let generation = selectionGeneration
+        let apiProfile = try await apiProfile(for: profileID, client: client)
+        var styledProfile = apiProfile
+        styledProfile.planningPreference = planStyle
+        let previousID = lastLiveDecision?.profileID == profileID ? lastLiveDecision?.decisionID : nil
+        let evaluation = try await client.evaluate(
+            API.EvaluateRequest(profile: styledProfile, scenario: nil, previousDecisionID: previousID)
+        )
+        guard generation == selectionGeneration, evaluation.profileID == profileID else {
+            throw APIError.cancelled
+        }
+        let loaded = LoadedEvaluation(evaluation: evaluation, mode: .live, apiProfile: styledProfile)
+        lastLive[profileID] = loaded
+        lastLiveDecision = (profileID, evaluation.decisionSummary.decisionID)
+        evaluationLoad = .loaded(loaded)
+    }
+
     /// Exact saved artifact, or nil until Eric's bundle is in `Resources/Demo/`.
     func savedEvaluation(for profileID: String, preset: DemoPreset = .original) -> LoadedEvaluation? {
         #if DEBUG

@@ -25,6 +25,12 @@ enum APIError: Error, Equatable {
         case .invalidBaseURL, .cancelled, .invalidResponse: return false
         }
     }
+
+    /// The pinned `base_decision_id` is gone or from another server; refresh the plan first.
+    var isStaleBaseDecision: Bool {
+        if case .server(_, let body) = self { return body.code == "BASE_DECISION_NOT_FOUND" }
+        return false
+    }
 }
 
 extension APIError {
