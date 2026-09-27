@@ -193,7 +193,7 @@ function Assumptions({ display, onClose }: { display: Display; onClose: () => vo
       } />
       <button className="link" onClick={checkConnection} style={{ marginTop: 8 }}>Check again</button>
       <p className="caption" style={{ marginTop: 10 }}>
-        To use another backend, restart the desktop app with BACKEND_URL set (see desktop/README.md).
+        To use another backend, restart the desktop app with BACKEND_URL set (see docs/DESKTOP.md).
       </p>
     </Drawer>
   );

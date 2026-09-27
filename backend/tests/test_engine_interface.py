@@ -1,4 +1,4 @@
-"""Developer B names and values that Developers A and C rely on (DEVELOPER_A_NEEDS.md item 6).
+"""Developer B names and values that Developers A and C rely on (docs/ENGINE_HANDOFF.md).
 
 A's prompt sends `recommendation_context` as the only allowed evidence and maps B's
 fallback codes; C's simulator calls `allocate_month` every month. Changing anything

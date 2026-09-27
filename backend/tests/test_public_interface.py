@@ -1,4 +1,4 @@
-"""Developer A names that Developer C's scripts import (DEVELOPER_A_NEEDS.md item 3).
+"""Developer A names that Developer C's scripts import (docs/ENGINE_HANDOFF.md).
 
 Renaming or changing these breaks scripts/export_demo.py and scripts/prepare_decisions.py,
 so this test fails first. Change them only after telling Eric.

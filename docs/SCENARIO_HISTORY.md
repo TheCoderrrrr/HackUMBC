@@ -2,6 +2,10 @@
 
 Save a projection run, then compare two runs of the same profile over 5, 10 and 20 years. The desktop app's **Explore → Scenario history** panel uses it. `/v1/evaluate` never touches the database: without `TIGER_DATABASE_URL`, the history routes answer `503 HISTORY_DISABLED` and everything else works as before.
 
+This targets the [hackUMBC Best Use of Tiger Data prize](https://hackumbc-2026.devpost.com/), which rewards time-series analytics with a visible user benefit: two saved scenarios diverging over time, with the yearly values coming from a Tiger Data continuous aggregate. Code lives in `backend/app/analytics/`, behind its own router, so the fund shortlist and the evaluation flow don't depend on it.
+
+**Data rules:** synthetic demo profiles only. No real profiles, names, debts, API keys, or raw requests go to the cloud database, and neither does the raw SEC staging database. Projection points are stored as computed; SQL never recalculates financial policy. Credentials stay in git-ignored `backend/.env`.
+
 ## Setup
 
 1. Create a Tiger Cloud service (TimescaleDB). Copy its connection string.
@@ -48,9 +52,9 @@ ORDER BY y.month, r.created_at;
 
 ## Tests
 
-- `tests/test_history.py`: rebuild equality with live and saved-AI results, date and yearly rules against ports of the app's `monthLabel` and `balanceAtYear`, idempotency, ordering, comparison, invalid or missing runs, and outage handling (in-memory store).
-- `tests/test_history_tiger.py`: the same flow against the real service in a throwaway schema. It checks that the hypertable and continuous aggregate exist, and that the aggregate returns exactly the app's yearly samples. Skipped without `TIGER_DATABASE_URL`.
+- `backend/tests/test_history.py`: rebuild equality with live and saved-AI results, date and yearly rules against ports of the app's `monthLabel` and `balanceAtYear`, idempotency, ordering, comparison, invalid or missing runs, and outage handling (in-memory store).
+- `backend/tests/test_history_tiger.py`: the same flow against the real service in a throwaway schema. It checks that the hypertable and continuous aggregate exist, and that the aggregate returns exactly the app's yearly samples. Skipped without `TIGER_DATABASE_URL`.
 
 ## Teardown
 
-`DROP SCHEMA arm CASCADE;` removes all history. Pause or delete the service in the Tiger Cloud console to stop billing.
+`DROP SCHEMA arm CASCADE;` removes all history. Pause or delete the service in the Tiger Cloud console to stop billing ([pricing](https://www.tigerdata.com/pricing): 30-day no-card trial, then metered).
