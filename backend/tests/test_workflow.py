@@ -120,6 +120,33 @@ def test_custom_election_above_annual_cap_is_infeasible(morgan):
     assert res.json()["error"]["code"] == "INFEASIBLE_SCENARIO"
 
 
+def test_over_cap_message_names_the_limit_not_a_budget_gap(morgan):
+    # REPORT A8: the excess over the cap is not a cash shortfall.
+    res = post(make_client(), morgan, scenario={"retirement_age": 67, "employee_contribution_rate": 0.5})
+    err = res.json()["error"]
+    assert "annual contribution limit" in err["message"]
+    assert "50%" in err["message"]
+    assert "short $" not in err["message"]
+
+
+def test_null_rate_custom_shortfall_returns_blocked_projection(morgan):
+    # REPORT A8: a no-rate (adaptive) scenario on a shortfall profile is a blocked
+    # projection, like current/adaptive — not a 422 pointing at a rate nobody chose.
+    morgan["monthly_living_expenses_cents"] = 900_000
+    res = post(make_client(), morgan, scenario={"retirement_age": 67, "employee_contribution_rate": None})
+    assert res.status_code == 200
+    custom = res.json()["projections"]["custom"]
+    assert custom["feasible"] is False
+    assert custom["points"] == []
+
+
+def test_fixed_rate_custom_shortfall_still_422s(morgan):
+    morgan["monthly_living_expenses_cents"] = 900_000
+    res = post(make_client(), morgan, scenario={"retirement_age": 67, "employee_contribution_rate": 0.05})
+    assert res.status_code == 422
+    assert res.json()["error"]["code"] == "INFEASIBLE_SCENARIO"
+
+
 def test_affordable_custom_election_is_accepted(morgan):
     res = post(make_client(), morgan, scenario={"retirement_age": 67, "employee_contribution_rate": 0.19})
     assert res.status_code == 200

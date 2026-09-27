@@ -182,9 +182,19 @@ class SimulationTests(unittest.TestCase):
         self.assertEqual(blocked.projection.shortfall_cents, 123)
         self.assertEqual(blocked.projection.points, ())
         self.assertIsNone(blocked.projection.retirement_balance_nominal_cents)
+        # A null-rate custom is the adaptive policy at another age: a later shortfall
+        # returns a blocked projection like current/adaptive, not a 422 (REPORT A8).
+        blocked_custom = run(profile, strategy="custom",
+                             scenario={"retirement_age": 75, "employee_contribution_rate": None},
+                             allocator=fail_at_thirteen)
+        self.assertFalse(blocked_custom.projection.feasible)
+        self.assertEqual(blocked_custom.projection.shortfall_cents, 123)
+        self.assertEqual(blocked_custom.projection.points, ())
+        # Only an explicit fixed rate raises.
         with self.assertRaises(InfeasibleScenario) as caught:
-            run(profile, strategy="custom", scenario={"retirement_age": 75, "employee_contribution_rate": None}, allocator=fail_at_thirteen)
+            run(profile, strategy="custom", scenario={"retirement_age": 75, "employee_contribution_rate": 0.06}, allocator=fail_at_thirteen)
         self.assertEqual(caught.exception.month, 13)
+        self.assertEqual(caught.exception.reason, "cash")
 
     def test_missing_match_input_blocks_custom_without_budget_error(self):
         def missing(*args):
@@ -246,6 +256,8 @@ class SimulationTests(unittest.TestCase):
                 "retirement_age": 67, "employee_contribution_rate": 0.50,
             })
         self.assertEqual(caught.exception.month, 1)
+        self.assertEqual(caught.exception.reason, "cap")
+        self.assertEqual(caught.exception.rate, 0.50)
 
     def test_custom_rate_fails_at_later_monthly_cap(self):
         profile = morgan()

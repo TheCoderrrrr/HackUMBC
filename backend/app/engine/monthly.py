@@ -25,11 +25,18 @@ class MissingHandoffError(RuntimeError):
 class InfeasibleScenario(ValueError):
     """An explicit Custom scenario cannot be funded at a projected month."""
 
-    def __init__(self, month: int, shortfall_cents: int) -> None:
+    def __init__(self, month: int, shortfall_cents: int, reason: str = "cash",
+                 rate: float | None = None) -> None:
         self.month = month
         self.shortfall_cents = shortfall_cents
+        # "cash": the budget can't cover essentials plus the election.
+        # "cap": the election exceeds the annual contribution limit (the shortfall is the
+        # excess over the cap, not a budget gap). REPORT A8.
+        self.reason = reason
+        # The fixed employee rate that was rejected, when one was requested.
+        self.rate = rate
         super().__init__(
-            f"Custom scenario is short {shortfall_cents} cents in month {month}"
+            f"Custom scenario is short {shortfall_cents} cents in month {month} ({reason})"
         )
 
 

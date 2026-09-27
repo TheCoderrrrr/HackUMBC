@@ -360,7 +360,8 @@ def run_simulation(
                 (Decimal(annual_salary) / 12) * decimal(contribution_override)
             )
             if desired_custom_cents > employee_limit:
-                raise InfeasibleScenario(month, desired_custom_cents - employee_limit)
+                raise InfeasibleScenario(month, desired_custom_cents - employee_limit,
+                                         reason="cap", rate=contribution_override)
         allocation = allocator(
             profile,
             inputs,
@@ -377,8 +378,16 @@ def run_simulation(
             shortfall = allocation.shortfall_cents
             if shortfall < 0:
                 raise EngineInvariantError("shortfall cannot be negative")
-            if strategy == "custom" and allocation.block_code != "MISSING_REQUIRED_INPUT":
-                raise InfeasibleScenario(month, shortfall)
+            if (
+                strategy == "custom"
+                and contribution_override is not None
+                and allocation.block_code != "MISSING_REQUIRED_INPUT"
+            ):
+                # Only an explicit fixed rate is rejected with 422. A null-rate custom
+                # applies the adaptive policy at another age, so a cash shortfall returns
+                # a blocked projection, exactly like current and adaptive (REPORT A8).
+                raise InfeasibleScenario(month, shortfall, reason="cash",
+                                         rate=contribution_override)
             warnings.append(f"{strategy.upper()}_INFEASIBLE_MONTH_{month}")
             if allocation.block_code:
                 warnings.append(allocation.block_code)
