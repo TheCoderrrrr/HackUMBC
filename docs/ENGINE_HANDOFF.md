@@ -4,6 +4,11 @@ How the three backend workstreams divide the Adaptive Retirement Management (ARM
 
 ## Shared rules
 
+- **Fund-aware extension (model/policy 2.0.0):** `fund_model.resolve()` creates the
+  server-owned immutable fee/glide-path snapshot for every evaluation. Scenario
+  `extra_monthly_debt_cents`, `priority_style`, and `base_decision_id` retain that
+  snapshot; AI-versus-rules comparison reruns the same inputs without another model call.
+  See [FUND_AWARE_PLAN.md](FUND_AWARE_PLAN.md) for the live contract and release steps.
 - Use the contract in [BACKEND.md](BACKEND.md) and keep it synchronized with [FRONTEND.md](FRONTEND.md).
 - Python, not AI, calculates money, matching, debt payments, allocations, and projections.
 - Two fixed agent calls: Recommendation receives Python-computed `FinancialState` indicators and returns an ordering, rationale, and tradeoffs; Explanation describes the validated decision and computed changes. There is no Financial State Agent.
