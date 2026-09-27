@@ -1,0 +1,13 @@
+// Code signing for the AdaptiveRetirement app target.
+//
+// These are the team defaults (the demo phone's Apple team). Don't edit them for your
+// own phone, and don't change Team or Bundle Identifier in Xcode's Signing &
+// Capabilities tab: that writes your values into project.pbxproj, which everyone shares.
+//
+// To run on your own iPhone, copy Signing.local.xcconfig.example to
+// Signing.local.xcconfig (git-ignored) and set your values there.
+
+DEVELOPMENT_TEAM = 7AG43Y3Q47
+BUNDLE_ID_SUFFIX =
+
+#include? "Signing.local.xcconfig"
