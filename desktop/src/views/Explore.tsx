@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { errorMessage } from "../api/client";
+import type { ScreenFact } from "../api/chatContext";
 import type { Evaluation, Projection, Scenario } from "../api/types";
 import { Icon, Stepper } from "../components/ui";
 import { LineChart, type Series } from "../components/LineChart";
@@ -32,12 +33,28 @@ const sameDraft = (a: Draft, b: Draft) =>
 
 const SECONDS_PER_MONTH = 0.11;
 
-export function Explore({ display }: { display: Display }) {
+export function Explore({ display, onContext }: { display: Display; onContext: (facts: ScreenFact[]) => void }) {
   const { profile, evaluation } = display;
   const { setDrawer } = useStore();
   const [compared, setCompared] = useState<Shown | null>(null);
   const [view, setView] = useState<ExploreView>("compare");
   const custom = compared?.evaluation ?? null;
+  useEffect(() => () => onContext([]), [onContext]);
+  useEffect(() => {
+    const facts: ScreenFact[] = [
+      { label: "explore_view", value: view },
+      { label: "current_projected_retirement_balance", value: display.evaluation.projections.current.retirement_balance_today_cents === null ? "not available" : money(display.evaluation.projections.current.retirement_balance_today_cents) },
+      { label: "adaptive_projected_retirement_balance", value: display.evaluation.projections.adaptive.retirement_balance_today_cents === null ? "not available" : money(display.evaluation.projections.adaptive.retirement_balance_today_cents) },
+      { label: "projection_kind", value: "illustrative scenario, not a forecast" },
+    ];
+    if (compared) facts.push(
+      { label: "compared_retirement_age", value: String(compared.scenario?.retirement_age ?? compared.evaluation.projections.adaptive.retirement_age) },
+      { label: "compared_contribution_rate", value: compared.scenario?.employee_contribution_rate === null || compared.scenario?.employee_contribution_rate === undefined ? "adaptive policy" : percent(compared.scenario.employee_contribution_rate) },
+      { label: "compared_feasible", value: String(compared.evaluation.projections.custom?.feasible ?? true) },
+      { label: "compared_projected_retirement_balance", value: compared.evaluation.projections.custom?.retirement_balance_today_cents === null || compared.evaluation.projections.custom?.retirement_balance_today_cents === undefined ? "not available" : money(compared.evaluation.projections.custom.retirement_balance_today_cents) },
+    );
+    onContext(facts);
+  }, [view, compared, display, onContext]);
   // A new scenario result is what the person wants to see next.
   const onResult = (shown: Shown | null) => {
     setCompared(shown);

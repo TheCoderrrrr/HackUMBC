@@ -1,4 +1,5 @@
-import { lazy, Suspense, useCallback, useState } from "react";
+import { lazy, Suspense, useCallback, useMemo, useState } from "react";
+import { screenContext, type ScreenFact } from "./api/chatContext";
 import { Avatar, Icon, LiveStatus, PROFILE_SUBTITLE } from "./components/ui";
 import { Drawers } from "./views/Drawers";
 import { Guide } from "./views/Guide";
@@ -36,7 +37,13 @@ export function App() {
   const page = PAGES.find((p) => p.id === tab) ?? PAGES[0];
   const [chatOpen, setChatOpen] = useState(false);
   const [chatLoaded, setChatLoaded] = useState(false);
+  const [screenExtra, setScreenExtra] = useState<{ tab: Tab; profileID: string; facts: ScreenFact[] } | null>(null);
   const closeChat = useCallback(() => setChatOpen(false), []);
+  const setFundContext = useCallback((facts: ScreenFact[]) => setScreenExtra({ tab: "funds", profileID: profile.id, facts }), [profile.id]);
+  const setExploreContext = useCallback((facts: ScreenFact[]) => setScreenExtra({ tab: "explore", profileID: profile.id, facts }), [profile.id]);
+  const context = useMemo(() => screenContext(tab, display, dataMode,
+    screenExtra?.tab === tab && screenExtra.profileID === profile.id ? screenExtra.facts : []),
+    [tab, display, dataMode, screenExtra, profile.id]);
 
   return (
     <div className="app">
@@ -87,7 +94,7 @@ export function App() {
       <button className="chat-launcher" type="button" onClick={() => { setChatLoaded(true); setChatOpen(true); }} aria-label="Ask a retirement question" aria-haspopup="dialog" aria-expanded={chatOpen}>
         <Icon name="chat" /> Ask
       </button>
-      {chatLoaded && <Suspense fallback={null}><Chat open={chatOpen} onClose={closeChat} /></Suspense>}
+      {chatLoaded && <Suspense fallback={null}><Chat key={profile.id} open={chatOpen} onClose={closeChat} context={context} /></Suspense>}
       <Guide />
     </div>
   );

@@ -1882,6 +1882,16 @@
             "type": "array",
             "maxItems": 4,
             "title": "History"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScreenContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,

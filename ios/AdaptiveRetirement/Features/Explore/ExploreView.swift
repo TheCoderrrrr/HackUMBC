@@ -78,8 +78,39 @@ struct ExploreView: View {
         .toolbar(showsHint ? .hidden : .visible, for: .tabBar)
         .animation(Motion.respecting(reduceMotion, Motion.smartFast), value: showsHint)
         .onChange(of: store.profile.id) { _, _ in resetForProfile() }
-        .onAppear { draft = .original(for: store.displayProfile) }
+        .onAppear {
+            draft = .original(for: store.displayProfile)
+            updateChatContext()
+        }
+        .onChange(of: selectedMonth) { _, _ in updateChatContext() }
+        .onChange(of: customResult?.inputHash) { _, _ in updateChatContext() }
+        .onChange(of: store.displayProfile.evaluation?.inputHash) { _, _ in updateChatContext() }
         .onDisappear(perform: pause)
+    }
+
+    private func updateChatContext() {
+        var facts = [
+            EducationScreenFact(label: "selected_timeline_month", value: ExploreTimeline.label(forMonth: selectedMonth)),
+            EducationScreenFact(label: "timeline_note", value: String(timeline.context(at: selectedMonth).prefix(120))),
+            EducationScreenFact(label: "projection_kind", value: "illustrative scenario, not a forecast")
+        ]
+        if let projections = store.displayProfile.evaluation?.projections {
+            if let current = projections.current.retirementBalanceTodayCents {
+                facts.append(EducationScreenFact(label: "current_projected_retirement_balance", value: Money.exact(current)))
+            }
+            if let adaptive = projections.adaptive.retirementBalanceTodayCents {
+                facts.append(EducationScreenFact(label: "adaptive_projected_retirement_balance", value: Money.exact(adaptive)))
+            }
+        }
+        if let scenario = customScenario, let result = customResult?.projections.custom {
+            facts.append(EducationScreenFact(label: "compared_retirement_age", value: String(scenario.retirementAge)))
+            facts.append(EducationScreenFact(label: "compared_contribution_rate", value: scenario.employeeContributionRate.map { String(format: "%.1f%%", $0 * 100) } ?? "adaptive policy"))
+            facts.append(EducationScreenFact(label: "compared_feasible", value: String(result.feasible)))
+            if let amount = result.retirementBalanceTodayCents {
+                facts.append(EducationScreenFact(label: "compared_projected_retirement_balance", value: Money.exact(amount)))
+            }
+        }
+        store.chatScreenFacts[.explore] = facts
     }
 
     // MARK: River and playhead
