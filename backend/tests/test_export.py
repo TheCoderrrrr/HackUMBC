@@ -48,7 +48,6 @@ def decisions(source_profiles: list[dict]) -> dict[str, dict]:
         profile_id = profile["id"]
         result[profile_id] = {
             "profile_hash": profile_hash(profile),
-            "reviewers": ["A", "B"],
             "decision_id": profile_id + "-saved",
             "expected_source": "ai",
             "model_id": "fixture-model",
@@ -84,7 +83,6 @@ def fixtures(source_profiles: list[dict]) -> dict:
         fallbacks.append({
             "profile_id": profile["id"],
             "profile_hash": profile_hash(profile),
-            "reviewers": ["A", "B"],
             "decision_id": profile["id"] + "-fallback",
             "expected_source": "rules_fallback",
             "model_id": None,
@@ -105,7 +103,6 @@ def fixtures(source_profiles: list[dict]) -> dict:
                 schema_version="1", model_version="1.0.0", policy_version="1.0.0",
             )
             explanations[hash_value] = {
-                "reviewers": ["A", "B"],
                 "explanation": {
                     "state_summary": profile["id"],
                     "narrative": f"Reviewed for {hash_value[:8]}",

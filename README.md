@@ -163,7 +163,7 @@ flowchart LR
 | API, contracts, Gemini AI pipeline | ✅ Done | Developer A |
 | Financial state, policy, validation | ✅ Done | Developer B |
 | Monthly simulation and evaluator | ✅ Done | Developer C |
-| Saved AI decisions and offline demo bundle | 🟡 In progress | Developer C (A + B review) |
+| Saved AI decisions and offline demo bundle | 🟡 In progress | Developer C |
 | SwiftUI iPhone app | 🟡 In progress | Frontend |
 | Plaid Sandbox import | ⚪ Stretch goal | Developer A |
 
@@ -258,7 +258,6 @@ What's still to build between Developer A (Neil) and Developer C (Eric). Everyth
 
 1. **Urgent: revoke the Gemini key committed in `backend/.env.example`** (PR #12). Deleting the line isn't enough, because the key stays in git history. Revoke it in Google AI Studio, remove it from `.env.example`, and keep real keys only in the git-ignored `backend/.env`.
 2. **Measure live latency** with `AI_REASONING_EFFORT=low` (or `none`) against the 4-second budget for both calls.
-3. **Review `backend/fixtures/decisions.json`** once Eric generates it (model and prompt provenance, structure), then add `"A"` to each record's `reviewers`.
 
 Done in PR #12: the OpenAI client (`OpenAIModel`, `build_model`), provider configuration, the `openai` pin, and guards for every name C relies on (`Evaluation`, `permitted_orders`, `explanation_facts`, `OpenAIModel`, `build_model`).
 
@@ -266,13 +265,14 @@ Done in PR #12: the OpenAI client (`OpenAIModel`, `build_model`), provider confi
 
 1. **Generate the saved content:**
    - Put the OpenAI key in `backend/.env` (`OPENAI_API_KEY=`) and make sure the OpenAI account has billing enabled.
-   - From `backend`, run `python -m scripts.prepare_decisions`, then `python -m scripts.export_demo --draft`.
-   - Send `decisions.json` to Neil and Kevin, and `fixtures/draft/` to Kevin (audit) and the frontend developer (placeholder).
-2. **After both review marks:** run `python -m scripts.export_demo` twice, compare the bytes, commit, and hand the twelve files to the frontend for `Resources/Demo/`.
+   - From `backend`, run `python -m scripts.prepare_decisions` (done: `fixtures/decisions.json` is committed).
+2. **Export the bundle:** run `python -m scripts.export_demo` twice, compare the bytes, commit `fixtures/generated/`, and hand the twelve files to the frontend for `Resources/Demo/`.
+
+No human sign-off step (team decision): the saved AI text is demo placeholder content. To change it later, edit `fixtures/decisions.json` or regenerate, then re-export. The exporter still rejects text with numbers, invalid decisions, and stale hashes.
 
 Done: `prepare_decisions` builds the model with Neil's `build_model` (the provider in `backend/.env`) and uses his `permitted_orders` and `explanation_facts`, so saved prompts match the live API's exactly.
 
-**Order matters:** the model ID and prompt version are part of every saved hash. Changing the provider, model or prompt version after generating means regenerating and re-reviewing.
+**Order matters:** the model ID and prompt version are part of every saved hash. Changing the provider, model or prompt version after generating means regenerating and re-exporting.
 
 ---
 

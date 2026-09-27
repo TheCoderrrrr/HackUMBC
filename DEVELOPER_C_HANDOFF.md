@@ -14,21 +14,22 @@ Done this session (C-owned files only):
   default (keeps Morgan's $963.80); the Morgan variant must be
   starter -> debt -> full. After `AIRateLimited` it waits the provider's
   suggested time (30 s if none, at most 120 s) before retrying.
-- `export_demo.py --draft` skips only the review marks and writes only to the
-  git-ignored `fixtures/draft/`, for Kevin's pre-review audit and the
-  frontend placeholder.
+- Saved AI text needs no human sign-off (team decision): it is demo
+  placeholder content. The exporter no longer requires A/B review marks and
+  `--draft` was removed; every automatic check (schemas, B's validator, A's
+  prose rules, hashes) still runs.
+- `prepare_decisions` uses A's `build_model` (GPT-6 Luna by default),
+  `permitted_orders` and `explanation_facts`. `fixtures/decisions.json` is
+  generated and committed.
 
 # Next steps
 
-1. Get a Gemini key (aistudio.google.com/apikey) into `backend/.env` as
-   `GEMINI_API_KEY=...`. Don't set `AI_PROMPT_VERSION`; the code owns it.
-2. From `backend`: `python -m scripts.prepare_decisions`, then
-   `python -m scripts.export_demo --draft`.
-3. Send `fixtures/decisions.json` to Neil and Kevin, and `fixtures/draft/` to
-   Kevin (audit) and the frontend developer (placeholder).
-4. After both review marks: `python -m scripts.export_demo` twice, compare
-   bytes, commit `fixtures/decisions.json` and `fixtures/generated/`, hand the
-   twelve files to the frontend developer for `Resources/Demo/`.
+1. From `backend` (with `source .venv/bin/activate`):
+   `python -m scripts.export_demo` twice; compare the two outputs byte for byte.
+2. Commit `fixtures/generated/` and hand the twelve files to the frontend
+   developer for `Resources/Demo/`.
+3. To change the saved text later: edit `fixtures/decisions.json` (keep it
+   free of numbers) or regenerate with `--force`, then re-export.
 
 # Developer C handoff
 

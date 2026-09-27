@@ -33,7 +33,7 @@ def recommendation(order):
 
 class ScriptedModel:
     """Keeps the prompt's default order, except for a cash-security preference (the Morgan
-    variant), where it picks starter -> debt -> full as the reviewed demonstration does."""
+    variant), where it picks starter -> debt -> full as the saved demonstration does."""
 
     model_id = "test-only-model"
 
@@ -57,12 +57,6 @@ class ScriptedModel:
         return ExplanationOut(state_summary="TEST ONLY summary without figures.", narrative=self.explanation), None
 
 
-def reviewed(fixture):
-    for record in [*fixture["decisions"].values(), *fixture["explanations"].values(), *fixture["fallback_cases"]]:
-        record["reviewers"] = ["A", "B"]
-    return fixture
-
-
 def write(tmp: Path, fixture) -> Path:
     path = tmp / "decisions.json"
     path.write_text(json.dumps(fixture))
@@ -77,7 +71,7 @@ def test_prepared_fixture_exports_a_valid_deterministic_bundle():
     assert len(fixture["explanations"]) == 10 and len(fixture["fallback_cases"]) == 4
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
-        decisions = write(tmp, reviewed(fixture))
+        decisions = write(tmp, fixture)  # straight from generation: no sign-off step
         manifest = export_bundle(PROFILES, decisions, tmp / "a")
         export_bundle(PROFILES, decisions, tmp / "b")
         assert len(manifest["artifacts"]) == 10
@@ -96,13 +90,6 @@ def test_prompts_match_the_live_api_and_carry_no_identifiers():
             assert identifier not in prompt
     for prompt in model.explain_prompts:  # A's explanation_facts for an initial plan
         assert '"is_initial_plan": true' in prompt and '"changes": []' in prompt
-
-
-def test_unreviewed_fixture_is_refused():
-    fixture = prepare(ScriptedModel(), PROFILES)
-    with tempfile.TemporaryDirectory() as tmp:
-        with pytest.raises(ExportError, match="review marks"):
-            export_bundle(PROFILES, write(Path(tmp), fixture), Path(tmp) / "out")
 
 
 def test_numeric_explanation_is_retried_then_rejected():
@@ -138,20 +125,24 @@ def test_rate_limit_waits_before_retrying(retry_after, expected_wait):
     assert len(fixture["decisions"]) == 4
 
 
-def test_draft_export_skips_review_marks_only_in_the_draft_folder():
+def test_exported_morgan_shows_the_documented_card_payment():
     fixture = prepare(ScriptedModel(), PROFILES)
+    assert not any("reviewers" in r for r in [*fixture["decisions"].values(), *fixture["explanations"].values()])
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
-        decisions = write(tmp, fixture)
-        manifest = export_bundle(PROFILES, decisions, tmp / "fixtures" / "draft", draft=True)
-        assert len(manifest["artifacts"]) == 10
-        morgan = json.loads((tmp / "fixtures" / "draft" / "morgan-original.json").read_text())
+        export_bundle(PROFILES, write(tmp, fixture), tmp / "generated")
+        morgan = json.loads((tmp / "generated" / "morgan-original.json").read_text())
         card = next(r for r in morgan["evaluation"]["plan"]["reasons"] if r["facts"].get("debt_id") == "morgan-card")
         assert card["facts"]["extra_payment_cents"] == 96380
-        with pytest.raises(ExportError, match="only write to fixtures/draft"):
-            export_bundle(PROFILES, decisions, tmp / "fixtures" / "generated", draft=True)
-        with pytest.raises(ExportError, match="unreviewed drafts"):
-            export_bundle(PROFILES, write(tmp, reviewed(fixture)), tmp / "fixtures" / "draft")
+
+
+def test_numeric_saved_explanation_still_blocks_export():
+    """Dropping human sign-off keeps the automatic prose check: no numbers reach the app."""
+    fixture = prepare(ScriptedModel(), PROFILES)
+    next(iter(fixture["explanations"].values()))["explanation"]["narrative"] = "Pay three hundred dollars."
+    with tempfile.TemporaryDirectory() as tmp:
+        with pytest.raises(ExportError, match="numbers"):
+            export_bundle(PROFILES, write(Path(tmp), fixture), Path(tmp) / "generated")
 
 
 def test_profiles_parse_with_the_shared_schema():
