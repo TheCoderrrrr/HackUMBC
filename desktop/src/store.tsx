@@ -399,7 +399,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     removeMine,
     numbers: numbers ?? (selectedMissing ? { id: null } : null),
     numbersOpen: numbers !== null || selectedMissing,
-    openNumbers: (id: string | null) => setNumbers({ id }),
+    // The form replaces the page it opens on; Funds doesn't show it, so opening it from there moves to Overview.
+    openNumbers: (id: string | null) => {
+      setNumbers({ id });
+      setTab((t) => (t === "funds" ? "overview" : t));
+    },
     closeNumbers: () => {
       setNumbers(null);
       if (selectedMissing) {

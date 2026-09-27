@@ -2,9 +2,7 @@ import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import { screenContext, type ScreenFact } from "./api/chatContext";
 import { Avatar, Icon, LiveStatus, PROFILE_SUBTITLE } from "./components/ui";
 import { Brand } from "./components/Brand";
-import { StylePanel } from "./views/StylePanel";
 import { Drawers } from "./views/Drawers";
-import { Guide } from "./views/Guide";
 import { Overview } from "./views/Overview";
 import { Plan } from "./views/Plan";
 import { errorMessage } from "./api/client";
@@ -17,6 +15,9 @@ const Funds = lazy(() => import("./views/Funds").then((m) => ({ default: m.Funds
 const Learn = lazy(() => import("./views/Learn").then((m) => ({ default: m.Learn })));
 const Chat = lazy(() => import("./views/Chat").then((m) => ({ default: m.Chat })));
 const YourNumbers = lazy(() => import("./views/YourNumbers").then((m) => ({ default: m.YourNumbers })));
+// Opened now and then: Getting started and the plan-style panel load when first opened.
+const Guide = lazy(() => import("./views/Guide").then((m) => ({ default: m.Guide })));
+const StylePanel = lazy(() => import("./views/StylePanel").then((m) => ({ default: m.StylePanel })));
 
 /** Pages, grouped the way people use them: their money, planning ahead, learning. */
 const PAGES: { id: Tab; title: string; icon: string; group: string; description: (first: string) => string }[] = [
@@ -34,7 +35,7 @@ const PAGES: { id: Tab; title: string; icon: string; group: string; description:
 const GROUPS = ["Your money", "Plan ahead", "Learn"] as const;
 
 export function App() {
-  const { tab, display, profile, load, setDrawer, dataMode, savedMatchesStyle, style, numbersOpen, numbers, openStyle } = useStore();
+  const { tab, display, profile, load, setDrawer, dataMode, savedMatchesStyle, style, numbersOpen, numbers, openStyle, guideOpen, styleOpen } = useStore();
   const showNumbers = numbersOpen && tab !== "funds";
   const page = PAGES.find((p) => p.id === tab) ?? PAGES[0];
   const [chatOpen, setChatOpen] = useState(false);
@@ -101,12 +102,12 @@ export function App() {
         </div>
       </main>
       {display && <Drawers display={display} />}
-      <button className="chat-launcher" type="button" onClick={() => { setChatLoaded(true); setChatOpen(true); }} aria-label="Ask a retirement question" aria-haspopup="dialog" aria-expanded={chatOpen}>
+      <button className="chat-launcher" data-tour="ask" type="button" onClick={() => { setChatLoaded(true); setChatOpen(true); }} aria-label="Ask a retirement question" aria-haspopup="dialog" aria-expanded={chatOpen}>
         <Icon name="chat" /> Ask
       </button>
       {chatLoaded && <Suspense fallback={null}><Chat key={profile.id} open={chatOpen} onClose={closeChat} context={context} /></Suspense>}
-      <Guide />
-      <StylePanel />
+      {guideOpen && <Suspense fallback={null}><Guide /></Suspense>}
+      {styleOpen && <Suspense fallback={null}><StylePanel /></Suspense>}
     </div>
   );
 }
@@ -129,7 +130,7 @@ function Sidebar() {
           <div key={group} className="nav-group" role="group" aria-label={group}>
             <p className="eyebrow nav-group-title">{group}</p>
             {PAGES.filter((p) => p.group === group).map((p) => (
-              <button key={p.id} aria-current={tab === p.id ? "page" : undefined} onClick={() => setTab(p.id)}>
+              <button key={p.id} data-tour={p.id === "explore" ? "explore saved" : p.id} aria-current={tab === p.id ? "page" : undefined} onClick={() => setTab(p.id)}>
                 <Icon name={p.icon} /> {p.title}
               </button>
             ))}
@@ -140,7 +141,7 @@ function Sidebar() {
         ))}
       </nav>
 
-      <div className="style-chip">
+      <div className="style-chip" data-tour="style">
         <span className="style-chip-head">
           <label className="eyebrow" htmlFor="sidebar-plan-style">Plan style</label>
           <button className="style-chip-cta" onClick={openStyle} aria-haspopup="dialog">Compare</button>
@@ -155,7 +156,7 @@ function Sidebar() {
         </div>
       </div>
 
-      <div className="profiles">
+      <div className="profiles" data-tour="people">
         <p className="eyebrow side-title">Demo profiles</p>
         {profiles.filter((p) => !isPersonal(p.id)).map((p) => (
           <button key={p.id} className="profile-btn" aria-pressed={p.id === profile.id} onClick={() => selectProfile(p.id)}>
@@ -188,7 +189,7 @@ function Sidebar() {
       </div>
 
       <div className="sidebar-footer">
-        <div className="toggle">
+        <div className="toggle" data-tour="live">
           Live calculation
           <button className="switch" role="switch" aria-checked={liveEnabled} aria-label="Live calculation"
             onClick={() => setLiveEnabled(!liveEnabled)} />

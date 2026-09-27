@@ -5,14 +5,9 @@ import { Tabs, type TabItem } from "../components/Tabs";
 import { Term } from "../components/Term";
 import { monthBudget, yearlyBalances, type Display } from "../data/display";
 import { firstReach, gapAt, goalPresets, moneyShort, parseGoal, yearMarkers, yearsSooner } from "../data/chart";
-import { money, moneyExact, monthLabel, months, percent } from "../data/format";
+import { money, moneyExact, monthLabel, months, percent, when } from "../data/format";
 import { useStore, type PlanSection } from "../store";
 
-/** "Sep 2027", or the given words for "already" (month 0) and "never within the plan" (null). */
-export function when(month: number | null, asOf: string, done = "Already", never = "Not before retirement"): string {
-  if (month === null) return never;
-  return month === 0 ? done : monthLabel(asOf, month);
-}
 
 /**
  * Your plan: where you're heading (always visible), then one topic per tab. Every tab opens

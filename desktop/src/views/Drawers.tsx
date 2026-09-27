@@ -1,11 +1,10 @@
 import type { ReactNode } from "react";
 import { Drawer, Icon } from "../components/ui";
 import { debtName, explanationSteps, PRIORITY_LABEL, type Display } from "../data/display";
-import { asOfLabel, money, moneyExact, months, percent } from "../data/format";
+import { asOfLabel, money, moneyExact, months, percent, when } from "../data/format";
 import { usesBundle } from "../data/saved";
 import { useStore, type PlanSection } from "../store";
 import { Term } from "../components/Term";
-import { when } from "./Plan";
 
 const CHECK_LABEL: Record<string, string> = {
   EXACT_PRIORITY_MEMBERSHIP: "Priorities are exactly the documented set",

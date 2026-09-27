@@ -1,6 +1,5 @@
 import { useEffect, type ReactNode } from "react";
-import { DATA_MODE_LABEL, type CashKind } from "../data/display";
-import { moneyExact, splitMoney } from "../data/format";
+import { DATA_MODE_LABEL } from "../data/display";
 import { useStore } from "../store";
 
 // ---------- Icons (SF Symbols stand-ins) ----------
@@ -66,95 +65,7 @@ export const PROFILE_SUBTITLE: Record<string, string> = {
   casey: "Approaching retirement",
 };
 
-// ---------- Figures ----------
-
-export function HeroAmount({ cents }: { cents: number }) {
-  const parts = splitMoney(cents);
-  return (
-    <div className="hero" aria-label={moneyExact(cents)}>
-      <span className="dollars">{parts.dollars}</span>
-      <span className="cents">.{parts.cents}</span>
-    </div>
-  );
-}
-
-export function Figure({ children, size = 52 }: { children: ReactNode; size?: number }) {
-  return <span className="figure" style={{ fontSize: size }}>{children}</span>;
-}
-
-export function Stat({ value, unit, caption, align = "left", icon }: {
-  value: string; unit?: string; caption: string; align?: "left" | "right"; icon?: string;
-}) {
-  return (
-    <div style={{ textAlign: align, flex: 1 }}>
-      <div style={{ display: "flex", gap: 5, alignItems: "baseline", justifyContent: align === "right" ? "flex-end" : "flex-start" }}>
-        {icon && <span style={{ color: "var(--text-2)", alignSelf: "center", display: "flex" }}><Icon name={icon} size={14} /></span>}
-        <span className="figure" style={{ fontSize: 22, letterSpacing: -0.6 }}>{value}</span>
-        {unit && <span className="caption" style={{ fontSize: 13 }}>{unit}</span>}
-      </div>
-      <div className="caption" style={{ marginTop: 3 }}>{caption}</div>
-    </div>
-  );
-}
-
-// ---------- Bands ----------
-
-export const BAND: Record<CashKind | "employer" | "minimum", string> = {
-  retirement: "var(--band-retirement)",
-  debt: "var(--band-debt)",
-  emergency: "var(--band-emergency)",
-  remaining: "var(--band-remaining)",
-  employer: "var(--band-employer)",
-  minimum: "var(--band-minimum)",
-};
-
-export const CASH_ACCENT: Record<CashKind, string> = {
-  retirement: "var(--accent)",
-  debt: "var(--debt-accent)",
-  emergency: "var(--positive)",
-  remaining: "var(--text)",
-};
-
-export interface BandSegment {
-  label: string;
-  value: string;
-  weight: number;
-  fill: string;
-}
-
-/** Proportional band whose segments carry their own label and amount. */
-export function SegmentedBand({ segments, height = 64, minPercent = 18 }: {
-  segments: BandSegment[]; height?: number; minPercent?: number;
-}) {
-  const total = segments.reduce((s, x) => s + x.weight, 0) || 1;
-  return (
-    <div className="band" style={{ height }} role="img" aria-label={segments.map((s) => `${s.label} ${s.value}`).join(", ")}>
-      {segments.map((s) => (
-        <div key={s.label} className="band-seg" style={{ background: s.fill, flexGrow: Math.max((s.weight / total) * 100, minPercent), flexBasis: 0 }}>
-          <div className="seg-text">
-            <div className="seg-label">{s.label}</div>
-            <div className="seg-value">{s.value}</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/** Share-labelled band; only funded categories get a slice. */
-export function ShareBand({ items, height = 40 }: { items: { key: string; amount: number; fill: string }[]; height?: number }) {
-  const funded = items.filter((i) => i.amount > 0);
-  const total = funded.reduce((s, i) => s + i.amount, 0);
-  return (
-    <div className="band" style={{ height }}>
-      {funded.map((i) => (
-        <div key={i.key} className="band-seg" style={{ background: i.fill, flexGrow: i.amount, flexBasis: 0, borderRadius: 8 }}>
-          {height >= 24 && <div className="seg-center">{((i.amount / total) * 100).toFixed(1)}%</div>}
-        </div>
-      ))}
-    </div>
-  );
-}
+// ---------- Meters ----------
 
 export function MonthMeter({ months, target }: { months: number; target: number }) {
   return (
@@ -187,20 +98,6 @@ export function AllocationRing({ stocks, size = 124 }: { stocks: number; size?: 
           <div className="caption" style={{ fontSize: 11 }}>stocks</div>
         </div>
       </div>
-    </div>
-  );
-}
-
-// ---------- Headers ----------
-
-export function SectionHeader({ title, onWhy, subtitle }: { title: string; onWhy?: () => void; subtitle?: string }) {
-  return (
-    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 16 }}>
-      <div>
-        <h2 className="h-section">{title}</h2>
-        {subtitle && <p className="caption" style={{ marginTop: 3 }}>{subtitle}</p>}
-      </div>
-      {onWhy && <button className="link" onClick={onWhy} aria-label={`Why? ${title}`}>Why?</button>}
     </div>
   );
 }

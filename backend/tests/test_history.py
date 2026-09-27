@@ -392,7 +392,8 @@ def test_a_run_remembers_every_choice_behind_it(client, style):
     saved = client.post("/v1/history/runs", json=body)
     assert saved.status_code == 201, saved.text
     run = saved.json()["run"]
-    assert run["scenario"] == scenario
+    assert {k: run["scenario"][k] for k in scenario} == scenario
+    assert all(v is None for k, v in run["scenario"].items() if k not in scenario)  # unset options come back as null
     assert run["planning_preference"] == (style or base.planning_preference or "balanced")
     listed = client.get("/v1/history/runs", params={"profile_id": "morgan"}).json()["runs"]
     assert listed[0]["planning_preference"] == run["planning_preference"]

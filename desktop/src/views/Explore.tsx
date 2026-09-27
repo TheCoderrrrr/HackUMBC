@@ -34,7 +34,7 @@ export const original = (d: Display): Draft => ({
   priorityStyle: "same",
   preset: "original",
 });
-export const sameDraft = (a: Draft, b: Draft) =>
+const sameDraft = (a: Draft, b: Draft) =>
   a.retirementAge === b.retirementAge && a.policy === b.policy && (a.policy === "adaptive" || a.fixedRate === b.fixedRate)
   && a.extraDebt === b.extraDebt && a.priorityStyle === b.priorityStyle;
 
