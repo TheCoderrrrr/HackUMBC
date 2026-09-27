@@ -12,6 +12,14 @@ struct ScenarioDraft: Equatable {
     enum Preset: String, CaseIterable, Identifiable {
         case original, retireLater, ratePlusOne
         var id: String { rawValue }
+
+        var demoPreset: DemoPreset {
+            switch self {
+            case .original: .original
+            case .retireLater: .retirePlusTwo
+            case .ratePlusOne: .contributionPlusOne
+            }
+        }
     }
 
     var retirementAge: Int
@@ -37,7 +45,8 @@ struct RetirementComparisonSection: View {
                 .font(.geist(20, .medium, relativeTo: .title3))
                 .foregroundStyle(Palette.textPrimary)
                 .accessibilityAddTraits(.isHeader)
-            Text("Illustrative preview · not a calculated result")
+            Text(profile.evaluation == nil ? "Illustrative preview · not a calculated result"
+                                           : "Projected balance · nominal, illustrative assumptions")
                 .font(.geist(12, .regular, relativeTo: .caption))
                 .foregroundStyle(Palette.textSecondary)
                 .padding(.top, 2)
@@ -49,7 +58,7 @@ struct RetirementComparisonSection: View {
             .frame(height: 28)
             .padding(.top, 15)
 
-            ComparisonChart()
+            comparisonChart
                 .frame(height: 205)
 
             HStack {
@@ -71,6 +80,25 @@ struct RetirementComparisonSection: View {
         Text(text)
             .font(.geist(12, .medium, relativeTo: .caption))
             .foregroundStyle(Palette.textCaption)
+    }
+
+    /// The engine's Current and Adaptive yearly balances on a shared scale, or the schematic preview.
+    @ViewBuilder
+    private var comparisonChart: some View {
+        if let projections = profile.evaluation?.projections {
+            let years = profile.yearsToRetirement
+            let adaptive = projections.adaptive.yearlyRetirementBalances(years: years)
+            let current = projections.current.yearlyRetirementBalances(years: years)
+            let top = Double(max(adaptive.max() ?? 1, current.max() ?? 1, 1))
+            if adaptive.count > 1, current.count > 1 {
+                ComparisonChart(adaptive: adaptive.map { Double($0) / top },
+                                current: current.map { Double($0) / top })
+            } else {
+                ComparisonChart()
+            }
+        } else {
+            ComparisonChart()
+        }
     }
 }
 
@@ -100,9 +128,14 @@ private struct LegendItem: View {
 // MARK: - Scenario controls
 
 struct ScenarioControls: View {
+    @EnvironmentObject private var store: AppStore
     let profile: Profile
     @Binding var draft: ScenarioDraft
+    /// Engine result for the compared draft (live, or an exact saved preset).
+    @Binding var result: API.Evaluation?
     @State private var comparedDraft: ScenarioDraft?
+    @State private var status: String?
+    @State private var compareTask: Task<Void, Never>?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -167,18 +200,25 @@ struct ScenarioControls: View {
                 .transition(.opacity)
             }
 
-            Button { comparedDraft = draft } label: {
-                Label("Compare scenario", systemImage: "square.split.2x1")
+            Button(action: compare) {
+                HStack(spacing: Space.s) {
+                    if compareTask != nil {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: "square.split.2x1")
+                    }
+                    Text("Compare scenario")
+                }
             }
                 .buttonStyle(PrimaryButtonStyle())
+                .disabled(compareTask != nil)
                 .padding(.top, 22)
 
-            if let comparedDraft {
-                Text(comparedDraft == .original(for: profile)
-                     ? "This is the saved plan. The chart already shows it."
-                     : "Custom comparisons need a live calculation. The chart keeps the saved Current and Adaptive preview.")
+            if comparedDraft != nil, let status {
+                Text(status)
                     .font(.geist(12, .regular, relativeTo: .caption))
                     .foregroundStyle(Palette.textCaption)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, Space.s)
                     .transition(.opacity)
             }
@@ -210,8 +250,64 @@ struct ScenarioControls: View {
         }
         .animation(Motion.reveal, value: draft.policy)
         .animation(Motion.reveal, value: comparedDraft)
+        .sensoryFeedback(.selection, trigger: draft)
+        .sensoryFeedback(trigger: comparedDraft) { _, new in new != nil ? .impact(weight: .medium) : nil }
         .onChange(of: draft) { _, new in
-            if new != comparedDraft { comparedDraft = nil }
+            if new != comparedDraft {
+                compareTask?.cancel()
+                compareTask = nil
+                comparedDraft = nil
+                status = nil
+                result = nil
+            }
+        }
+        .onDisappear { compareTask?.cancel() }
+    }
+
+    /// Exact saved preset when offline; otherwise a live `/v1/evaluate` with the draft as scenario.
+    private func compare() {
+        let compared = draft
+        comparedDraft = compared
+        result = nil
+        guard compared != .original(for: profile) else {
+            status = "This is the saved plan. The chart already shows it."
+            return
+        }
+        if !store.isLiveEnabled {
+            if let preset = compared.preset?.demoPreset,
+               let saved = store.savedEvaluation(for: profile.id, preset: preset) {
+                result = saved.evaluation
+                status = "Saved calculation for this preset."
+            } else {
+                status = "Reconnect for a custom scenario. Saved presets still work offline."
+            }
+            return
+        }
+        status = nil
+        let scenario = API.Scenario(retirementAge: compared.retirementAge,
+                                    employeeContributionRate: compared.policy == .fixed ? compared.fixedRate / 100 : nil)
+        compareTask = Task {
+            defer { if comparedDraft == compared { compareTask = nil } }
+            do {
+                let loaded = try await store.evaluateScenario(scenario)
+                guard !Task.isCancelled, comparedDraft == compared else { return }
+                result = loaded.evaluation
+                status = loaded.evaluation.projections.custom?.feasible == false
+                    ? "This scenario can't be funded as entered. See the outcomes below."
+                    : "Live calculation for this scenario."
+            } catch {
+                guard !Task.isCancelled, comparedDraft == compared else { return }
+                status = Self.message(for: error)
+            }
+        }
+    }
+
+    private static func message(for error: Error) -> String {
+        switch error as? APIError {
+        case .server(_, let body): return body.message
+        case .timedOut: return "The calculation took too long. Try again."
+        case .unreachable, .invalidBaseURL: return "Reconnect for a custom scenario. Saved presets still work offline."
+        default: return "Couldn't calculate this scenario."
         }
     }
 
@@ -233,9 +329,10 @@ struct ScenarioControls: View {
         switch preset {
         case .original: break
         case .retireLater: next.retirementAge = min(profile.retirementAge + 2, 80)
-        // The exact +1-point rate comes from the engine artifact; the draft only
-        // records the preset until a live calculation is available.
-        case .ratePlusOne: break
+        // Matches export_demo.py: the opening Adaptive rate plus one point, held fixed.
+        case .ratePlusOne:
+            next.policy = .fixed
+            next.fixedRate = min(((profile.adaptiveEmployeeRate * 100 + 1) * 2).rounded() / 2, 20)
         }
         next.preset = preset
         draft = next
@@ -270,20 +367,13 @@ private struct PresetChip<Label: View>: View {
 // MARK: - Whole-picture outcomes
 
 struct OutcomeRows: View {
+    /// Saved or live evaluation for the plan on screen.
+    let evaluation: API.Evaluation?
+    /// Result of "Compare scenario", whose `custom` projection joins the comparison.
+    var custom: API.Evaluation? = nil
     @State private var expanded: Set<String> = []
 
-    private let outcomes = [
-        "Retirement-account balance",
-        "Debt-free timing & total interest",
-        "Emergency-reserve milestones",
-        "Cash & debt at retirement"
-    ]
-    private let symbols = [
-        "Retirement-account balance": "building.columns.fill",
-        "Debt-free timing & total interest": "creditcard.fill",
-        "Emergency-reserve milestones": "umbrella.fill",
-        "Cash & debt at retirement": "banknote.fill"
-    ]
+    private struct Row { let title: String; let lines: [(String, String)] }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -299,17 +389,16 @@ struct OutcomeRows: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, 17)
 
-            ForEach(outcomes, id: \.self) { outcome in
-                let isOpen = expanded.contains(outcome)
+            ForEach(rows, id: \.title) { row in
+                let isOpen = expanded.contains(row.title)
                 Button {
                     withAnimation(Motion.reveal) {
-                        if isOpen { expanded.remove(outcome) } else { expanded.insert(outcome) }
+                        if isOpen { expanded.remove(row.title) } else { expanded.insert(row.title) }
                     }
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: Space.m) {
-                            IconBadge(systemName: symbols[outcome] ?? "circle", size: 42)
-                            Text(outcome)
+                            Text(row.title)
                                 .font(.geist(15, .regular, relativeTo: .callout))
                                 .foregroundStyle(Palette.textSecondary)
                             Spacer()
@@ -320,25 +409,81 @@ struct OutcomeRows: View {
                         }
                         .frame(minHeight: 44)
                         if isOpen {
-                            Text("Shown after a live calculation.")
-                                .font(.geist(12, .regular, relativeTo: .caption))
-                                .foregroundStyle(Palette.textCaption)
-                                .padding(.leading, 40)
-                                .padding(.bottom, Space.s)
-                                .transition(.opacity)
+                            VStack(alignment: .leading, spacing: 4) {
+                                if row.lines.isEmpty {
+                                    Text("Shown after a live calculation.")
+                                        .font(.geist(12, .regular, relativeTo: .caption))
+                                        .foregroundStyle(Palette.textCaption)
+                                } else {
+                                    ForEach(row.lines, id: \.0) { line in
+                                        HStack {
+                                            Text(line.0)
+                                                .font(.geist(13, .regular, relativeTo: .footnote))
+                                                .foregroundStyle(Palette.textSecondary)
+                                            Spacer()
+                                            Text(line.1)
+                                                .font(.numeral(13, .medium, relativeTo: .footnote))
+                                                .monospacedDigit()
+                                                .foregroundStyle(Palette.textPrimary)
+                                        }
+                                        .accessibilityElement(children: .combine)
+                                    }
+                                }
+                            }
+                            .padding(.bottom, Space.s)
+                            .transition(.opacity)
                         }
                     }
                 }
                 .buttonStyle(PressableStyle(scale: 1, dim: 0.7))
-                .accessibilityValue(isOpen ? "Shown after a live calculation" : "")
             }
 
-            Text("Values appear after calculation. Preview curves show the intended comparison layout only.")
+            Text(evaluation == nil
+                 ? "Values appear after calculation. Preview curves show the intended comparison layout only."
+                 : "Nominal values from the plan calculation, using the illustrative assumptions.")
                 .font(.geist(12, .regular, relativeTo: .caption))
                 .foregroundStyle(Palette.textCaption)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 16)
         }
+        .sensoryFeedback(.selection, trigger: expanded)
+    }
+
+    /// Current, Adaptive and (when compared) the custom scenario, straight from the response.
+    private var strategies: [(String, API.Projection)] {
+        guard let evaluation else { return [] }
+        var list = [("Current", evaluation.projections.current), ("Adaptive", evaluation.projections.adaptive)]
+        if let scenario = custom?.projections.custom { list.append(("Your scenario", scenario)) }
+        return list
+    }
+
+    private var rows: [Row] {
+        let s = strategies
+        func line(_ name: String, _ p: API.Projection, _ value: (API.Projection) -> String) -> (String, String) {
+            (name, p.feasible ? value(p) : "Not fundable")
+        }
+        return [
+            Row(title: "Retirement-account balance", lines: s.map { name, p in
+                line(name, p) { Self.money($0.retirementBalanceNominalCents) }
+            }),
+            Row(title: "Debt-free timing & total interest", lines: s.map { name, p in
+                line(name, p) { "\(Self.month($0.debtFreeMonth)) · \(Self.money($0.cumulativeDebtInterestCents))" }
+            }),
+            Row(title: "Emergency-reserve milestones", lines: s.map { name, p in
+                line(name, p) { "Starter \(Self.month($0.starterReserveMonth)) · Full \(Self.month($0.fullReserveMonth))" }
+            }),
+            Row(title: "Cash & debt at retirement", lines: s.map { name, p in
+                line(name, p) { "\(Self.money($0.cashNominalCents)) · \(Self.money($0.debtNominalCents))" }
+            })
+        ]
+    }
+
+    private static func money(_ cents: Int64?) -> String { cents.map(Money.whole) ?? "—" }
+
+    /// Month 0 is today; later months become a calendar label ("Jan 2028").
+    private static func month(_ month: Int?) -> String {
+        guard let month else { return "—" }
+        return month == 0 ? "Now" : ExploreTimeline.label(forMonth: month)
     }
 }

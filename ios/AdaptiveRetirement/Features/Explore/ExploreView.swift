@@ -11,8 +11,11 @@ struct ExploreView: View {
     @State private var isPlaying = false
     @State private var playTask: Task<Void, Never>?
     @State private var draft = ScenarioDraft.original(for: .morgan)
+    @State private var isScrolled = !ScreenHeaderScroll.isTrackable
+    /// Live custom-scenario result from "Compare scenario"; cleared when the draft or profile changes.
+    @State private var customResult: API.Evaluation?
 
-    private var timeline: ExploreTimeline { .illustrative(for: store.profile) }
+    private var timeline: ExploreTimeline { .illustrative(for: store.displayProfile) }
     private var selectedMonth: Int { Int(month.rounded()) }
     private var showsHint: Bool { store.showsPlayheadHint }
 
@@ -27,15 +30,15 @@ struct ExploreView: View {
                 riverSection
 
                 if !showsHint {
-                    RetirementComparisonSection(profile: store.profile)
+                    RetirementComparisonSection(profile: store.displayProfile)
                     Hairline(color: Palette.hairlineStrong)
                         .padding(.top, 17)
                         .padding(.bottom, 18)
-                    ScenarioControls(profile: store.profile, draft: $draft)
+                    ScenarioControls(profile: store.displayProfile, draft: $draft, result: $customResult)
                     Hairline(color: Palette.hairlineStrong)
                         .padding(.top, 19)
                         .padding(.bottom, 20)
-                    OutcomeRows()
+                    OutcomeRows(evaluation: store.displayProfile.evaluation, custom: customResult)
                     Button { store.sheet = .assumptions } label: {
                         Label("Modeling assumptions", systemImage: "slider.horizontal.3")
                     }
@@ -52,11 +55,12 @@ struct ExploreView: View {
             .padding(.bottom, 28)
         }
         .scrollIndicators(.hidden)
+        .tracksScrolled($isScrolled)
         .scrollDisabled(showsHint)
         .defaultScrollAnchor(Self.debugScrollAnchor)
         .background(Palette.page.ignoresSafeArea())
         .safeAreaInset(edge: .top, spacing: 0) {
-            ScreenHeader(title: "Explore") { HeaderAvatarButton() }
+            ScreenHeader(title: "Explore", isScrolled: isScrolled) { HeaderAvatarButton() }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if showsHint { hintActions }
@@ -64,7 +68,7 @@ struct ExploreView: View {
         .toolbar(showsHint ? .hidden : .visible, for: .tabBar)
         .animation(Motion.respecting(reduceMotion, Motion.smartFast), value: showsHint)
         .onChange(of: store.profile.id) { _, _ in resetForProfile() }
-        .onAppear { draft = .original(for: store.profile) }
+        .onAppear { draft = .original(for: store.displayProfile) }
         .onDisappear(perform: pause)
     }
 
@@ -87,7 +91,9 @@ struct ExploreView: View {
                     playheadLesson
                 } else {
                     milestones
-                    Text("Illustrative dates and flows · not calculated results")
+                    Text(store.displayProfile.evaluation == nil
+                         ? "Illustrative dates and flows · not calculated results"
+                         : "Milestone dates from the plan · flows illustrative")
                         .font(.geist(11, .regular, relativeTo: .caption2))
                         .foregroundStyle(Palette.textCaption)
                         .padding(.top, Space.s)
@@ -104,9 +110,6 @@ struct ExploreView: View {
     /// The playhead's date and what the plan is doing then.
     private var transport: some View {
         HStack(alignment: .center, spacing: Space.m) {
-            IconBadge(systemName: contextSymbol, size: 60)
-                .contentTransition(.symbolEffect(.replace))
-                .animation(reduceMotion ? nil : Motion.select, value: contextSymbol)
             VStack(alignment: .leading, spacing: 0) {
                 WordRoll(text: ExploreTimeline.label(forMonth: selectedMonth))
                     .font(.numeral(24, .medium, relativeTo: .title2))
@@ -131,13 +134,9 @@ struct ExploreView: View {
             .controlSize(.regular)
             .tint(Palette.textSecondary)
             .accessibilityLabel(playLabel)
+            .sensoryFeedback(.impact(weight: .light), trigger: isPlaying)
         }
         .frame(minHeight: 52)
-    }
-
-    /// The latest milestone at or before the playhead picks the readout's icon.
-    private var contextSymbol: String {
-        timeline.milestones.last { $0.month <= selectedMonth }.map(Self.symbol(for:)) ?? "calendar"
     }
 
     static func symbol(for milestone: Milestone) -> String {
@@ -289,7 +288,8 @@ struct ExploreView: View {
     private func resetForProfile() {
         pause()
         month = 0
-        draft = .original(for: store.profile)
+        draft = .original(for: store.displayProfile)
+        customResult = nil
     }
 
     private static var debugScrollAnchor: UnitPoint? {

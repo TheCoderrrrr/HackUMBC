@@ -58,7 +58,7 @@ private struct DestinationColumn: View {
 }
 
 /// Canvas-drawn streamlines. Animatable on `month`, so SwiftUI interpolates seeks; a
-/// continuous downstream pulse keeps the river flowing even when the plan holds steady.
+/// gentle real-time sway keeps the river alive even when the plan holds steady.
 private struct RiverStreamlines: View, Animatable {
     let timeline: ExploreTimeline
     var month: Double
@@ -71,11 +71,6 @@ private struct RiverStreamlines: View, Animatable {
 
     private static let accent = (r: 168.0, g: 230.0, b: 161.0)
     private static let blue = (r: 127.0, g: 166.0, b: 222.0)
-
-    /// Downstream pulse: length and gap along each path, in points, and speed in points/second.
-    private static let pulseLength: CGFloat = 22
-    private static let pulseGap: CGFloat = 150
-    private static let pulseSpeed: Double = 46
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1 / 30, paused: reduceMotion)) { clock in
@@ -140,24 +135,6 @@ private struct RiverStreamlines: View, Animatable {
                                with: .linearGradient(gradient, startPoint: CGPoint(x: x, y: 0),
                                                      endPoint: CGPoint(x: x, y: bottom)),
                                lineWidth: 1.2)
-
-                guard !reduceMotion else { continue }
-                // Each stream's pulse is offset by the golden ratio so they never march in step.
-                let period = Double(Self.pulseLength + Self.pulseGap)
-                let offset = Double(i) * 0.618_034 * period
-                let phase = (time * Self.pulseSpeed + offset).truncatingRemainder(dividingBy: period)
-                let lifted = Self.mix(warmth, lift: 0.45)
-                let glow = Gradient(stops: [
-                    .init(color: lifted.opacity(0.1), location: 0),
-                    .init(color: lifted.opacity(0.9), location: 0.5),
-                    .init(color: lifted.opacity(0.45), location: 1)
-                ])
-                context.stroke(path,
-                               with: .linearGradient(glow, startPoint: CGPoint(x: x, y: 0),
-                                                     endPoint: CGPoint(x: x, y: bottom)),
-                               style: StrokeStyle(lineWidth: 1.4, lineCap: .round,
-                                                  dash: [Self.pulseLength, Self.pulseGap],
-                                                  dashPhase: -CGFloat(phase)))
             }
         }
     }
@@ -177,13 +154,10 @@ private struct RiverStreamlines: View, Animatable {
         return result
     }
 
-    /// Accent-to-blue at `t`, optionally lifted toward white by `lift` (for the pulse).
-    private static func mix(_ t: CGFloat, lift: Double = 0) -> Color {
+    /// Accent-to-blue at `t`.
+    private static func mix(_ t: CGFloat) -> Color {
         let t = Double(t)
-        func channel(_ a: Double, _ b: Double) -> Double {
-            let base = a + (b - a) * t
-            return (base + (255 - base) * lift) / 255
-        }
+        func channel(_ a: Double, _ b: Double) -> Double { (a + (b - a) * t) / 255 }
         return Color(.sRGB,
                      red: channel(accent.r, blue.r),
                      green: channel(accent.g, blue.g),

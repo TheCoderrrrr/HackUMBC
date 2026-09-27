@@ -6,7 +6,9 @@ import SwiftUI
 struct PlanView: View {
     @EnvironmentObject private var store: AppStore
 
-    private var profile: Profile { store.profile }
+    @State private var isScrolled = !ScreenHeaderScroll.isTrackable
+
+    private var profile: Profile { store.displayProfile }
 
     var body: some View {
         ScrollView {
@@ -28,9 +30,10 @@ struct PlanView: View {
             .padding(.bottom, 28)
         }
         .scrollIndicators(.hidden)
+        .tracksScrolled($isScrolled)
         .background(Palette.page.ignoresSafeArea())
         .safeAreaInset(edge: .top, spacing: 0) {
-            ScreenHeader {
+            ScreenHeader(isScrolled: isScrolled) {
                 Text("Your plan")
                     .font(.geist(32, .regular, relativeTo: .largeTitle))
                     .tracking(-0.7)
@@ -53,7 +56,7 @@ struct PlanView: View {
     private var contributions: some View {
         let total = profile.employeeMonthlyCents + profile.employerMonthlyCents
         return VStack(alignment: .leading, spacing: 0) {
-            PlanSectionHeader(title: "Retirement contributions", symbol: "building.columns.fill") { store.sheet = .explanation }
+            PlanSectionHeader(title: "Retirement contributions") { store.sheet = .explanation }
                 .padding(.bottom, Space.m)
 
             HStack(alignment: .firstTextBaseline, spacing: Space.s) {
@@ -89,7 +92,7 @@ struct PlanView: View {
 
     private var cashPriorities: some View {
         VStack(alignment: .leading, spacing: 0) {
-            PlanSectionHeader(title: "Monthly cash priorities", symbol: "arrow.triangle.branch") { store.sheet = .explanation }
+            PlanSectionHeader(title: "Monthly cash priorities") { store.sheet = .explanation }
                 .padding(.bottom, Space.l)
 
             CashPriorityBand(priorities: profile.cashPriorities, height: 10)
@@ -115,7 +118,7 @@ struct PlanView: View {
         }
 
         return VStack(alignment: .leading, spacing: 0) {
-            PlanSectionHeader(title: PlanCopy.debtTitle(debt), symbol: "creditcard.fill", tint: Palette.blue) { store.sheet = .explanation }
+            PlanSectionHeader(title: PlanCopy.debtTitle(debt)) { store.sheet = .explanation }
                 .padding(.bottom, Space.m)
 
             HStack(alignment: .firstTextBaseline) {
@@ -151,7 +154,7 @@ struct PlanView: View {
         let beyond = profile.emergencyMonths - Double(profile.fullTargetMonths)
 
         return VStack(alignment: .leading, spacing: 0) {
-            PlanSectionHeader(title: "Emergency savings", symbol: "umbrella.fill", tint: Palette.positive) { store.sheet = .explanation }
+            PlanSectionHeader(title: "Emergency savings") { store.sheet = .explanation }
                 .padding(.bottom, Space.m)
 
             HStack(alignment: .firstTextBaseline) {
@@ -194,7 +197,7 @@ struct PlanView: View {
     private var allocation: some View {
         let stocks = profile.equityWeight
         return VStack(alignment: .leading, spacing: 0) {
-            PlanSectionHeader(title: "Target-date foundation", symbol: "chart.pie.fill") { store.sheet = .explanation }
+            PlanSectionHeader(title: "Target-date foundation") { store.sheet = .explanation }
                 .padding(.bottom, Space.l)
 
             HStack(spacing: Space.xxl) {
@@ -235,34 +238,29 @@ private enum PlanPalette {
 
 // MARK: - Pieces
 
-/// Icon badge stacked above a 19 pt Medium section title with a trailing **Why?** link.
+/// A 19 pt Medium section title with a trailing **Why?** link.
 private struct PlanSectionHeader: View {
     let title: String
-    let symbol: String
-    var tint: Color = Palette.accent
     let why: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Space.m) {
-            IconBadge(systemName: symbol, tint: tint)
-            HStack(alignment: .firstTextBaseline, spacing: Space.s) {
-                Text(title)
-                    .font(.geist(19, .medium, relativeTo: .title3))
-                    .foregroundStyle(Palette.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer(minLength: Space.s)
-                Button(action: why) {
-                    Text("Why?")
-                        .font(.geist(13, .medium, relativeTo: .subheadline))
-                        .foregroundStyle(Palette.accent)
-                        .frame(minWidth: 44, minHeight: 44, alignment: .trailing)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(PressableStyle())
-                .accessibilityLabel("Why? \(title)")
+        HStack(alignment: .firstTextBaseline, spacing: Space.s) {
+            Text(title)
+                .font(.geist(19, .medium, relativeTo: .title3))
+                .foregroundStyle(Palette.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: Space.s)
+            Button(action: why) {
+                Text("Why?")
+                    .font(.geist(13, .medium, relativeTo: .subheadline))
+                    .foregroundStyle(Palette.accent)
+                    .frame(minWidth: 44, minHeight: 44, alignment: .trailing)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(PressableStyle())
+            .accessibilityLabel("Why? \(title)")
         }
     }
 }

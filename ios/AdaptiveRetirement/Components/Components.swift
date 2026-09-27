@@ -55,8 +55,10 @@ struct AvatarView: View {
 // MARK: - Screen header (80 pt, fading, progressive blur)
 
 /// Matching navigation header for Overview / Plan / Explore.
-/// Content scrolls beneath; a 32 pt background-to-transparent fade with a subtle blur sits under it.
+/// Content scrolls beneath; a 32 pt background-to-transparent fade with a subtle blur sits under it
+/// once the content has scrolled (pass `isScrolled`, typically from `tracksScrolled(_:)`).
 struct ScreenHeader<Leading: View, Trailing: View>: View {
+    var isScrolled: Bool = true
     @ViewBuilder var leading: Leading
     @ViewBuilder var trailing: Trailing
 
@@ -93,15 +95,42 @@ struct ScreenHeader<Leading: View, Trailing: View>: View {
                 .padding(.bottom, -32)
                 .ignoresSafeArea(edges: .top)
                 .allowsHitTesting(false)
+                .opacity(isScrolled ? 1 : 0)
+                .animation(.easeOut(duration: 0.2), value: isScrolled)
             }
         }
     }
 }
 
 extension ScreenHeader where Leading == Text {
-    init(title: String, @ViewBuilder trailing: () -> Trailing) {
+    init(title: String, isScrolled: Bool = true, @ViewBuilder trailing: () -> Trailing) {
+        self.isScrolled = isScrolled
         self.leading = Text(title).font(TypeScale.title).foregroundStyle(Palette.textPrimary)
         self.trailing = trailing()
+    }
+}
+
+enum ScreenHeaderScroll {
+    static var isTrackable: Bool {
+        if #available(iOS 18.0, *) { true } else { false }
+    }
+}
+
+extension View {
+    /// Writes whether the scroll view has moved off its resting top, for `ScreenHeader`'s fade.
+    /// iOS 17 has no scroll-geometry callback, so the binding keeps its initial value there
+    /// (seed it with `!ScreenHeaderScroll.isTrackable` to keep the fade on).
+    @ViewBuilder
+    func tracksScrolled(_ isScrolled: Binding<Bool>) -> some View {
+        if #available(iOS 18.0, *) {
+            onScrollGeometryChange(for: Bool.self) { geometry in
+                geometry.contentOffset.y + geometry.contentInsets.top > 1
+            } action: { _, scrolled in
+                isScrolled.wrappedValue = scrolled
+            }
+        } else {
+            self
+        }
     }
 }
 
@@ -347,6 +376,39 @@ struct DataModeBadge: View {
     }
 }
 
+/// Live-calculation status beside the data badge: a spinner while a request is out, and a
+/// Retry control after a retryable failure (the previous result stays on screen).
+struct LiveStatusRow: View {
+    @EnvironmentObject private var store: AppStore
+
+    var body: some View {
+        HStack(alignment: .center, spacing: Space.s) {
+            DataModeBadge(mode: store.dataMode)
+            if store.evaluationLoad.isLoading {
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(Palette.textCaption)
+                    .accessibilityLabel("Updating live calculation")
+            }
+            Spacer(minLength: 0)
+            if store.retryableError != nil {
+                Button {
+                    store.refreshEvaluation()
+                } label: {
+                    Label("Retry", systemImage: "arrow.clockwise")
+                        .font(TypeScale.caption)
+                        .foregroundStyle(Palette.accent)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressableStyle())
+                .accessibilityHint("Couldn't reach the server. Showing the previous result.")
+            }
+        }
+        .animation(Motion.select, value: store.evaluationLoad.isLoading)
+    }
+}
+
 // MARK: - Sheet scaffold
 
 /// Platform sheet contents with a title and a circular glass close control.
@@ -516,25 +578,5 @@ struct GlassGroup<Content: View>: View {
         } else {
             content
         }
-    }
-}
-
-
-// MARK: - Icons
-
-/// A tinted SF Symbol in a small glass tile — leads section headers and rows.
-struct IconBadge: View {
-    let systemName: String
-    var tint: Color = Palette.accent
-    var size: CGFloat = 48
-
-    var body: some View {
-        Image(systemName: systemName)
-            .font(.system(size: size * 0.44, weight: .semibold))
-            .symbolRenderingMode(.hierarchical)
-            .foregroundStyle(tint)
-            .frame(width: size, height: size)
-            .glassSurface(RoundedRectangle(cornerRadius: size * 0.32, style: .continuous), tint: tint)
-            .accessibilityHidden(true)
     }
 }

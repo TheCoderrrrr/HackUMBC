@@ -20,6 +20,44 @@ enum ActiveSheet: String, Identifiable {
     var id: String { rawValue }
 }
 
+/// A backend evaluation plus where it came from, so labels never outlive their source.
+struct LoadedEvaluation {
+    let evaluation: API.Evaluation
+    let mode: DataMode
+
+    var origin: DecisionOrigin {
+        switch evaluation.decisionSummary.source {
+        case .rulesFallback: return .rules
+        case .ai: return mode == .saved ? .savedAI : .ai
+        }
+    }
+
+    func relabeled(_ mode: DataMode) -> LoadedEvaluation {
+        LoadedEvaluation(evaluation: evaluation, mode: mode)
+    }
+}
+
+/// FRONTEND.md §5 loading state. `previous` stays on screen during refresh and after failure.
+enum EvaluationLoad {
+    case idle
+    case loading(previous: LoadedEvaluation?)
+    case loaded(LoadedEvaluation)
+    case failed(previous: LoadedEvaluation?, error: Error)
+
+    var current: LoadedEvaluation? {
+        switch self {
+        case .idle: return nil
+        case .loading(let previous), .failed(let previous, _): return previous
+        case .loaded(let loaded): return loaded
+        }
+    }
+
+    var isLoading: Bool {
+        if case .loading = self { return true }
+        return false
+    }
+}
+
 /// Root presentation state. Holds no financial policy.
 @MainActor
 final class AppStore: ObservableObject {
@@ -33,17 +71,52 @@ final class AppStore: ObservableObject {
     /// Explore's "Drag to a date" hint shows once after onboarding.
     @Published var showsPlayheadHint = true
 
-    init() {
+    /// Backend evaluation for `profile`. `.idle` until a bundle or server supplies one.
+    @Published private(set) var evaluationLoad: EvaluationLoad = .idle
+    /// Public HTTPS base URL, e.g. the Cloudflare tunnel. Empty means saved data only.
+    @Published private(set) var serverBaseURL: String
+
+    static let serverBaseURLKey = "serverBaseURL"
+    /// Fixed ngrok domain used until someone saves a different URL (or an empty one for saved-only).
+    static let defaultServerBaseURL = "https://coral-sandbox-apron.ngrok-free.dev"
+
+    private let demo: DemoRepository
+    private var client: APIClient?
+    private var selectionGeneration = 0
+    private var evaluationTask: Task<Void, Never>?
+    private var lastLive: [String: LoadedEvaluation] = [:]
+    private var lastLiveDecision: (profileID: String, decisionID: String)?
+    private var serverProfiles: [String: API.FinancialProfile] = [:]
+
+    /// `client` overrides the URL-based client (previews and tests).
+    init(demo: DemoRepository = DemoRepository(), client: APIClient? = nil, defaults: UserDefaults = .standard) {
+        self.demo = demo
+        let url = defaults.string(forKey: Self.serverBaseURLKey) ?? Self.defaultServerBaseURL
+        self.serverBaseURL = url
+        self.client = client ?? LiveAPIClient(baseURLString: url)
         #if DEBUG
         applyDebugLaunchArguments()
         #endif
+        refreshEvaluation()
     }
 
     #if DEBUG
+    /// `-evaluationFixtures <dir>` treats `<dir>/evaluate-<profile>.response.json` (for example
+    /// the repo's `contracts/examples`) as the saved result, to preview engine data without a bundle.
+    private func debugFixtureEvaluation(for profileID: String) -> LoadedEvaluation? {
+        guard let dir = UserDefaults.standard.string(forKey: "evaluationFixtures") else { return nil }
+        let url = URL(fileURLWithPath: dir).appendingPathComponent("evaluate-\(profileID).response.json")
+        guard let data = try? Data(contentsOf: url),
+              let evaluation = try? JSONDecoder().decode(API.Evaluation.self, from: data),
+              evaluation.profileID == profileID else { return nil }
+        return LoadedEvaluation(evaluation: evaluation, mode: .saved)
+    }
+
     /// `-screen <name>` jumps straight to a screen for previews and screenshots:
     /// splash, profile, accounts, focus, result, overview, plan, explore,
     /// and sheet names (picker, snapshot, explanation, assumptions, accountPreview).
-    /// `-focus debt|cash|retirement`, `-profile morgan|jordan|casey`, `-hint 0`.
+    /// `-focus debt|cash|retirement`, `-profile morgan|jordan|casey`, `-hint 0`,
+    /// `-serverBaseURL https://…` (read in `init`), `-evaluationFixtures <dir>`.
     private func applyDebugLaunchArguments() {
         let defaults = UserDefaults.standard
         if let id = defaults.string(forKey: "profile"), let p = Profile.all.first(where: { $0.id == id }) { profile = p }
@@ -69,9 +142,120 @@ final class AppStore: ObservableObject {
     }
     #endif
 
+    /// What screens render: the fixture with the current evaluation applied, or the plain
+    /// `DemoData` fixture while `evaluationLoad` is `.idle`.
+    var displayProfile: Profile { profile.applying(evaluationLoad.current) }
+
+    /// Retryable failure to surface as a banner; nil while loading or when nothing can be retried.
+    var retryableError: APIError? {
+        guard case .failed(_, let error) = evaluationLoad, let api = error as? APIError, api.isRetryable else { return nil }
+        return api
+    }
+
     func select(_ profile: Profile) {
         guard profile.id != self.profile.id else { return }
         self.profile = profile
+        lastLiveDecision = nil
+        refreshEvaluation()
+    }
+
+    // MARK: Backend evaluation
+
+    var isLiveEnabled: Bool { client != nil }
+
+    /// Changing the server resets live state but keeps bundled profiles (FRONTEND.md §8).
+    /// Returns false, and changes nothing, unless the URL is empty or absolute HTTPS.
+    @discardableResult
+    func setServerBaseURL(_ string: String, defaults: UserDefaults = .standard) -> Bool {
+        let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newClient = LiveAPIClient(baseURLString: trimmed)
+        guard trimmed.isEmpty || newClient != nil else { return false }
+        serverBaseURL = trimmed
+        defaults.set(trimmed, forKey: Self.serverBaseURLKey)
+        client = newClient
+        lastLive = [:]
+        lastLiveDecision = nil
+        serverProfiles = [:]
+        refreshEvaluation()
+        return true
+    }
+
+    /// Shows the saved result immediately, then requests a live one if a server is configured.
+    func refreshEvaluation() {
+        selectionGeneration += 1
+        let generation = selectionGeneration
+        evaluationTask?.cancel()
+        let profileID = profile.id
+
+        let saved = savedEvaluation(for: profileID)
+        let previous = lastLive[profileID]?.relabeled(.lastLive) ?? saved
+        guard let client else {
+            evaluationLoad = saved.map(EvaluationLoad.loaded) ?? .idle
+            dataMode = saved?.mode ?? .saved
+            return
+        }
+        evaluationLoad = .loading(previous: previous)
+        dataMode = previous?.mode ?? .saved
+
+        evaluationTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let apiProfile = try await self.apiProfile(for: profileID, client: client)
+                let previousID = self.lastLiveDecision?.profileID == profileID ? self.lastLiveDecision?.decisionID : nil
+                let evaluation = try await client.evaluate(
+                    API.EvaluateRequest(profile: apiProfile, scenario: nil, previousDecisionID: previousID)
+                )
+                guard generation == self.selectionGeneration, evaluation.profileID == profileID else { return }
+                let loaded = LoadedEvaluation(evaluation: evaluation, mode: .live)
+                self.lastLive[profileID] = loaded
+                self.lastLiveDecision = (profileID, evaluation.decisionSummary.decisionID)
+                self.evaluationLoad = .loaded(loaded)
+                self.dataMode = .live
+            } catch {
+                guard generation == self.selectionGeneration, !Self.isCancellation(error) else { return }
+                self.evaluationLoad = .failed(previous: previous, error: error)
+                self.dataMode = previous?.mode ?? .saved
+            }
+        }
+    }
+
+    /// Live custom scenario for the current profile. Throws `APIError.unreachable` offline,
+    /// where the UI shows "Reconnect for a custom scenario" and offers saved presets instead.
+    func evaluateScenario(_ scenario: API.Scenario) async throws -> LoadedEvaluation {
+        guard let client else { throw APIError.unreachable }
+        let profileID = profile.id
+        let apiProfile = try await apiProfile(for: profileID, client: client)
+        let previousID = lastLiveDecision?.profileID == profileID ? lastLiveDecision?.decisionID : nil
+        let evaluation = try await client.evaluate(
+            API.EvaluateRequest(profile: apiProfile, scenario: scenario, previousDecisionID: previousID)
+        )
+        if profile.id == profileID {
+            lastLiveDecision = (profileID, evaluation.decisionSummary.decisionID)
+        }
+        return LoadedEvaluation(evaluation: evaluation, mode: .live)
+    }
+
+    /// Exact saved artifact, or nil until Eric's bundle is in `Resources/Demo/`.
+    func savedEvaluation(for profileID: String, preset: DemoPreset = .original) -> LoadedEvaluation? {
+        #if DEBUG
+        if preset == .original, let fixture = debugFixtureEvaluation(for: profileID) { return fixture }
+        #endif
+        guard let artifact = try? demo.artifact(profileID: profileID, preset: preset) else { return nil }
+        return LoadedEvaluation(evaluation: artifact.evaluation, mode: .saved)
+    }
+
+    private func apiProfile(for id: String, client: APIClient) async throws -> API.FinancialProfile {
+        if let bundled = try? demo.profiles()[id] { return bundled }
+        if serverProfiles.isEmpty {
+            let response = try await client.demoProfiles()
+            serverProfiles = Dictionary(response.profiles.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        }
+        guard let profile = serverProfiles[id] else { throw APIError.invalidResponse }
+        return profile
+    }
+
+    private static func isCancellation(_ error: Error) -> Bool {
+        error is CancellationError || (error as? APIError) == .cancelled
     }
 
     func finishOnboarding() {

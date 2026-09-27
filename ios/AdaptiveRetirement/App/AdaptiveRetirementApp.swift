@@ -37,6 +37,7 @@ struct RootView: View {
             }
         }
         .animation(Motion.respecting(reduceMotion, .easeInOut(duration: 0.35)), value: store.phase == .main)
+        .sensoryFeedback(trigger: store.phase) { _, new in new == .main ? .success : nil }
     }
 }
 
@@ -55,6 +56,7 @@ struct MainTabView: View {
                 .tabItem { Label("Explore", systemImage: "point.topleft.down.to.point.bottomright.curvepath") }
                 .tag(MainTab.explore)
         }
+        .sensoryFeedback(.selection, trigger: store.tab)
         .sheet(item: $store.sheet) { sheet in
             switch sheet {
             case .profilePicker: ProfilePickerSheet().presentationDetents([.large])

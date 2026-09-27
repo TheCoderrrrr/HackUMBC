@@ -109,8 +109,8 @@ float blob(float2 p, float2 c, float r) {
         float n = hash21(floor(position * scale / 0.75) + 0.5);
         float darkMask = step(n, 0.39);
         float lightMask = step(0.61, n);
-        col = mix(col, half3(0.0), half(darkMask * 0.11 * grain));
-        col = mix(col, half3(1.0), half(lightMask * 0.085 * grain));
+        col = mix(col, half3(0.0), half(darkMask * 0.045 * grain));
+        col = mix(col, half3(1.0), half(lightMask * 0.035 * grain));
     }
 
     return half4(col, 1.0h);
@@ -189,8 +189,8 @@ half3 ramp(float h, float t) {
         float n = hash21(floor(position * scale / 0.75) + 0.5);
         float darkMask = step(n, 0.39);
         float lightMask = step(0.61, n);
-        col = mix(col, half3(0.0), half(darkMask * 0.12 * grain));
-        col = mix(col, half3(1.0), half(lightMask * 0.09 * grain));
+        col = mix(col, half3(0.0), half(darkMask * 0.05 * grain));
+        col = mix(col, half3(1.0), half(lightMask * 0.035 * grain));
     }
 
     return half4(col, 1.0h);
