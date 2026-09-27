@@ -110,7 +110,7 @@ export const api = {
     send<PlanStyles>("/v1/plan-styles", { method: "POST", body: JSON.stringify({ profile }) }, REQUEST_TIMEOUT_MS, signal),
   history: {
     status: (signal?: AbortSignal) =>
-      send<HistoryStatus>("/v1/history/status", { method: "GET" }, REQUEST_TIMEOUT_MS, signal),
+      send<HistoryStatus>("/v1/history/status", { method: "GET" }, EVALUATION_TIMEOUT_MS, signal),
     /** Sends the inputs of a shown result; the server recomputes and stores its own numbers. */
     save: (evaluation: Evaluation, scenario: Scenario | null, style: PlanningPreference | null) =>
       send<{ run: RunSummary; created: boolean }>("/v1/history/runs", {
@@ -133,15 +133,15 @@ export const api = {
 };
 
 export function errorMessage(error: unknown): string {
-  if (!(error instanceof APIError)) return "Couldn't calculate this scenario.";
+  if (!(error instanceof APIError)) return "Something went wrong. Try again.";
   switch (error.kind) {
     case "server":
       return error.body?.message ?? "The server rejected this request.";
     case "timedOut":
-      return "The calculation took too long. Try again.";
+      return "The request took too long. Try again.";
     case "unreachable":
       return "Can't reach the backend. Saved results still work.";
     default:
-      return "Couldn't calculate this scenario.";
+      return "Something went wrong. Try again.";
   }
 }

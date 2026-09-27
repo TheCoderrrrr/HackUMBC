@@ -11,6 +11,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.errors import ApiError
+from app.limits import client_key
 from app.schemas import ErrorEnvelope
 
 
@@ -90,9 +91,12 @@ class EducationalAnswerOut(StrictModel):
 # Server-owned notes and links. Model output never controls citations.
 TOPICS = {
     "retirement_general": (
-        r"\b(retir(?:e|ement|ing)|saving for the future|long.term sav(?:e|ing|ings)|"
-        r"compound(?:ing)? interest|withdrawals?|pension|social security|"
-        r"diversif(?:y|ication)|inflation|time horizon|asset allocation|annuit(?:y|ies))\b",
+        r"\b(retir(?:e|ed|ee|ees|ement|ing)|saving for the future|long.term sav(?:e|ing|ings)|"
+        r"compound(?:ing)?(?: interest)?|withdrawals?|pension|social security|"
+        r"diversif(?:y|ication)|inflation|time horizon|asset allocation|annuit(?:y|ies)|"
+        r"index funds?|etfs?|hsa|health savings|rmds?|required minimum|"
+        r"rebalanc(?:e|ing)|mutual funds?|dollar.cost|stocks? vs\.? bonds?|"
+        r"vesting)\b",
         "Retirement planning connects saving, investment risk, time horizon, and eventual income needs. Rules and suitable choices depend on a person's circumstances.",
         "Retirement planning is the process of preparing savings and income for later life. The amount and approach depend on your goals, time horizon, and circumstances.",
         "Retirement Toolkit",
@@ -148,7 +152,8 @@ TOPICS = {
         "https://www.investor.gov/introduction-investing/investing-basics/glossary/mutual-funds-past-performance",
     ),
     "retirement_accounts": (
-        r"\b(401\s*\(?k\)?|ira|individual retirement account|roth|retirement account)\b",
+        r"\b(401\s*\(?k\)?|403\s*\(?b\)?|457(?:\s*\(?b\)?)?|ira|individual retirement account|"
+        r"roth|retirement account|workplace (?:retirement )?plan)\b",
         "A workplace retirement plan and an individual retirement account have different eligibility, investment menus, and tax rules.",
         "A workplace retirement plan is offered through an employer; an IRA is an individual retirement account. Their investment choices, contribution rules, and tax treatment can differ.",
         "Employer-Sponsored Plans",
@@ -163,8 +168,12 @@ SENSITIVE = re.compile(
     r"\b\d{3}-\d{2}-\d{4}\b|\b(?:\d[ -]*?){13,19}\b",
     re.IGNORECASE,
 )
-FOLLOWUP = re.compile(r"\b(it|that|this|more|why|how about)\b", re.IGNORECASE)
-UNSAFE_OUTPUT = re.compile(r"https?://|www\.|\b\d[\d,.]*\b", re.IGNORECASE)
+FOLLOWUP = re.compile(
+    r"\b(it|that|this|more|why|how about|mean|example|explain|again|elaborate)\b",
+    re.IGNORECASE,
+)
+# Reject invented links, dollar amounts, and percentages. Named plan types like 403(b) are allowed.
+UNSAFE_OUTPUT = re.compile(r"https?://|www\.|\$|\d[\d,.]*\s*%|\bpercent(?:age)?s?\b", re.IGNORECASE)
 IRA_SOURCE = EducationSource(
     title="Individual Retirement Accounts (IRAs)",
     url="https://www.investor.gov/introduction-investing/investing-basics/investment-accounts/tax-advantaged-accounts/retirement-savings/individual-retirement-accounts-iras",
@@ -201,12 +210,12 @@ def _response(topic: str, answer: str, mode: Literal["ai", "template"]) -> Educa
 
 @router.post("/chat", response_model=EducationChatResponse, responses=_ERRORS)
 def chat(body: EducationChatRequest, request: Request) -> EducationChatResponse:
-    if not request.app.state.education_limiter.allow():
+    if not request.app.state.education_limiter.allow(client_key(request)):
         raise ApiError(429, "RATE_LIMITED", "Too many chat requests. Try again in a minute.", retryable=True)
     topic = _topic(body.message, body.history)
     if topic == "out_of_scope":
         return EducationChatResponse(
-            answer="I can help explain emergency savings, workplace matches, debt APR, target-date funds, risk, fees, returns, and retirement accounts.",
+            answer="I can help explain retirement planning, emergency savings, workplace matches, debt APR, target-date funds, risk, fees, returns, and retirement accounts.",
             mode="template", topic=topic, sources=[],
         )
     note = TOPICS[topic][1]
@@ -229,7 +238,7 @@ def chat(body: EducationChatRequest, request: Request) -> EducationChatResponse:
             timeout_s=CHAT_TIMEOUT_SECONDS,
         )
         answer = EducationalAnswerOut.model_validate(generated).answer
-        if UNSAFE_OUTPUT.search(re.sub(r"\b401\s*\(?k\)?\b", "workplace plan", answer, flags=re.IGNORECASE)):
+        if UNSAFE_OUTPUT.search(answer):
             raise ValueError("Generated answer contains unsupported numerical claim or link")
         return _response(topic, answer, "ai")
     except Exception as exc:  # timeout, rate limit, provider failure, or invalid output

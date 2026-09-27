@@ -11,6 +11,11 @@ import time
 from collections import deque
 
 
+def client_key(request) -> str:
+    """Rate-limit bucket: the demo key when present, otherwise the caller's IP (C2)."""
+    return request.headers.get("x-demo-key") or (request.client.host if request.client else "unknown")
+
+
 class RateLimiter:
     def __init__(self, limit: int, window_seconds: float = 60.0, clock=time.monotonic):
         self.limit, self.window, self.clock = limit, window_seconds, clock

@@ -67,6 +67,8 @@ def test_general_retirement_question_and_followup_reach_model():
     assert followup.json()["mode"] == "ai"
     assert followup.json()["topic"] == "retirement_general"
     assert model.calls[1][1]["question"] == "Why does that matter?"
+    again = post(client, "What do you mean?", [{"role": "user", "content": "How does a retirement time horizon affect saving?"}])
+    assert again.json()["topic"] == "retirement_general"
 
 
 @pytest.mark.parametrize("failure", [AITimeout(), AIRateLimited(), RuntimeError("provider secret")])
@@ -84,11 +86,19 @@ def test_provider_failures_use_deterministic_template_and_safe_log(failure, capl
 @pytest.mark.parametrize("bad", [{"answer": " "}, {"answer": "x" * 901},
                                  {"answer": "Yes", "extra": 1}, {"answer_id": "basic"},
                                  {"answer": "Current return is 9%."},
-                                 {"answer": "See https://fake.example/info"}])
+                                 {"answer": "See https://fake.example/info"},
+                                 {"answer": "A typical return is $1,000."}])
 def test_invalid_or_unsupported_model_answer_falls_back(bad):
     response = post(make_client(ChatModel(bad)), "What is an expense ratio?")
     assert response.json()["mode"] == "template"
     assert response.json()["answer"] == TOPICS["fees"][2]
+
+
+def test_named_plan_types_in_generated_answer_are_allowed():
+    answer = "A 403(b) is a workplace plan similar to a 401(k), often offered by schools and nonprofits."
+    response = post(make_client(ChatModel(answer)), "What is a 403(b)?")
+    assert response.json()["mode"] == "ai"
+    assert response.json()["answer"] == answer
 
 
 def test_disabled_model_uses_template():
@@ -115,6 +125,8 @@ def test_input_limits_and_unknown_fields(body, path):
     ("What does risk tolerance mean?", "risk"),
     ("Are historical returns a forecast?", "historical_vs_hypothetical"),
     ("What is an IRA?", "retirement_accounts"),
+    ("What is a 403(b)?", "retirement_accounts"),
+    ("What is an index fund?", "retirement_general"),
     ("How is the weather?", "out_of_scope"),
 ])
 def test_topic_matching_and_out_of_scope(message, topic):

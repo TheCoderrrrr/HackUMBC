@@ -44,6 +44,7 @@ struct RootView: View {
 struct MainTabView: View {
     @EnvironmentObject private var store: AppStore
     @State private var chatMessages: [EducationMessage] = []
+    @State private var chatDraft = ""
 
     var body: some View {
         TabView(selection: $store.tab) {
@@ -86,7 +87,7 @@ struct MainTabView: View {
             case .explanation: ExplanationSheet().presentationDetents([.large])
             case .assumptions: AssumptionsSheet().presentationDetents([.medium, .large])
             case .accountPreview: AccountPreviewSheet().presentationDetents([.large])
-            case .educationChat: EducationChatView(messages: $chatMessages).presentationDetents([.large])
+            case .educationChat: EducationChatView(messages: $chatMessages, draft: $chatDraft).presentationDetents([.large])
             }
         }
     }

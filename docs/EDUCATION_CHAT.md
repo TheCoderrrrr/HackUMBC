@@ -1,6 +1,6 @@
 # Educational chat
 
-The retirement-learning chat opens from the floating **Ask** button on every desktop and iPhone tab. Closing the panel or sheet keeps the conversation in memory while the app remains open. It explains emergency savings, employer matching, debt APR, target-date funds, investment risk, fund fees, historical versus hypothetical returns, and 401(k)/IRA basics. It is separate from `/v1/evaluate` and the fund shortlist; it does not recalculate a plan or choose investments.
+The retirement-learning chat opens from the floating **Ask** button on every desktop and iPhone tab. Closing the panel or sheet keeps the conversation in memory while the app remains open. It explains retirement planning, emergency savings, employer matching, debt APR, target-date funds, investment risk, fund fees, historical versus hypothetical returns, and 401(k)/403(b)/IRA basics. It is separate from `/v1/evaluate` and the fund shortlist; it does not recalculate a plan or choose investments.
 
 ## API
 

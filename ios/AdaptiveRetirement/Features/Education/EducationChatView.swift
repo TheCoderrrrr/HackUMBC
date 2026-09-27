@@ -39,7 +39,7 @@ struct EducationChatView: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
     @Binding var messages: [EducationMessage]
-    @State private var draft = ""
+    @Binding var draft: String
     @State private var isSending = false
     @State private var errorMessage: String?
     @State private var requestTask: Task<Void, Never>?
@@ -234,7 +234,8 @@ struct EducationChatView: View {
     private func ask(_ text: String) {
         let question = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty, question.count <= 500, !isSending else { return }
-        guard let base = URL(string: store.serverBaseURL), base.scheme == "https" else {
+        guard let base = URL(string: store.serverBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)),
+              base.scheme == "https" else {
             errorMessage = "Connect to the backend to ask a question."
             return
         }
