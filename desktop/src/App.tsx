@@ -1,6 +1,8 @@
+import { useCallback, useState } from "react";
 import { Avatar, Icon, LiveStatus, PROFILE_SUBTITLE } from "./components/ui";
 import { Drawers } from "./views/Drawers";
 import { Explore } from "./views/Explore";
+import { Chat } from "./views/Chat";
 import { Funds } from "./views/Funds";
 import { Overview } from "./views/Overview";
 import { Plan } from "./views/Plan";
@@ -16,6 +18,8 @@ const TABS: { id: Tab; title: string; icon: string }[] = [
 
 export function App() {
   const { tab, display, profile, load, setDrawer } = useStore();
+  const [chatOpen, setChatOpen] = useState(false);
+  const closeChat = useCallback(() => setChatOpen(false), []);
 
   return (
     <div className="app">
@@ -48,6 +52,10 @@ export function App() {
         </div>
       </main>
       {display && <Drawers display={display} />}
+      <button className="chat-launcher" type="button" onClick={() => setChatOpen(true)} aria-label="Ask a retirement question" aria-haspopup="dialog" aria-expanded={chatOpen}>
+        <Icon name="chat" /> Ask
+      </button>
+      <Chat open={chatOpen} onClose={closeChat} />
     </div>
   );
 }
