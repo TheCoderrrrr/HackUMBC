@@ -111,8 +111,9 @@ def load_settings() -> Settings:
         ai_reasoning_effort=effort,
         gemini_api_key=_str("GEMINI_API_KEY", None),
         ai_thinking_level=None if thinking == "none" else thinking,
-        # The whole AI pipeline must finish well inside the iOS request timeout.
-        ai_total_timeout_seconds=_number("AI_TOTAL_TIMEOUT_SECONDS", 4.0, 0.5, IOS_TIMEOUT_SECONDS - 1),
+        # The whole AI pipeline must finish well inside the iOS request timeout, leaving
+        # ~3 s for tunnel + transfer overhead (measured 2–4.5 s end to end, REPORT A6).
+        ai_total_timeout_seconds=_number("AI_TOTAL_TIMEOUT_SECONDS", 4.0, 0.5, IOS_TIMEOUT_SECONDS - 3),
         plaid_enabled=_bool("PLAID_ENABLED", False),
         decision_ttl_seconds=_number("SESSION_TTL_SECONDS", 7200, 60, 86400, cast=int),
     )

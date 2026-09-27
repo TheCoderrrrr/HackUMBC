@@ -1,6 +1,6 @@
 # Backend Team Split
 
-This document assigns the three backend workstreams for the Adaptive Retirement prototype. The team is building one Python service; the same deterministic engine must power the live API and the saved offline demo.
+This document assigns the three backend workstreams for the Adaptive Retirement Management (ARM) prototype. The team is building one Python service; the same deterministic engine must power the live API and the saved offline demo.
 
 ## Shared rules
 

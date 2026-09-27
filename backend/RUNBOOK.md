@@ -1,6 +1,6 @@
 # Backend Runbook (Developer A)
 
-How to run, expose, check and recover the Adaptive Retirement API for the demo. The
+How to run, expose, check and recover the Adaptive Retirement Management (ARM) API for the demo. The
 backend runs on a teammate's laptop and reaches the iPhone through an ngrok HTTPS
 tunnel on a fixed free domain, so the URL never changes (a Cloudflare quick tunnel
 also works, but its URL changes on every restart).
