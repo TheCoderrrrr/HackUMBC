@@ -10,7 +10,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white) ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?style=for-the-badge&logo=fastapi&logoColor=white) ![Gemini](https://img.shields.io/badge/Gemini-Flash_Lite-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white) ![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS_17+-0D96F6?style=for-the-badge&logo=swift&logoColor=white)
 <br/>
-![Tests](https://img.shields.io/badge/backend_tests-320_passing-2EA44F?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-1D4ED8?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-6366F1?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_only-6B7280?style=flat-square)
+![Tests](https://img.shields.io/badge/backend_tests-341_passing-2EA44F?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-1D4ED8?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-6366F1?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_only-6B7280?style=flat-square)
 
 **HackUMBC 2026** · University of Maryland, Baltimore County
 
@@ -160,7 +160,7 @@ flowchart LR
 
 | Area | Status | Owner |
 |---|---|---|
-| API, contracts, Gemini AI pipeline | ✅ Done | Developer A |
+| API, contracts, AI pipeline (OpenAI or Gemini) | ✅ Done | Developer A |
 | Financial state, policy, validation | ✅ Done | Developer B |
 | Monthly simulation and evaluator | ✅ Done | Developer C |
 | Saved AI decisions and offline demo bundle | 🟡 In progress | Developer C |
@@ -178,17 +178,17 @@ cd backend
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements-test.txt
-cp .env.example .env               # optional: add GEMINI_API_KEY for live AI
+cp .env.example .env               # optional: add OPENAI_API_KEY (or GEMINI_API_KEY) for live AI
 uvicorn app.main:app --port 8000
 ```
 
 ```bash
 python scripts/smoke.py            # checks health, profiles, evaluations and errors
-pytest                             # 320 backend tests
+pytest                             # 341 backend tests
 ```
 
 > [!NOTE]
-> **No API key? It still works.** Without `GEMINI_API_KEY`, every response uses the rules fallback and is labeled that way. The phone reaches the laptop through a Cloudflare tunnel; see [`backend/RUNBOOK.md`](backend/RUNBOOK.md).
+> **No API key? It still works.** Without a key for the selected `AI_PROVIDER`, every response uses the rules fallback and is labeled that way. The phone reaches the laptop through a Cloudflare tunnel; see [`backend/RUNBOOK.md`](backend/RUNBOOK.md).
 
 <details>
 <summary><b>🔌 API surface</b></summary>
@@ -211,12 +211,12 @@ Money is integer USD cents; rates are decimals (`0.05` = 5%). The full schema is
 backend/
   app/
     main.py, api.py, schemas.py      API, routes and the shared contract
-    ai/                              Gemini client, prompts, pipeline, circuit breaker
+    ai/                              OpenAI/Gemini clients, prompts, pipeline, circuit breaker
     engine/                          state, policy, simulation, evaluator
     engine_port.py                   the one seam between API and engine
   scripts/                           contracts export, smoke test, demo export
   fixtures/                          Jordan, Morgan, Casey (+ Morgan cash-security)
-  tests/                             320 tests
+  tests/                             341 tests
 contracts/                           OpenAPI + example payloads for iOS
 BACKEND.md · FRONTEND.md             full specifications
 ```
@@ -231,7 +231,7 @@ BACKEND.md · FRONTEND.md             full specifications
 | iPhone app | Swift, SwiftUI, Swift Charts, iOS 17+ |
 | Backend | Python 3.12, FastAPI, Pydantic, Uvicorn |
 | Financial engine | Pure Python, `Decimal` cents, deterministic monthly simulation |
-| AI | Gemini 3.5 Flash-Lite via `google-genai`, structured output, backend only |
+| AI | OpenAI GPT-6 Luna (default) or Gemini 3.5 Flash-Lite via `google-genai`, structured output, backend only |
 | Hosting | A teammate's laptop + Cloudflare quick tunnel |
 
 </details>
@@ -256,8 +256,19 @@ What's still to build between Developer A (Neil) and Developer C (Eric). Everyth
 
 ### Neil (Developer A)
 
-1. **Urgent: revoke the Gemini key committed in `backend/.env.example`** (PR #12). Deleting the line isn't enough, because the key stays in git history. Revoke it in Google AI Studio, remove it from `.env.example`, and keep real keys only in the git-ignored `backend/.env`.
-2. **Measure live latency** with `AI_REASONING_EFFORT=low` (or `none`) against the 4-second budget for both calls.
+1. ~~Revoke the Gemini key committed in `backend/.env.example`~~ **Done:** the key is revoked and `.env.example` is empty. It still exists in git history, but it no longer works. Keep real keys only in the git-ignored `backend/.env`.
+2. **Measure live latency against the 4-second budget. Done for Gemini; OpenAI still to measure.** Run: 15 live `POST /v1/evaluate` calls (5 each for Jordan, Morgan and Casey), `gemini-3.5-flash-lite`, `AI_THINKING_LEVEL=minimal`, 2026-09-26.
+
+   | Measure | Median | Slowest |
+   |---|---|---|
+   | Recommendation call | 1.5 s | 1.8 s |
+   | Explanation call | 0.9 s | 1.4 s |
+   | Whole request, both calls ran (8 requests) | 2.6 s | 3.1 s |
+
+   - Every request that reached the AI finished inside the 4-second budget, with at least 0.9 s to spare. None timed out.
+   - One of 8 AI explanations was rejected for containing numbers and replaced with the template, as designed.
+   - The limit that bites is the Gemini rate limit, not speed. The ninth request got `RATE_LIMITED` after about 17 calls in roughly 30 seconds. The breaker then returned `AI_COOLDOWN` fallbacks in about 0.1 s each, labeled honestly.
+   - Still to do: repeat with OpenAI (`AI_REASONING_EFFORT=low`, then `none`) once an `OPENAI_API_KEY` is available.
 
 Done in PR #12: the OpenAI client (`OpenAIModel`, `build_model`), provider configuration, the `openai` pin, and guards for every name C relies on (`Evaluation`, `permitted_orders`, `explanation_facts`, `OpenAIModel`, `build_model`).
 
