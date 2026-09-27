@@ -48,7 +48,8 @@ def save_run(body: SaveRunRequest, request: Request, response: Response) -> Save
     store = _store(request)
     if not request.app.state.evaluate_limiter.allow(client_key(request)):
         raise ApiError(429, "RATE_LIMITED", "Too many requests. Try again in a minute.", retryable=True)
-    record = service.build_run(body.profile_id, body.scenario, body.decision_summary, body.input_hash)
+    record = service.build_run(body.profile_id, body.scenario, body.decision_summary, body.input_hash,
+                               body.planning_preference)
     try:
         run, created = store.save(record)
     except HistoryUnavailable:

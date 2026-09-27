@@ -33,7 +33,7 @@ function sourceLabel(run: RunSummary): string {
 }
 
 export function History({ shown }: { shown: Shown }) {
-  const { liveEnabled, profile } = useStore();
+  const { liveEnabled, profile, style } = useStore();
   const [state, setState] = useState<State>({ kind: "checking" });
   const [runs, setRuns] = useState<RunSummary[]>([]);
   const [pick, setPick] = useState<{ base: string | null; other: string | null }>({ base: null, other: null });
@@ -93,7 +93,7 @@ export function History({ shown }: { shown: Shown }) {
     setSaving(true);
     setMessage(null);
     try {
-      const { run, created } = await api.history.save(shown.evaluation, shown.scenario);
+      const { run, created } = await api.history.save(shown.evaluation, shown.scenario, style);
       setMessage(created ? `Saved “${run.label}”.` : `“${run.label}” is already in history.`);
       await loadRuns(run.run_id);
     } catch (error) {
