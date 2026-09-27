@@ -43,6 +43,7 @@ struct RootView: View {
 
 struct MainTabView: View {
     @EnvironmentObject private var store: AppStore
+    @State private var chatMessages: [EducationMessage] = []
 
     var body: some View {
         TabView(selection: $store.tab) {
@@ -59,6 +60,24 @@ struct MainTabView: View {
                 .tabItem { Label("Funds", systemImage: "chart.pie") }
                 .tag(MainTab.funds)
         }
+        .overlay(alignment: .bottomTrailing) {
+            Button {
+                store.sheet = .educationChat
+            } label: {
+                Label("Ask", systemImage: "bubble.left.and.text.bubble.right")
+                    .font(TypeScale.labelMedium)
+                    .foregroundStyle(Palette.accent)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 13)
+                    .background(Palette.sheet, in: Capsule())
+                    .overlay { Capsule().stroke(Palette.hairline, lineWidth: 1) }
+                    .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
+            }
+            .accessibilityLabel("Ask a retirement question")
+            .padding(.trailing, Space.gutter)
+            .padding(.bottom, 60)
+            .ignoresSafeArea(.keyboard)
+        }
         .sensoryFeedback(.selection, trigger: store.tab)
         .sheet(item: $store.sheet) { sheet in
             switch sheet {
@@ -67,6 +86,7 @@ struct MainTabView: View {
             case .explanation: ExplanationSheet().presentationDetents([.large])
             case .assumptions: AssumptionsSheet().presentationDetents([.medium, .large])
             case .accountPreview: AccountPreviewSheet().presentationDetents([.large])
+            case .educationChat: EducationChatView(messages: $chatMessages).presentationDetents([.large])
             }
         }
     }

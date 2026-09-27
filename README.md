@@ -8,7 +8,7 @@
 
 <img src="./assets/hero.svg" width="100%" alt="A target-date fund plans from your birth year alone, so everyone that age gets the same plan. ARM uses your income, debt, savings and employer match to show how much to save, where it goes and what it builds." />
 
-![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=FFD43B) ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?style=flat-square&logo=fastapi&logoColor=white) ![OpenAI](https://img.shields.io/badge/OpenAI-GPT--6_Luna-412991?style=flat-square&logo=openai&logoColor=white) ![Gemini](https://img.shields.io/badge/Gemini-Flash_Lite-8E75B2?style=flat-square&logo=googlegemini&logoColor=white) ![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS_17+-F05138?style=flat-square&logo=swift&logoColor=white) ![Tests](https://img.shields.io/badge/tests-341_passing-22C55E?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-2563EB?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-EC4899?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_only-0EA5E9?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=FFD43B) ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?style=flat-square&logo=fastapi&logoColor=white) ![Gemini](https://img.shields.io/badge/Gemini-Flash_Lite-8E75B2?style=flat-square&logo=googlegemini&logoColor=white) ![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS_17+-F05138?style=flat-square&logo=swift&logoColor=white) ![Tests](https://img.shields.io/badge/tests-341_passing-22C55E?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-2563EB?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-EC4899?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_only-0EA5E9?style=flat-square)
 
 <sub><b>HackUMBC 2026</b> · University of Maryland, Baltimore County</sub>
 
@@ -332,10 +332,11 @@ docs/                                specifications, handoffs and runbook
 What's still to build between Developer A (Neil) and Developer C (Eric). Everything else each side asked for is on `main`.
 
 **Team decision (resolved):** the default provider is **Gemini 3.5 Flash-Lite** (`AI_PROVIDER=gemini`, `AI_THINKING_LEVEL=minimal`) — per the [⚡ Speed](#-speed) measurements, it is the option where **both** AI calls fit the 4-second budget. OpenAI GPT-6 Luna remains available (`AI_PROVIDER=openai`); with its default effort `low` every recommendation times out, so it only fits with `AI_REASONING_EFFORT=none`, and most explanations then fall back to templates. The budget stays at 4 s: raising it toward 7 s would push tunnel requests past the app's 8-second timeout (REPORT A6). `/health` now reports `ai_available`, and `smoke.py` warns when live AI is off.
+ The same Gemini model answers the educational chat, which has its own 12-second deadline and sends the question plus recent chat history (see [`docs/EDUCATION_CHAT.md`](docs/EDUCATION_CHAT.md)).
 
 ### Neil (Developer A)
 
-1. **Put `GEMINI_API_KEY` on the one demo host** (the laptop from the A2 domain decision). The Gemini free tier rate-limits bursts (about 17 calls in 30 s), so avoid hammering it during rehearsal; the rules fallback is labeled and demo-safe.
+1. **Put `GEMINI_API_KEY` on the one demo host** (the laptop from the A2 domain decision). The Gemini free tier rate-limits bursts (about 17 calls in 30 s), so avoid hammering it during rehearsal; the rules fallback is labeled and demo-safe. Restart the backend after changing provider settings.
 
 ### Eric (Developer C)
 

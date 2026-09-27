@@ -92,7 +92,7 @@ evaluate(profile, scenario, validated_decision) -> Evaluation
 
 AI orchestration runs before the pure evaluator. API and exporter call the same evaluator with a validated decision. The exporter reads committed decision fixtures; it never makes live model calls. Routers and the Plaid adapter contain no financial policy. Swift does not duplicate the engine.
 
-Use the raw Anthropic or OpenAI Python SDK for the two fixed, single-shot agent calls, with Pydantic models for `DecisionSummary` and `AIExplanation`. Instructor may wrap the SDK for schema validation and retry-on-failure during fixture preparation; the interactive path has no automatic retries. Do not add LangChain, CrewAI, AutoGen, LangGraph, or another autonomous-agent orchestration framework. The two calls do not loop and share one hard total timeout.
+Use the raw Anthropic or OpenAI Python SDK for the two fixed, single-shot evaluation agent calls, with Pydantic models for `DecisionSummary` and `AIExplanation`. Instructor may wrap the SDK for schema validation and retry-on-failure during fixture preparation; the interactive path has no automatic retries. Do not add LangChain, CrewAI, AutoGen, LangGraph, or another autonomous-agent orchestration framework. The two evaluation calls do not loop and share one hard total timeout. A later, separate educational chat route is documented in [EDUCATION_CHAT.md](EDUCATION_CHAT.md).
 
 `POST /v1/evaluate` remains one synchronous request returning one `Evaluation` with both `decision_summary` and `explanation`. Do not split explanation into a second endpoint, polling, or streaming; `PlanViewModel` loads the evaluation in one call.
 

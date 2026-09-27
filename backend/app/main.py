@@ -16,6 +16,7 @@ from app.analytics.store import HistoryStore, build_history_store
 from app.api import router
 from app.config import Settings, load_settings
 from app.decisions import DecisionStore
+from app.education import router as education_router
 from app.errors import envelope, install_error_handlers
 from app.fund_api import router as fund_router
 from app.limits import RateLimiter
@@ -36,6 +37,8 @@ def create_app(settings: Settings | None = None, model: StructuredModel | None =
     app.add_middleware(GZipMiddleware, minimum_size=1024)
     app.state.settings = settings
     app.state.evaluate_limiter = RateLimiter(settings.evaluations_per_minute)
+    app.state.education_limiter = RateLimiter(30)
+    app.state.education_model = model
     app.state.pipeline = EvaluationPipeline(
         settings, model, DecisionStore(settings.decision_store_size, settings.decision_ttl_seconds)
     )
@@ -78,6 +81,7 @@ def create_app(settings: Settings | None = None, model: StructuredModel | None =
 
     app.include_router(router)
     app.include_router(fund_router)
+    app.include_router(education_router)
     app.include_router(history_router)
     log.info("AI %s (provider=%s, model=%s)", "enabled" if model else "disabled: rules fallback",
              settings.ai_provider, settings.ai_model)

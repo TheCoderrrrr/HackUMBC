@@ -27,6 +27,7 @@ Install the tunnel (macOS `brew install ngrok`; Windows `winget install ngrok.ng
 Recommended `.env` for the demo:
 
 ```bash
+AI_PROVIDER=gemini
 AI_MODEL=gemini-3.5-flash-lite
 AI_THINKING_LEVEL=minimal
 AI_TOTAL_TIMEOUT_SECONDS=4

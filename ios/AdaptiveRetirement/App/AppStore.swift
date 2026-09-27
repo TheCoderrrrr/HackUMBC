@@ -16,7 +16,7 @@ enum MainTab: Hashable {
 }
 
 enum ActiveSheet: String, Identifiable {
-    case profilePicker, snapshot, explanation, assumptions, accountPreview
+    case profilePicker, snapshot, explanation, assumptions, accountPreview, educationChat
     var id: String { rawValue }
 }
 

@@ -36,7 +36,7 @@ The backend owns financial calculations. Swift formats and displays results; it 
 
 - No readiness score, probability of success, or guaranteed retirement-income number.
 - No automatic allocation adjustment based on debt or assets.
-- No on-device LLM, chatbot, trading, authentication accounts, or production bank credentials. AI calls run on the backend.
+- No on-device LLM, trading, authentication accounts, or production bank credentials. AI calls run on the backend. The later educational chat addition is documented in [EDUCATION_CHAT.md](EDUCATION_CHAT.md).
 - No independent debt-payment slider. Contribution changes must affect other priorities.
 - Plaid Sandbox is conditional stretch work, not the main demo entry point.
 - No second financial engine in Swift.
