@@ -57,7 +57,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const id = stored("profile", "morgan");
     return profiles.some((p) => p.id === id) ? id : profiles[0].id;
   });
-  const [tab, setTab] = useState<Tab>(() => stored<Tab>("tab", "overview"));
+  const [tab, setTab] = useState<Tab>(() => {
+    const saved = localStorage.getItem("tab");
+    return saved === "plan" || saved === "explore" || saved === "funds" ? saved : "overview";
+  });
   const [drawer, setDrawer] = useState<Drawer>(null);
   const [liveEnabled, setLiveEnabledState] = useState(() => stored("live", "on") === "on");
   const [load, setLoad] = useState<Load>({ status: "idle" });

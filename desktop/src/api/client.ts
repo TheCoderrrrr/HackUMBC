@@ -6,7 +6,16 @@ import type {
 /** Relative to the page; the Vite dev server forwards `/api/*` to the backend. */
 const BASE = "/api";
 export const EVALUATION_TIMEOUT_MS = 8000;
+const CHAT_TIMEOUT_MS = 16000;
 const REQUEST_TIMEOUT_MS = 5000;
+
+export type EducationTurn = { role: "user" | "assistant"; content: string };
+export type EducationReply = {
+  answer: string;
+  mode: "ai" | "template";
+  topic: string;
+  sources: { title: string; url: string }[];
+};
 
 export type APIErrorKind = "timedOut" | "cancelled" | "unreachable" | "server" | "unexpectedStatus" | "invalidResponse";
 
@@ -91,6 +100,10 @@ export const api = {
     send<CatalogSummary>("/v1/funds/catalog", { method: "GET" }, REQUEST_TIMEOUT_MS, signal),
   fundShortlist: (query: FundShortlistQuery, signal?: AbortSignal) =>
     send<FundShortlistEnvelope>("/v1/funds/shortlist", { method: "POST", body: JSON.stringify(query) }, REQUEST_TIMEOUT_MS, signal),
+  educationChat: (message: string, history: EducationTurn[], signal?: AbortSignal) =>
+    send<EducationReply>("/v1/education/chat", {
+      method: "POST", body: JSON.stringify({ message, history: history.slice(-4) }),
+    }, CHAT_TIMEOUT_MS, signal),
   history: {
     status: (signal?: AbortSignal) =>
       send<HistoryStatus>("/v1/history/status", { method: "GET" }, REQUEST_TIMEOUT_MS, signal),
