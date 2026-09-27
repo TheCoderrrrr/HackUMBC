@@ -10,10 +10,10 @@ import pytest
 
 from app.ai.client import AIRateLimited
 from app.ai.prompts import PROMPT_VERSION, ExplanationOut, RecommendationOut
-from app.engine_port import permitted_orders as live_permitted_orders
+from app.ai.client import OpenAIModel
 from app.schemas import FinancialProfile
 from scripts.export_demo import ExportError, export_bundle
-from scripts.prepare_decisions import VARIANT_ORDER, PrepareError, load_profiles, permitted_orders, prepare
+from scripts.prepare_decisions import VARIANT_ORDER, PrepareError, load_profiles, model_from_settings, prepare
 
 PROFILES = Path(__file__).parents[1] / "fixtures" / "profiles.json"
 ORDER = re.compile(r'\["[a-z_]+", "[a-z_]+", "[a-z_]+"\]')
@@ -42,6 +42,7 @@ class ScriptedModel:
         self.explanation = explanation
         self.failures = list(failures)  # exceptions raised by the first calls, in order
         self.prompts: list[str] = []
+        self.explain_prompts: list[str] = []
 
     def choose(self, prompt):
         return VARIANT_ORDER if "'cash_security'" in prompt else json.loads(ORDER.findall(prompt)[0])
@@ -52,6 +53,7 @@ class ScriptedModel:
         if issubclass(schema, RecommendationOut):
             self.prompts.append(prompt)
             return recommendation(self.choose(prompt)), "test-only-model-001"
+        self.explain_prompts.append(prompt)
         return ExplanationOut(state_summary="TEST ONLY summary without figures.", narrative=self.explanation), None
 
 
@@ -83,14 +85,17 @@ def test_prepared_fixture_exports_a_valid_deterministic_bundle():
             assert path.read_bytes() == (tmp / "b" / path.name).read_bytes(), path.name
 
 
-def test_prompt_offers_the_same_orders_as_the_live_api():
-    for profile in load_profiles(PROFILES).values():
-        assert permitted_orders(profile.model_dump(mode="json")) == live_permitted_orders(profile)
+def test_prompts_match_the_live_api_and_carry_no_identifiers():
     model = ScriptedModel()
     prepare(model, PROFILES)
-    assert len(model.prompts) == 4
-    for prompt in model.prompts:
+    assert len(model.prompts) == 4 and len(model.explain_prompts) == 10
+    for prompt in model.prompts:  # A's permitted_orders: all three documented orders
         assert len(ORDER.findall(prompt)) == 3
+    for prompt in [*model.prompts, *model.explain_prompts]:
+        for identifier in ("Morgan", "Jordan", "Casey", "morgan-card", "jordan-student"):
+            assert identifier not in prompt
+    for prompt in model.explain_prompts:  # A's explanation_facts for an initial plan
+        assert '"is_initial_plan": true' in prompt and '"changes": []' in prompt
 
 
 def test_unreviewed_fixture_is_refused():
@@ -151,3 +156,23 @@ def test_draft_export_skips_review_marks_only_in_the_draft_folder():
 
 def test_profiles_parse_with_the_shared_schema():
     assert all(isinstance(p, FinancialProfile) for p in load_profiles(PROFILES).values())
+
+
+def test_model_comes_from_the_selected_provider(monkeypatch):
+    monkeypatch.setenv("AI_ENABLED", "true")
+    monkeypatch.setenv("AI_PROVIDER", "openai")
+    monkeypatch.setenv("AI_MODEL", "gpt-6-luna")
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    assert model_from_settings() == "OPENAI_API_KEY is not set in backend/.env (AI_PROVIDER=openai)"
+
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-only")
+    model = model_from_settings()
+    assert isinstance(model, OpenAIModel) and model.model_id == "gpt-6-luna"
+
+    monkeypatch.setenv("AI_PROVIDER", "gemini")
+    monkeypatch.setenv("AI_MODEL", "gemini-3.5-flash-lite")
+    monkeypatch.setenv("GEMINI_API_KEY", "")
+    assert model_from_settings() == "GEMINI_API_KEY is not set in backend/.env (AI_PROVIDER=gemini)"
+
+    monkeypatch.setenv("AI_ENABLED", "false")
+    assert "AI_ENABLED is false" in model_from_settings()
