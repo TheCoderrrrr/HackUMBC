@@ -141,7 +141,7 @@ struct PlanView: View {
             }
             .padding(.bottom, Space.l)
 
-            Footnote(text: PlanCopy.debtNote(debt))
+            Footnote(text: PlanCopy.debtNote(for: profile, debt: debt))
         }
     }
 
@@ -536,16 +536,32 @@ enum PlanCopy {
         debt.name == "Credit card" ? "Credit card debt" : debt.name
     }
 
-    static func debtNote(_ debt: Debt) -> String {
-        debt.extraCents > 0
+    /// What follows high-APR debt in the validated priority order drives the note, so the
+    /// copy can't contradict the engine's decision (REPORT B3).
+    static func debtNote(for profile: Profile, debt: Debt) -> String {
+        if let order = profile.evaluation?.decisionSummary.orderedPriorities,
+           let debtIndex = order.firstIndex(of: .highAprDebt) {
+            switch order.dropFirst(debtIndex + 1).first {
+            case .starterReserve:
+                return "After this debt is paid off, build your starter reserve next."
+            case .fullReserve:
+                return "After this debt is paid off, rebuild savings before increasing contributions."
+            case nil:
+                return "After this debt is paid off, contributions can increase."
+            case .highAprDebt:
+                break  // unreachable: priorities are unique
+            }
+        }
+        return debt.extraCents > 0
             ? "After this debt is paid off, rebuild savings before increasing contributions."
             : "At \(OverviewCopy.percent(debt.apr)) APR, the minimum payment keeps this on schedule without slowing saving."
     }
 
-    /// "Sep 2028" from Explore's illustrative timeline, when it marks this plan's payoff.
+    /// The payoff date only when it comes from the engine's adaptive projection; otherwise
+    /// the stat is hidden — never a hard-coded date (REPORT B5).
     static func debtCleared(for profile: Profile, debt: Debt) -> String? {
         guard debt.extraCents > 0,
-              let month = ExploreTimeline.illustrative(for: profile).milestones.first(where: { $0.title == "Debt cleared" })?.month
+              let month = profile.evaluation?.projections.adaptive.debtFreeMonth, month > 0
         else { return nil }
         return ExploreTimeline.label(forMonth: month)
     }

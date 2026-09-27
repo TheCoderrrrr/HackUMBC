@@ -153,16 +153,28 @@ extension ExploreTimeline {
         return counts
     }
 
-    /// Morgan: the three dated Figma states. Milestone months come from the engine's adaptive
-    /// projection when an evaluation is loaded; otherwise the prototype's Sep 2028 / Jan 2030.
+    /// Morgan: the three dated Figma states. Dated milestones appear only when their months
+    /// come from the engine's adaptive projection — never from the schematic preview
+    /// (REPORT B5). Phase copy follows the validated priority order (REPORT B3).
     private static func morgan(_ profile: Profile) -> ExploreTimeline {
         let open = opening(profile)
+        // Schematic phase months keep the river's shape in preview; they carry no dates.
         var debtCleared = 24, reserveMet = 40
+        var milestones: [Milestone] = []
+        var exactMonthContext: [Int: String] = [0: "Opening month"]
+        // What follows high-APR debt in the validated order names the middle phase.
+        let order = profile.evaluation?.decisionSummary.orderedPriorities
+        let afterDebt = order.flatMap { o in o.firstIndex(of: .highAprDebt).flatMap { o.dropFirst($0 + 1).first } }
+        let buildingPhase = afterDebt == .starterReserve ? "Building the starter reserve" : "Building reserves"
         if let adaptive = profile.evaluation?.projections.adaptive,
            let debt = adaptive.debtFreeMonth, let reserve = adaptive.fullReserveMonth,
            0 < debt, debt < reserve, reserve <= 48 {
             debtCleared = debt
             reserveMet = reserve
+            milestones = [Milestone(month: debt, title: "Debt cleared"),
+                          Milestone(month: reserve, title: "Reserve target reached")]
+            exactMonthContext[debt] = "Debt cleared · \(buildingPhase.lowercased())"
+            exactMonthContext[reserve] = "Reserve target reached"
         }
         return ExploreTimeline(
             lastMonth: 48,
@@ -171,10 +183,7 @@ extension ExploreTimeline {
                 RiverKeyframe(month: debtCleared, counts: [open.counts[0], streamCount - open.counts[0], 0]),
                 RiverKeyframe(month: reserveMet, counts: [streamCount, 0, 0])
             ],
-            milestones: [
-                Milestone(month: debtCleared, title: "Debt cleared"),
-                Milestone(month: reserveMet, title: "Reserve target reached")
-            ],
+            milestones: milestones,
             tracks: TimelineTracks(retirementIncreaseFrom: reserveMet,
                                    debtPayoff: 0...debtCleared,
                                    reserveFunding: debtCleared...reserveMet),
@@ -194,14 +203,10 @@ extension ExploreTimeline {
             contextByPhase: [
                 (0, "Opening month"),
                 (1, "Paying down the card"),
-                (debtCleared, "Building reserves"),
+                (debtCleared, buildingPhase),
                 (reserveMet, "Contribution increased")
             ],
-            exactMonthContext: [
-                0: "Opening month",
-                debtCleared: "Debt cleared · building reserves",
-                reserveMet: "Reserve target reached"
-            ]
+            exactMonthContext: exactMonthContext
         )
     }
 

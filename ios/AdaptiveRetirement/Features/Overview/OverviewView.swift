@@ -424,15 +424,24 @@ enum OverviewCopy {
     }
 
     static func nextStepHeadline(for profile: Profile) -> String {
+        // With a loaded evaluation the engine's primary action drives the copy (B3);
+        // the per-profile strings below are the no-evaluation preview only.
+        if let evaluation = profile.evaluation {
+            return ReasonCopy.headline(for: evaluation)
+        }
         switch profile.id {
-        case "morgan": "Keep the match. Tackle the debt."
-        case "casey": "Stay the course into retirement."
-        default: "Keep saving at your current rate."
+        case "morgan": return "Keep the match. Tackle the debt."
+        case "casey": return "Stay the course into retirement."
+        default: return "Keep saving at your current rate."
         }
     }
 
     /// Detail sentence with the key amount emphasised.
     static func nextStepDetail(for profile: Profile) -> Text {
+        if let evaluation = profile.evaluation,
+           let detail = ReasonCopy.detail(for: evaluation, profile: profile) {
+            return detail
+        }
         if let amount = profile.primaryActionAmountCents, let debt = profile.debts.first {
             return Text(Money.exact(amount)).font(.geist(13, .medium, relativeTo: .footnote))
                 + Text(" extra toward your \(debt.name.lowercased()) each month.")
