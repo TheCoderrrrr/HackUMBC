@@ -199,7 +199,57 @@ pytest                             # 341 backend tests
 ```
 
 > [!NOTE]
-> **No API key? It still works.** Without a key for the selected `AI_PROVIDER`, every response uses the rules fallback and is labeled that way. The phone reaches the laptop through a Cloudflare tunnel; see [`backend/RUNBOOK.md`](backend/RUNBOOK.md).
+> **No API key? It still works.** Without a key for the selected `AI_PROVIDER`, every response uses the rules fallback and is labeled that way. The phone reaches the laptop through an ngrok tunnel (below); see also [`backend/RUNBOOK.md`](backend/RUNBOOK.md).
+
+### 📱 Run the full stack on an iPhone
+
+The app only talks to an HTTPS server, so the laptop's API is published through an ngrok tunnel on a fixed free domain.
+
+**1. Backend (terminal 1)**
+
+```bash
+cd backend && source .venv/bin/activate
+uvicorn app.main:app --host 127.0.0.1 --port 8000   # log: "AI enabled (provider=openai, model=gpt-6-luna)"
+```
+
+For live AI, put `OPENAI_API_KEY=...` in `backend/.env` (git-ignored; never in `.env.example`, which is committed).
+
+**2. Tunnel (terminal 2, once per machine: `brew install ngrok`)**
+
+
+3. Start the tunnel: `ngrok http --url=unsheathe-chemicals-truth.ngrok-free.dev 8000`
+
+`scripts/serve_demo.sh unsheathe-chemicals-truth.ngrok-free.dev 8000` runs the API, the tunnel and `caffeinate` together.
+
+**3. Smoke test (terminal 3, from `backend`)**
+
+```bash
+python scripts/smoke.py https://your-name.ngrok-free.app   # expect RESULT: OK
+```
+
+Run it from `backend/`, since the path is relative. If it fails with `CERTIFICATE_VERIFY_FAILED` on a python.org Python, run `"/Applications/Python 3.12/Install Certificates.command"` once.
+
+**4. Install on the iPhone (Xcode)**
+
+1. Connect the phone by cable, tap **Trust This Computer**, and open `ios/AdaptiveRetirement.xcodeproj`.
+2. Select the phone as the run destination and press ⌘R once. Then turn on **Settings → Privacy & Security → Developer Mode** on the phone (the switch appears only after Xcode has seen the phone).
+3. Sign with your own Apple ID **without touching Xcode's Signing & Capabilities tab** (that would write your values into the shared `project.pbxproj`). Instead:
+
+   ```bash
+   cp ios/Config/Signing.local.xcconfig.example ios/Config/Signing.local.xcconfig
+   ```
+
+   Set `DEVELOPMENT_TEAM` to your Team ID (**Xcode → Settings → Accounts**) and `BUNDLE_ID_SUFFIX` to something unique like `.yourname`. The file is git-ignored, so it can't be committed. Without it, the app signs with the team defaults in `ios/Config/Signing.xcconfig`.
+4. Press ⌘R. With a free Apple ID, trust the profile under **Settings → General → VPN & Device Management**. Free installs expire after 7 days.
+
+**5. Point the app at your server (saved on the phone)**
+
+In the app: **Explore → Modeling assumptions → Live calculation**, enter `https://your-name.ngrok-free.app`. Without it, the app uses the built-in team domain (`AppStore.defaultServerBaseURL`).
+
+**6. Check it**
+
+- **Live:** the badge reads **Live calculation**, profile switching works, Morgan shows the **$963.80** extra card payment, **Why?** shows **AI-assisted priorities**, and **Compare scenario** returns. Repeat once on cellular with Wi-Fi off.
+- **Offline:** copy the bundle into the app (`mkdir -p ios/AdaptiveRetirement/Resources/Demo && cp backend/fixtures/generated/*.json ios/AdaptiveRetirement/Resources/Demo/`) and reinstall. Stop the server, turn on Airplane Mode, then force-quit and reopen the app: it shows **Saved demo calculation**, with every profile, preset and the Morgan demonstration.
 
 <details>
 <summary><b>🔌 API surface</b></summary>
@@ -243,7 +293,7 @@ BACKEND.md · FRONTEND.md             full specifications
 | Backend | Python 3.12, FastAPI, Pydantic, Uvicorn |
 | Financial engine | Pure Python, `Decimal` cents, deterministic monthly simulation |
 | AI | OpenAI GPT-6 Luna (default) or Gemini 3.5 Flash-Lite via `google-genai`, structured output, backend only |
-| Hosting | A teammate's laptop + Cloudflare quick tunnel |
+| Hosting | A teammate's laptop + ngrok tunnel on a fixed free domain |
 
 </details>
 
