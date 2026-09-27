@@ -330,9 +330,9 @@ struct ScenarioControls: View {
                 set: { draft.priorityStyle = $0 == "same" ? nil : API.PlanningPreference(rawValue: $0); draft.preset = nil }
             )) {
                 Text("Keep plan style").tag("same")
-                Text("Balanced").tag(API.PlanningPreference.balanced.rawValue)
-                Text("Cash security").tag(API.PlanningPreference.cashSecurity.rawValue)
-                Text("Debt reduction").tag(API.PlanningPreference.debtReduction.rawValue)
+                Text("Balanced (user override)").tag(API.PlanningPreference.balanced.rawValue)
+                Text("Cash security (user override)").tag(API.PlanningPreference.cashSecurity.rawValue)
+                Text("Debt reduction (user override)").tag(API.PlanningPreference.debtReduction.rawValue)
             }
             .padding(.top, Space.m)
 

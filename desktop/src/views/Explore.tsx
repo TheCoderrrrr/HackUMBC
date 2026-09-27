@@ -447,8 +447,8 @@ function ScenarioControls({ display, onResult }: { display: Display; onResult: (
       <label className="field" style={{ marginTop: 16 }}>
         <span className="field-label">Priority style</span>
         <select value={draft.priorityStyle} onChange={(e) => edit({ priorityStyle: e.target.value as Draft["priorityStyle"], preset: null })}>
-          <option value="same">Keep plan style</option><option value="balanced">Balanced</option>
-          <option value="cash_security">Cash security</option><option value="debt_reduction">Debt reduction</option>
+          <option value="same">Keep plan style</option><option value="balanced">Balanced (user override)</option>
+          <option value="cash_security">Cash security (user override)</option><option value="debt_reduction">Debt reduction (user override)</option>
         </select>
       </label>
 

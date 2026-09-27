@@ -77,6 +77,36 @@ def test_scenario_pins_decision_and_uses_exact_debt_budget():
     assert sum(debt["extra_payment_cents"] for debt in run.opening_allocation.facts["raw_allocation"]["debts"]) == 50_000
 
 
+def test_stale_base_decision_requires_explicit_refresh():
+    profile = selected_morgan()
+    response = make_client().post("/v1/evaluate", json={
+        "profile": profile.model_dump(mode="json"),
+        "scenario": {"retirement_age": profile.retirement_age + 1},
+        "base_decision_id": "expired-or-from-another-server",
+    })
+    assert response.status_code == 422
+    error = response.json()["error"]
+    assert error["code"] == "BASE_DECISION_NOT_FOUND"
+    assert error["field_paths"] == ["base_decision_id"]
+
+
+def test_unaffordable_extra_debt_budget_is_rejected_with_its_input_path():
+    profile = selected_morgan()
+    response = make_client().post("/v1/evaluate", json={
+        "profile": profile.model_dump(mode="json"),
+        "scenario": {
+            "retirement_age": profile.retirement_age,
+            "employee_contribution_rate": None,
+            "extra_monthly_debt_cents": 9_999_999,
+        },
+    })
+    assert response.status_code == 422
+    error = response.json()["error"]
+    assert error["code"] == "INFEASIBLE_SCENARIO"
+    assert error["field_paths"] == ["scenario.extra_monthly_debt_cents"]
+    assert "month 1" in error["message"]
+
+
 def test_selected_fund_requires_balance_confirmation():
     raw = selected_morgan().model_dump(mode="json")
     raw["fund_balance_confirmed"] = False
