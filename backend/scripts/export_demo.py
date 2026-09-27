@@ -1,17 +1,15 @@
-"""Export ten reviewed offline evaluations through the live numerical engine.
+"""Export ten saved-AI offline evaluations through the live numerical engine.
 
-Fixture format (C prepares it with scripts.prepare_decisions; A and B review):
+Fixture format (prepared by scripts.prepare_decisions):
   decisions: {profile_id: {profile_hash, proposal, model_id, prompt_version,
-                          decision_id, expected_source, reviewers: ["A", "B"]}}
-  explanations: {input_hash: {explanation, reviewers: ["A", "B"]}}
+                          decision_id, expected_source}}
+  explanations: {input_hash: {explanation}}
   fallback_cases: [{profile_id, profile_hash, proposal: null, model_id: null,
-                    prompt_version, decision_id, expected_source, reviewers: ["A", "B"]}]
-The two review marks document human sign-off; schema/evidence validation still
-runs. No provider is contacted by this command.
-
-`--draft` skips only the review marks and writes only to the git-ignored
-fixtures/draft, so B can audit the bundle before review and the frontend has a
-placeholder. A draft is never the shipped bundle.
+                    prompt_version, decision_id, expected_source}]
+No human sign-off is required (team decision: the AI text is demo placeholder
+content and can be edited later). Every automatic check still runs: schemas,
+B's decision validator, A's prose rules, hashes, provenance and labels. No
+provider is contacted by this command.
 """
 
 from __future__ import annotations
@@ -74,11 +72,6 @@ def _parse(model: Any, value: Any) -> Any:
     return model.model_validate(value) if hasattr(model, "model_validate") else model(**value)
 
 
-def _require_review(record: Any, context: str) -> None:
-    if not isinstance(record, dict) or set(record.get("reviewers", ())) != {"A", "B"}:
-        raise ExportError(f"{context} requires Developer A and B review marks")
-
-
 def _check_replayed_decision(record: dict[str, Any], decision: Any, profile_id: str) -> None:
     for field, expected in (
         ("decision_id", record.get("decision_id")),
@@ -96,7 +89,7 @@ def _check_replayed_decision(record: dict[str, Any], decision: Any, profile_id: 
 
 
 def check_saved_explanation(profile: Any, evaluation: dict[str, Any], explanation: Any) -> None:
-    """Apply A's live Explanation rules to saved text (proposal pending A's review).
+    """Apply A's live Explanation rules to saved text.
 
     Saved explanations describe an initial plan, so they carry no changes, and
     their prose must pass the same number-free and length checks as live output.
@@ -240,7 +233,7 @@ def validate_bundle(
         if eval_dict["profile_id"] != profile_id:
             raise ExportError(f"evaluation profile ID mismatch in {filename}")
         if eval_dict["decision_summary"]["source"] != "ai" or eval_dict["explanation"]["source"] != "ai":
-            raise ExportError(f"final artifact lacks reviewed AI content in {filename}")
+            raise ExportError(f"final artifact lacks saved AI content in {filename}")
         versions = ("schema_version", "model_version", "policy_version")
         if any(
             artifact[key] != manifest[key] or eval_dict[key] != manifest[key]
@@ -414,17 +407,8 @@ def export_bundle(
     assumptions: Any = None,
     evaluator: Callable[..., Any] = evaluate,
     opening_rate_fn: Callable[..., float] = _default_opening_rate,
-    draft: bool = False,
 ) -> dict[str, Any]:
-    """Publish the bundle. `draft` skips only the A/B review marks, for B's pre-review
-    audit and the frontend placeholder, and may only write to a `fixtures/draft` folder."""
     output = output.absolute()
-    is_draft_folder = (output.parent.name, output.name) == ("fixtures", "draft")
-    if draft and not is_draft_folder:
-        raise ExportError(f"--draft may only write to fixtures/draft, not {output}")
-    if not draft and is_draft_folder:
-        raise ExportError("fixtures/draft is for unreviewed drafts; use --draft or another output")
-    require_review = (lambda record, context: None) if draft else _require_review
     if any(value is None for value in (
         profile_model, scenario_model, explanation_model, evaluation_model,
         state_fn, decision_validator, explanation_validator, assumptions,
@@ -476,21 +460,20 @@ def export_bundle(
         for profile_id in PROFILE_IDS:
             profile = profiles[profile_id]
             record = decision_records[profile_id]
-            require_review(record, f"{profile_id} decision")
             if record["profile_hash"] != profile_hash(profile):
                 raise ExportError(f"{profile_id}: stale saved decision")
             state = state_fn(profile)
             decisions[profile_id] = decision_validator(profile, state, record)
             _check_replayed_decision(record, decisions[profile_id], profile_id)
             if get(decisions[profile_id], "source") != "ai" or not get(decisions[profile_id], "model_id"):
-                raise ExportError(f"{profile_id}: final artifacts require a reviewed saved AI decision")
+                raise ExportError(f"{profile_id}: final artifacts require a saved AI decision")
             if profile_id in STANDARD_IDS:
                 opening_rates[profile_id] = opening_rate_fn(
                     profile, assumptions, decisions[profile_id]
                 )
         variant_order = list(get(decisions[VARIANT_ID], "ordered_priorities"))
         if variant_order != ["starter_reserve", "high_apr_debt", "full_reserve"]:
-            raise ExportError("Morgan variant does not use its reviewed exception order")
+            raise ExportError("Morgan variant does not use its documented exception order")
 
         fallback_cases = fixtures.get("fallback_cases", [])
         if {record.get("profile_id") for record in fallback_cases} != set(PROFILE_IDS) or len(fallback_cases) != 4:
@@ -498,7 +481,6 @@ def export_bundle(
         for record in fallback_cases:
             profile_id = record["profile_id"]
             profile = profiles[profile_id]
-            require_review(record, f"{profile_id} outage fixture")
             if record["profile_hash"] != profile_hash(profile):
                 raise ExportError(f"{profile_id}: stale outage fixture")
             fallback = decision_validator(profile, state_fn(profile), record)
@@ -542,12 +524,11 @@ def export_bundle(
                     if hash_value != expected:
                         raise ExportError("evaluator input hash mismatch")
                     saved = explanation_records.get(hash_value)
-                    require_review(saved, f"{filename} explanation")
                     if saved is None:
                         raise ExportError(f"{filename}: no saved explanation for this input hash")
                     explanation = _parse(explanation_model, saved["explanation"])
                     if get(explanation, "source") != "ai":
-                        raise ExportError("final artifact explanation must be reviewed saved AI")
+                        raise ExportError("final artifact explanation must be saved AI")
                     explanation_validator(profile, data, explanation)
                     data["explanation"] = _model_dict(explanation)
                     data = _model_dict(_parse(evaluation_model, data))
@@ -606,18 +587,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profiles", type=Path, default=Path("fixtures/profiles.json"))
     parser.add_argument("--decisions", type=Path, default=Path("fixtures/decisions.json"))
-    parser.add_argument("--output", type=Path, default=None,
-                        help="default fixtures/generated, or fixtures/draft with --draft")
-    parser.add_argument("--draft", action="store_true",
-                        help="unreviewed audit/placeholder bundle; skips review marks, writes only to fixtures/draft")
+    parser.add_argument("--output", type=Path, default=Path("fixtures/generated"))
     args = parser.parse_args()
-    output = args.output or Path("fixtures/draft" if args.draft else "fixtures/generated")
+    output = args.output
     try:
-        manifest = export_bundle(args.profiles, args.decisions, output, draft=args.draft)
+        manifest = export_bundle(args.profiles, args.decisions, output)
     except (ExportError, MissingHandoffError, ValueError, KeyError, TypeError) as exc:
         parser.exit(1, f"export failed: {exc}\n")
-    label = "DRAFT (unreviewed, do not ship) " if args.draft else ""
-    print(f"exported {len(manifest['artifacts'])} {label}artifacts to {output}")
+    print(f"exported {len(manifest['artifacts'])} artifacts to {output}")
     return 0
 
 

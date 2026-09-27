@@ -3,9 +3,8 @@
 Fixture preparation for the offline bundle (BACKEND.md section 13). Uses A's
 model client (AI_PROVIDER in backend/.env; GPT-6 Luna by default), prompts,
 Explanation facts and prose rules, and B's decision validator; C's evaluator
-binds each explanation to its artifact's exact input hash. Records
-are written without review marks: Developers A and B review them and set
-"reviewers": ["A", "B"] before `scripts.export_demo` will accept them.
+binds each explanation to its artifact's exact input hash. The saved AI text
+is demo placeholder content; edit it later if needed, then re-run the export.
 
 Run from backend with the provider's key (OPENAI_API_KEY by default) in backend/.env:
 
@@ -142,7 +141,6 @@ def prepare(model, profiles_path: Path, *, attempts: int = 3,
             "prompt_version": PROMPT_VERSION,
             "decision_id": decision_id,
             "expected_source": "ai",
-            "reviewers": [],
         }
 
     rates = {pid: _default_opening_rate(profiles[pid], MODEL_ASSUMPTIONS, decisions[pid]) for pid in STANDARD_IDS}
@@ -151,9 +149,8 @@ def prepare(model, profiles_path: Path, *, attempts: int = 3,
         evaluation = evaluate(profiles[profile_id], scenario, decisions[profile_id])
         explanation = _explain(model, profiles[profile_id], evaluation, attempts, sleep)
         explanations[evaluation.input_hash] = {
-            "artifact": f"{profile_id}/{preset_id}",  # for reviewers; the exporter keys on the hash
+            "artifact": f"{profile_id}/{preset_id}",  # for people reading the file; the exporter keys on the hash
             "explanation": explanation,
-            "reviewers": [],
         }
 
     fallback_cases = [{
@@ -164,7 +161,6 @@ def prepare(model, profiles_path: Path, *, attempts: int = 3,
         "prompt_version": PROMPT_VERSION,
         "decision_id": f"dec_fallback_{profile_id}",
         "expected_source": "rules_fallback",
-        "reviewers": [],
     } for profile_id in PROFILE_IDS]
     return {"decisions": records, "explanations": explanations, "fallback_cases": fallback_cases}
 
@@ -192,7 +188,7 @@ def main() -> int:
     parser.add_argument("--force", action="store_true", help="replace an existing decisions file")
     args = parser.parse_args()
     if args.output.exists() and not args.force:
-        parser.exit(1, f"{args.output} exists; pass --force to replace it (this discards review marks)\n")
+        parser.exit(1, f"{args.output} exists; pass --force to replace it (this discards any edits to the saved text)\n")
 
     model = model_from_settings()
     if isinstance(model, str):
@@ -203,7 +199,7 @@ def main() -> int:
         parser.exit(1, f"prepare failed: {exc}\n")
     args.output.write_text(json.dumps(fixture, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"wrote {len(fixture['decisions'])} decisions and {len(fixture['explanations'])} explanations "
-          f"to {args.output}; send it to A and B for review")
+          f"to {args.output}; next: python -m scripts.export_demo")
     return 0
 
 

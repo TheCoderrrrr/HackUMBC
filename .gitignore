@@ -19,5 +19,7 @@ htmlcov/
 .env.*
 !.env.example
 
-# Unreviewed draft bundles (scripts.export_demo --draft)
+# Old draft bundles from the removed --draft mode (safe to delete)
 backend/fixtures/draft/
+# Export lock files (scripts.export_demo)
+backend/fixtures/*.lock
