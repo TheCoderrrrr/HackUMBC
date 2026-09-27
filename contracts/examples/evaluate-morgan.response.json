@@ -2508,6 +2508,10 @@
           "cash_cents": 64316669,
           "debt_cents": 0
         }
+      ],
+      "warnings": [
+        "SIMPLIFIED_TAX_ESTIMATE",
+        "UNASSIGNED_SURPLUS"
       ]
     },
     "adaptive": {
@@ -4834,13 +4838,16 @@
           "cash_cents": 61817577,
           "debt_cents": 0
         }
+      ],
+      "warnings": [
+        "SIMPLIFIED_TAX_ESTIMATE",
+        "UNASSIGNED_SURPLUS"
       ]
     },
     "custom": null
   },
   "warnings": [
-    "SIMPLIFIED_TAX_ESTIMATE",
-    "UNASSIGNED_SURPLUS"
+    "SIMPLIFIED_TAX_ESTIMATE"
   ],
   "decision_summary": {
     "decision_id": "dec_example",

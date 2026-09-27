@@ -121,10 +121,15 @@ def evaluate(
             _check_opening_plan(plan, adaptive.opening_allocation.facts["raw_allocation"])
     else:
         plan = plan_fn(profile, state, validated_decision, allocation=adaptive.opening_allocation)
+    # Per-projection warnings: each projection carries its own months' allocator warnings
+    # instead of merging every month of every projection into the top level (REPORT C3).
     projections = {
-        "current": projection_dict(current.projection),
-        "adaptive": projection_dict(adaptive.projection),
-        "custom": projection_dict(custom.projection) if custom is not None else None,
+        "current": projection_dict(current.projection) | {"warnings": list(current.warnings)},
+        "adaptive": projection_dict(adaptive.projection) | {"warnings": list(adaptive.warnings)},
+        "custom": (
+            projection_dict(custom.projection) | {"warnings": list(custom.warnings)}
+            if custom is not None else None
+        ),
     }
     if use_b_template:
         explanation = template_fn(
@@ -132,11 +137,15 @@ def evaluate(
         )
     else:
         explanation = template_fn(state, plan, projections, validated_decision, changes=[])
+    # Top-level warnings cover the financial state and the opening-month plan only —
+    # a client can tell what they belong to. Later months stay on their projection.
+    opening = adaptive.opening_allocation
     warnings = [
         *optional(state, "warnings", []),
-        *current.warnings, *adaptive.warnings,
-        *(custom.warnings if custom else ()),
+        *list(optional(opening, "warnings", None) or []),
     ]
+    if opening is not None and optional(opening, "block_code"):
+        warnings.append(optional(opening, "block_code"))
     result = {
         "schema_version": schema_version,
         "model_version": model_version,

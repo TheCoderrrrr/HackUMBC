@@ -16,6 +16,15 @@ def test_health_reports_ai_available_when_the_selected_provider_has_a_key():
     assert body["ai_available"] is True
 
 
+def test_warnings_are_scoped_to_their_projection(morgan):
+    # REPORT C3: Morgan's opening plan has no residual cash; the surplus appears years
+    # later, after the card is paid off, so it belongs to the projection, not the plan.
+    body = make_client().post("/v1/evaluate", json={"profile": morgan}).json()
+    assert "UNASSIGNED_SURPLUS" not in body["warnings"]
+    assert "UNASSIGNED_SURPLUS" in body["projections"]["adaptive"]["warnings"]
+    assert "UNASSIGNED_SURPLUS" in body["projections"]["current"]["warnings"]
+
+
 def test_demo_profiles_are_the_three_fixtures():
     body = make_client().get("/v1/demo-profiles").json()
     assert [p["id"] for p in body["profiles"]] == ["jordan", "morgan", "casey"]

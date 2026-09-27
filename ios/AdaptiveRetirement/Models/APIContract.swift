@@ -351,9 +351,12 @@ enum API {
         var starterReserveMonth: Int?
         var fullReserveMonth: Int?
         var points: [ProjectionPoint]
+        /// This projection's own warnings (REPORT C3). Optional so older servers and
+        /// bundles exported before the field existed still decode.
+        var warnings: [String]?
 
         enum CodingKeys: String, CodingKey {
-            case strategy, feasible, points
+            case strategy, feasible, points, warnings
             case retirementAge = "retirement_age"
             case shortfallCents = "shortfall_cents"
             case retirementBalanceNominalCents = "retirement_balance_nominal_cents"

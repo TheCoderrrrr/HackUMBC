@@ -2547,6 +2547,10 @@
           "cash_cents": 145360497,
           "debt_cents": 0
         }
+      ],
+      "warnings": [
+        "SIMPLIFIED_TAX_ESTIMATE",
+        "UNASSIGNED_SURPLUS"
       ]
     },
     "adaptive": {
@@ -4873,6 +4877,10 @@
           "cash_cents": 145360473,
           "debt_cents": 0
         }
+      ],
+      "warnings": [
+        "SIMPLIFIED_TAX_ESTIMATE",
+        "UNASSIGNED_SURPLUS"
       ]
     },
     "custom": null
