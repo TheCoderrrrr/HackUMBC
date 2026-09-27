@@ -8,11 +8,13 @@
 
 <img src="./assets/hero.svg" width="100%" alt="A target-date fund plans from your birth year alone, so everyone that age gets the same plan. ARM uses your income, debt, savings and employer match to show how much to save, where it goes and what it builds." />
 
-![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=FFD43B) ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?style=flat-square&logo=fastapi&logoColor=white) ![Gemini](https://img.shields.io/badge/Gemini-3.5_Flash--Lite-8E75B2?style=flat-square&logo=googlegemini&logoColor=white) ![Tiger Data](https://img.shields.io/badge/Tiger_Data-TimescaleDB-F5A623?style=flat-square&logo=postgresql&logoColor=white) ![React](https://img.shields.io/badge/React-desktop-61DAFB?style=flat-square&logo=react&logoColor=black) ![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS_17+-F05138?style=flat-square&logo=swift&logoColor=white) ![Tests](https://img.shields.io/badge/tests-636_passing-22C55E?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=FFD43B) ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?style=flat-square&logo=fastapi&logoColor=white) ![Gemini](https://img.shields.io/badge/Gemini-3.5_Flash--Lite-8E75B2?style=flat-square&logo=googlegemini&logoColor=white) ![Tiger Data](https://img.shields.io/badge/Tiger_Data-TimescaleDB-F5A623?style=flat-square&logo=postgresql&logoColor=white) ![React](https://img.shields.io/badge/React-desktop-61DAFB?style=flat-square&logo=react&logoColor=black) ![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS_17+-F05138?style=flat-square&logo=swift&logoColor=white)
+<br/>
+![Backend tests](https://img.shields.io/badge/backend_tests-541_passing-22C55E?style=flat-square) ![Desktop tests](https://img.shields.io/badge/desktop_tests-95_passing-22C55E?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-2563EB?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-EC4899?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_only-0EA5E9?style=flat-square)
 
 <sub><b>HackUMBC 2026</b> · University of Maryland, Baltimore County</sub>
 
-[Idea](#-the-idea) · [Result](#-the-result) · [How it works](#%EF%B8%8F-how-it-works) · [Tracks](#-tracks) · [Gemini](#-gemini) · [Tiger Data](#-tiger-data) · [Demo](#-demo) · [Run it](#-run-it)
+[Idea](#-the-idea) · [Result](#-the-result-same-age-different-plan) · [Thesis](#-technical-thesis) · [Architecture](#%EF%B8%8F-architecture) · [Results by track](#-results-by-track) · [Demo](#-demo-script) · [Impact](#-impact) · [Run it](#-run-it)
 
 </div>
 
@@ -21,106 +23,232 @@
 ## 💡 The idea
 
 > [!IMPORTANT]
-> **A target-date fund only knows your birth year.** Two 35-year-olds retiring in 2058 get the *same* plan, even if one has six months of savings and the other has **$18,000 on a 25% credit card**.
+> **A target-date fund only knows your birth year.** Two 35-year-olds retiring in 2058 get the *same* plan, even if one has six months of savings and the other carries **$18,000 of credit-card debt at 25% APR**.
 
-ARM keeps the fund exactly as it is and adapts what it ignores: **how much to contribute** and **where each extra dollar goes** (employer match, emergency savings or expensive debt), then projects debt, cash and retirement month by month.
+T. Rowe Price, whose target-date lineup is its largest product line, has said publicly that personalization is the next step for target-date solutions ([research](https://www.troweprice.com/institutional/us/en/insights/articles/2024/q3/make-it-personal-the-next-chapter-for-target-date-solutions-na.html)). **ARM is a working prototype of that idea.** It keeps the fund's stock/bond mix exactly as it is, and adapts the two things the fund ignores:
+
+- **How much to contribute:** a rate that fits this person's cash flow after essentials and required debt payments.
+- **Where the next dollar goes:** the employer match, emergency savings, or high-interest debt, in an order that fits their situation.
+
+Then it projects debt, cash and retirement **month by month** until retirement, and shows the tradeoffs openly.
+
+---
+
+## 📊 The result: same age, different plan
+
+| | 🟢 **Jordan**: financially established | 🟠 **Morgan**: competing priorities |
+|---|---|---|
+| Salary · savings | $120,000 · **6 months** | $84,000 · **1 month** |
+| Debt | $15,000 student loan at 4% | **$18,000 credit card at 25%** |
+| **ARM's plan** | Keep the 10% contribution; surplus to cash | Keep the full match at 5%; **put $963.80/month extra on the card** |
+
+**Morgan, at age 67:** current habits vs. ARM's plan, computed month by month by the deterministic engine (no AI in any number):
+
+| Outcome | Current habits | **ARM plan** | Difference |
+|---|---:|---:|---:|
+| 💳 Credit card paid off | month 135 (~11 years) | **month 16** | **119 months sooner** |
+| 🔥 Card interest paid | $35,788 | **$3,272** | **$32,516 saved** |
+| 🏦 Retirement balance | $1,320,893 | **$1,462,562** | **+$141,669** |
+| 🏦 In today's dollars | $599,382 | **$663,668** | **+$64,286** |
+| 🛟 Full 3-month emergency fund | month 9 | month 21 | 12 months later |
+
+> [!NOTE]
+> **The tradeoff is shown, not hidden.** Paying the 25% card first means Morgan's full emergency fund comes a year later. ARM puts retirement, debt and cash side by side, so a slower cash buffer is visible next to the $32,516 of interest it saves.
+
+---
+
+## 🧠 Technical thesis
+
+Personalizing finance with AI is easy to demo and hard to trust. A language model that picks contribution amounts or moves money is a liability. ARM gives the model **one narrow job** and wraps it in deterministic code:
 
 > **AI chooses the order. Python computes every dollar.**
 
----
-
-## 📊 The result
-
-Jordan and Morgan are both 35 and retiring at 67. Same fund, very different needs. For Morgan ($84k salary, 1 month saved, $18k card at 25%), the engine's plan keeps the full employer match and puts **$963.80/month extra on the card**:
-
-| At age 67 | Current habits | **ARM plan** |
-|---|---:|---:|
-| 💳 Card paid off | month 135 | **month 16** (119 months sooner) |
-| 🔥 Card interest paid | $35,788 | **$3,272** ($32,516 saved) |
-| 🏦 Retirement balance | $1,320,893 | **$1,462,562** (+$141,669) |
-| 🛟 Full emergency fund | month 9 | month 21 (the tradeoff, shown openly) |
-
-Every number comes from the deterministic engine; none come from AI.
-
----
-
-## ⚙️ How it works
-
 ```mermaid
 flowchart LR
-    profile["👤 Profile"] --> state["🧮 Financial state"]
-    state --> gemini["🤖 Gemini orders<br/>3 priorities"]
-    gemini --> check{"✅ Engine<br/>validator"}
-    check -- valid --> engine["📐 Waterfall +<br/>monthly simulation"]
-    check -- "invalid · timeout" --> rules["📏 Rules order"] --> engine
-    engine --> apps["🖥️ Desktop · 📱 iPhone"]
-    engine --> tiger[("🐯 Tiger Data<br/>saved runs")]
+    profile["👤 Profile<br/>income · debts · savings · match"] --> state["🧮 Financial state<br/>deterministic Python"]
+    state --> gemini["🤖 Gemini<br/>orders 3 priorities, cites evidence"]
+    gemini --> validate{"✅ Engine validator"}
+    validate -- "valid" --> engine["📐 Cash waterfall +<br/>month-by-month simulation"]
+    validate -- "invalid · timeout · rate limit" --> rules["📏 Rules order"] --> engine
+    engine --> explain["💬 Gemini explanation<br/>no numbers allowed"]
+    explain --> apps["🖥️ Desktop · 📱 iPhone"]
+    engine --> tiger[("🐯 Tiger Data<br/>saved runs as time series")]
+    tiger --> apps
 ```
 
-1. **Python** computes the financial state: budget, emergency months, match capture, high-interest debt.
-2. **Gemini** orders three priorities (cushion, expensive debt, full emergency fund) and cites evidence.
-3. **The engine** validates the order, or falls back to the rules order, and labels which one it used.
-4. **The engine** funds every dollar through a fixed waterfall and simulates each month to retirement.
-5. **Gemini** explains the plan in plain words, with no numbers; the app shows exact amounts separately.
+Every dollar, date and balance the user sees comes from a `Decimal`-based engine whose inputs are pinned by an `input_hash`. The model may reorder three priorities within documented rules and explain them in words; everything it returns is validated, or replaced by a **labeled** rules fallback.
+
+### The pipeline, stage by stage
+
+| Stage | Who | What happens |
+|---|---|---|
+| `derive_state` | 🧮 Python | Take-home cost of contributions, allocatable budget, emergency months, match capture, high-interest debt |
+| `recommend` | 🤖 Gemini | Orders starter reserve, high-APR debt and full reserve; each with a summary, evidence keys (an enum built per request) and a tradeoff |
+| `validate_decision` | ✅ Python | Rejects invalid orders, unknown evidence or numeric claims → falls back to the rules order, with a reason code |
+| `evaluate` | 📐 Python | Funds every dollar through the waterfall and simulates debt, cash and retirement each month for three strategies: current, adaptive, custom |
+| `explain` | 💬 Gemini | A plain-language "why this plan" with no numbers; rejected text falls back to a template |
+| `save_run` *(optional)* | 🐯 Tiger Data | Server re-runs the engine, checks `input_hash`, stores the projection as a time series |
 
 <details>
-<summary><b>The waterfall: the order money flows each month</b></summary>
+<summary><b>📋 The waterfall: the order money flows each month</b></summary>
 
-| Step | Priority |
-|:---:|---|
-| 0 | Essentials and required debt minimums |
-| 1 | Critical reserve: min($1,000, one month) |
-| 2 | Full employer match |
-| 3–5 | Starter reserve · high-APR debt (≥10%) · full reserve (**the only steps the AI or the user's plan style may reorder**) |
-| 6 | Retirement saving toward a 15% combined rate |
-| 7 | Anything left is yours |
+| Step | Priority | Why it matters |
+|:---:|---|---|
+| **0** | Essentials and required debt minimums | Nothing discretionary is recommended if basics aren't covered |
+| **1** | Critical reserve: min($1,000, one month) | Avoids raiding the 401(k) for a small emergency |
+| **2** | Employer match | Captures the full match when affordable |
+| **3–5** | Starter reserve · high-APR debt (≥10%) · full reserve | **The only steps the AI, or the user's plan style, may reorder** |
+| **6** | Retirement saving toward a 15% combined rate | Restores contributions once liquidity and debt are handled |
+| **7** | Residual cash | Yours to spend or save |
 
 </details>
 
 ---
 
-## 🏆 Tracks
+## 🏗️ Architecture
 
-| Track | What we built |
+```mermaid
+flowchart LR
+    subgraph clients["Clients"]
+        desktop["🖥️ React desktop"]
+        ios["📱 SwiftUI iPhone<br/>offline demo bundle"]
+    end
+
+    subgraph api["FastAPI backend"]
+        evaluate["/v1/evaluate"]
+        styles["/v1/plan-styles"]
+        history["/v1/history/*"]
+        funds["/v1/funds/*"]
+        chat["/v1/education/chat"]
+    end
+
+    subgraph core["Deterministic core"]
+        engine["Engine: state · waterfall ·<br/>monthly simulation"]
+        validator["Decision validator"]
+    end
+
+    subgraph ai["Gemini 3.5 Flash-Lite"]
+        rec["Recommendation"]
+        exp["Explanation"]
+        edu["Education answers"]
+    end
+
+    subgraph data["Data"]
+        tiger[("Tiger Data<br/>hypertable · continuous aggregate<br/>compression")]
+        catalog[("Reviewed fund catalog<br/>SEC filings")]
+    end
+
+    desktop --> api
+    ios --> api
+    evaluate --> rec --> validator --> engine
+    engine --> exp
+    styles --> engine
+    history --> engine
+    history <--> tiger
+    funds --> catalog
+    chat --> edu
+```
+
+- **Engine** (`backend/app/engine/`): integer cents, `Decimal` math, deterministic. The single source of every number.
+- **AI pipeline** (`backend/app/ai/`): the Gemini client, prompts and circuit breaker. One shared 4-second budget; structured output only.
+- **Plan styles** (`/v1/plan-styles`): each style's own rule order through the engine, with no AI call, cached per profile hash.
+- **Scenario history** (`backend/app/analytics/`): Tiger Data persistence. `/v1/evaluate` never depends on the database.
+- **Fund shortlist** (`/v1/funds/*`): ranks only reviewed facts; missing data excludes a fund rather than being filled in.
+- **Education chat** (`/v1/education/chat`): bounded Q&A. No personal data, no figures, server-owned sources.
+
+---
+
+## 🏆 Results by track
+
+### 1. NextGen Finance Innovation Challenge (T. Rowe Price)
+
+> *"Identify a real financial problem and show how one or more of these technologies* [ETFs, AI, digital assets] *could be used to solve it responsibly."*
+
+**The problem:** target-date funds, T. Rowe Price's largest product line, personalize on age alone. **Our answer:** personalize contributions and cash priorities *around* the fund, without changing its allocation.
+
+| What "responsibly" means in ARM | Evidence |
 |---|---|
-| **NextGen Finance** (T. Rowe Price) | A real gap in target-date funds, solved with AI that is **bounded, validated and labeled**, never trusted with a number. Plus an explainable fund shortlist from reviewed SEC filings. |
-| **[MLH] Best Use of Gemini API** | Three structured Gemini calls (decision, explanation, education chat), each with a deadline, schema, validator and labeled fallback. |
-| **[MLH] Best Use of Tiger Data** | Saved plans as time series: hypertable, continuous aggregate for the charts, and compression (81% smaller, measured). |
+| AI never produces a number | Every figure comes from the engine; numeric claims in AI text trigger a fallback |
+| Every decision is explainable | Order, evidence keys, tradeoffs and constraint checks are returned with each plan and shown under **Why this plan?** |
+| Every decision is honest about its source | Each response is labeled `ai` or `rules_fallback`, with a reason (`TIMEOUT`, `AI_COOLDOWN`, …) |
+| No demographic inference | Prompts contain only computed indicators: no names, IDs or account data |
+| Products stay grounded in filings | The **fund shortlist** ranks 6 target-date share classes (BlackRock LifePath Index 2030/2035/2055/2060, State Street Target Retirement 2030/2055); every fee and allocation cites its SEC filing |
+| Measurable user outcome | Morgan: **$32,516** less interest, card cleared **119 months sooner**, **+$141,669** at 67 |
 
----
+### 2. [MLH] Best Use of Gemini API
 
-## 🤖 Gemini
+Gemini 3.5 Flash-Lite (`google-genai`, structured output, `minimal` thinking) does three jobs, each with its own contract:
 
-| Call | Gemini returns | Guardrail |
+<table>
+<tr>
+<td width="50%" valign="top">
+
+#### ✅ Gemini may
+- Order starter reserve, high-APR debt and full reserve
+- Cite evidence and name the tradeoff
+- Explain the plan and what changed since last time
+- Answer retirement questions in plain words
+
+</td>
+<td width="50%" valign="top">
+
+#### ⛔ Gemini may not
+- Change essentials, debt minimums or the critical reserve
+- Change the match, APRs, caps or return assumptions
+- Change the investment allocation
+- Infer anything from names, age or demographics
+
+</td>
+</tr>
+</table>
+
+| Call | Gemini returns | If it fails or misbehaves |
 |---|---|---|
-| **Decision** | An order of 3 priorities + evidence keys (enum per request) | Engine re-validates; invalid → rules order |
-| **Explanation** | Plain-language "why this plan" | Rejected if it contains numbers → template |
-| **Education chat** | A short answer to a retirement question | No personal data, links or figures; server-owned sources |
+| **Decision** | An order of 3 priorities with evidence keys from a per-request enum | Engine rules order, labeled `rules_fallback` + reason |
+| **Explanation** | `state_summary` + `narrative` prose | Deterministic template if the text contains numbers |
+| **Education chat** | ≤900 characters; secrets in the question block the call | Built-in answer, labeled; sources come from the server |
 
-- **Never allowed:** changing essentials, minimums, match, APRs, returns or the fund's mix, or inferring anything from demographics.
-- **Always labeled:** every response says `ai` or `rules_fallback`, with the reason (`TIMEOUT`, `AI_COOLDOWN`, …).
-- **Fast enough:** both calls fit a shared **4-second budget**, with a median of **2.6 s** (slowest 3.1 s) for Gemini 3.5 Flash-Lite. A circuit breaker turns rate limits into instant, labeled fallbacks.
+**Measured** (live `/v1/evaluate` for Jordan, Morgan and Casey, 2026-09-26; "both calls" = decision + explanation):
 
----
+| Mode | Median | Slowest | Inside the 4-second budget? |
+|---|---:|---:|---|
+| Rules only (AI off) | 0.11 s | 0.13 s | Always; this is also the fallback path |
+| **Gemini 3.5 Flash-Lite** | **2.6 s** | **3.1 s** | **Both calls finish** ✅ |
+| OpenAI GPT-6 Luna, effort `low` | 7.6 s | 8.5 s | Decision times out → rules fallback |
 
-## 🐯 Tiger Data
+Gemini became the default because it's the only option where both calls fit the budget. A circuit breaker turns free-tier rate limits into instant, labeled fallbacks instead of slow errors.
+
+### 3. [MLH] Best Use of Tiger Data
 
 Users save a plan and compare two plans over 5, 10 and 20 years. A projection is a monthly time series that never changes after it's saved, which suits TimescaleDB well.
 
-| Feature | Our use |
-|---|---|
-| **Hypertable** | `projection_point`: every monthly balance, cash and debt value, partitioned by month |
-| **Continuous aggregate** | `projection_yearly`: the yearly points the charts draw (tested to match row for row) |
-| **Compression** | Segmented by run and strategy: **1.38 MB → 262 KB (81% smaller)** |
-| **Connection pool** | About 336 ms for the first call, then about **20 ms** |
+```mermaid
+flowchart LR
+    save["Save run<br/>(inputs only)"] --> recompute["Engine re-runs<br/>input_hash must match"]
+    recompute --> run[("scenario_run<br/>provenance: model, policy,<br/>prompt, decision, assumptions")]
+    recompute --> points[("projection_point<br/>hypertable on month<br/>compressed")]
+    points --> cagg[("projection_yearly<br/>continuous aggregate<br/>time_bucket 12 months + first")]
+    cagg --> compare["/v1/history/compare<br/>yearly timeline + 5/10/20-year horizons"]
+```
 
-**Proven, not trusted:** the app sends only a plan's inputs. The server re-runs the engine and stores the result only if its `input_hash` matches what the user saw.
+| Tiger Data feature | How ARM uses it | Measured |
+|---|---|---|
+| **Hypertable** | `projection_point`: every monthly balance, cash and debt value, partitioned on the month | 5,887 points across 8 saved runs |
+| **Continuous aggregate** | `projection_yearly`: `time_bucket(12, month)` + `first()`, real-time mode, refreshed on save | Matches the desktop chart's yearly points **row for row** (tested) |
+| **Compression** | Segmented by `(run_id, strategy)`, ordered by `month`, with a policy | **1.38 MB → 262 KB (81% smaller)** |
+| **Relational + time series** | `scenario_run` (provenance, JSON assumptions) joins the points in one Postgres | `ON DELETE CASCADE` removes a run cleanly |
+| **Connection pool** | 0–4 connections, health-checked, opened lazily | First call about 336 ms, then about **20 ms** |
+
+> [!TIP]
+> **Stored numbers are proven, not trusted.** The app sends only a plan's *inputs* (demo profile ID, scenario, decision, `input_hash`). The server re-validates the decision, re-runs the engine, and saves only if the recomputed hash matches what the user saw (`409` otherwise). Saving is idempotent, and `/v1/evaluate` keeps working if the database is down.
 
 <details>
-<summary><b>Demo query</b></summary>
+<summary><b>The demo query</b></summary>
 
 ```sql
-SELECT r.label, y.projected_on, y.retirement_balance_cents / 100 AS retirement_usd
+-- Morgan's saved plans at 5, 10 and 20 years
+SELECT r.label, y.projected_on, y.retirement_balance_cents / 100 AS retirement_usd,
+       y.cash_cents / 100 AS cash_usd, y.debt_cents / 100 AS debt_usd
 FROM arm.projection_yearly y JOIN arm.scenario_run r USING (run_id)
 WHERE r.profile_id = 'morgan' AND y.strategy = r.primary_strategy AND y.month IN (60, 120, 240)
 ORDER BY y.month, r.created_at;
@@ -130,52 +258,109 @@ ORDER BY y.month, r.created_at;
 
 ---
 
+## 👀 What judges should notice
+
+- **AI is contained by design, not by prompt alone.** A JSON schema limits what Gemini can say, the engine re-validates it, and a numeric claim in its prose triggers a fallback.
+- **Saved numbers are recomputed before they're stored.** Tiger Data holds engine output verified by `input_hash`, never numbers sent from the browser.
+- **Frontend and backend can't drift.** A contract test compares 14 API schemas against the desktop types, and sync tests check that the charts sample exactly the engine's yearly points.
+- **Beginners are guided, not flooded.** A five-page Getting started guide, a **?** beside every key term (numbers read from the engine), and a **Why this matters** for each section of the plan.
+- **Honest about limits.** Styles that make no difference for someone are shown as the same, and an AI override of the chosen style is disclosed on screen.
+
+---
+
+## 🆚 Why not just ask an LLM?
+
+| Asking a chatbot | ARM |
+|---|---|
+| Invents numbers that sound right | Every number comes from a deterministic engine, and the same inputs always give the same result (`input_hash`) |
+| One answer, no alternatives | Current habits vs. adaptive vs. your own scenario, side by side, month by month |
+| Can't show its work | Order, evidence, tradeoffs and constraint checks for every decision |
+| Fails silently or hallucinates | Validates every answer; falls back to rules with a visible label and reason |
+| Forgets the conversation | Plans saved to Tiger Data and compared over 5, 10 and 20 years |
+
+---
+
+## 🎬 Demo script
+
+1. **Getting started** opens → walk through *how ARM decides*, then pick **Debt payoff first** for Morgan.
+2. **Your plan** → $1.46M at 67 vs. $1.32M on current habits. Drag the chart, set a **$1M goal line**, read "N years sooner".
+3. **Debt → Why this matters** → card cleared in month 16 instead of 135, with interest on both sides.
+4. **Explore** → retire two years later → **Save to history** → **Saved runs**: two plans compared from Tiger Data.
+5. Turn **Live calculation** off → the app keeps working on saved results, with honest labels.
+6. **Ask** → "What is a target-date fund?" → answered by Gemini, with server-owned sources.
+
+---
+
 ## 🖥️ The app
 
 | Page | What you do there |
 |---|---|
-| **Getting started** | Five short pages that explain ARM and help you pick a plan style |
-| **Overview** | See your next step and where you stand |
-| **Your plan** | Watch your balance grow; pin any age, set a goal line, open **Why this matters** on each topic |
-| **Explore** | Try another retirement age or contribution; save and compare plans (Tiger Data) |
-| **Fund shortlist** | Rank target-date funds for a 401(k) or IRA |
-| **Learn** · **Ask** | Six short lessons you can apply to your numbers, and a Gemini education chat |
+| **Getting started** | Five short pages: welcome, how ARM decides, three ideas that matter most, choose a plan style, where to find things |
+| **Overview** | See your next step, three at-a-glance tiles, where you're heading, and a first-steps checklist |
+| **Your plan** | An always-visible projection (plan vs. current habits, shaded difference, pin any age, goal line), then one topic per tab, each with **Why this matters** |
+| **Explore** | Try another retirement age or contribution; Compare, Timeline and **Saved runs** (Tiger Data: save, compare, delete) |
+| **Fund shortlist** | Explainable target-date fund ranking for a 401(k) or IRA |
+| **Learn** · **Ask** | Six lessons, each with **Try** to apply it to your numbers, and the Gemini education chat |
+
+The iPhone app uses the same API and ships an offline bundle of saved results, so the demo works with no network.
 
 ---
 
-## 🎬 Demo
+## ✅ Engineering quality
 
-1. **Getting started** → pick **Debt payoff first** for Morgan.
-2. **Your plan** → $1.46M at 67 vs. $1.32M on current habits. Set a **$1M goal line** to see "N years sooner".
-3. **Debt → Why this matters** → card paid off in month 16 instead of month 135.
-4. **Explore** → retire two years later, **Save to history**, then compare in **Saved runs** (Tiger Data).
-5. **Ask** → "What is a target-date fund?"
+- **541 backend tests** (`pytest`): engine, policy, simulation, AI pipeline, history, plan styles, funds, education chat, contracts.
+- **5/5 real Tiger Data tests**: hypertable, continuous aggregate = chart values, compression, delete, pool reuse (opt-in with `TIGER_DATABASE_URL`).
+- **95 desktop tests** (`vitest`): chart math, sync tests on real engine output, the API↔UI contract test, the API client.
+- **7/7 live tests** against a running server, including save and delete through Tiger Data.
+- **Mutation-checked:** deliberate bugs (off-by-one dates, reversed differences, sampling drift, a skipped hash check) each make the suites fail.
+- **Performance:** first download 255 KB instead of 1,126 KB; plan-style comparisons cached (about 340 ms → 2.5 ms); rate-limiter memory bounded against spoofed client keys.
 
 ---
 
-## ✅ Quality
+## 🌍 Impact
 
-| Check | Result |
-|---|---|
-| Backend (`pytest`) | **541 passing**, plus 5/5 against real Tiger Data |
-| Desktop (`vitest`) | **95 passing**, including a contract test that keeps the API and UI types in sync |
-| Live, against a running server | **7/7**, including save and delete through Tiger Data |
-| First download | **255 KB** (was 1,126 KB) |
+<table>
+<tr>
+<td width="33%" valign="top">
+
+### For savers
+A clear **next step each month**, grounded in their real cash flow. For a profile like Morgan's, that means **$32,516 less interest**, a card paid off **119 months sooner**, and **+$141,669** at retirement (**+$64,286** in today's dollars), with the tradeoffs visible, not hidden.
+
+</td>
+<td width="33%" valign="top">
+
+### For plan providers
+Personalization **without touching the fund**. ARM adapts contributions and cash priorities around an existing target-date product, keeping its allocation and its glide path. Every decision is explainable and every stored plan is auditable (`input_hash`, model and policy versions).
+
+</td>
+<td width="33%" valign="top">
+
+### For AI in finance
+A reusable pattern: **the model proposes, a deterministic engine decides**, and every answer carries its source. It stays useful when the AI is slow, rate-limited or wrong, because the labeled rules path is always there.
+
+</td>
+</tr>
+</table>
+
+**How we'd measure it in a pilot:** the share of users getting the full employer match, the time to clear high-interest debt, months of emergency savings, and changes in contribution rate, each compared with current-habits projections for the same person.
 
 ---
 
 ## 🚀 Run it
 
 ```bash
-cd backend && python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+# Backend
+cd backend
+python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements-test.txt
 cp .env.example .env     # optional: GEMINI_API_KEY for live AI, TIGER_DATABASE_URL for saved plans
 uvicorn app.main:app --port 8000
 
-cd ../desktop && npm install && npm run dev    # http://localhost:5173
+# Desktop (second terminal)
+cd desktop && npm install && npm run dev                # http://localhost:5173
 ```
 
-No keys? It still runs: AI falls back to the labeled rules order, and saved plans are simply off.
+No keys? It still runs: AI falls back to the labeled rules order, and saved plans are simply off. Tests: `pytest` in `backend/`, `npm test` in `desktop/`.
 
 <details>
 <summary><b>📱 iPhone</b></summary>
@@ -189,39 +374,48 @@ Publish the API over HTTPS with ngrok (`ngrok http --url=your-team.ngrok-free.de
 
 | Endpoint | Purpose |
 |---|---|
-| `POST /v1/evaluate` | Profile + optional scenario → plan, decision, explanation, projections |
+| `POST /v1/evaluate` | Profile + optional scenario → state, plan, decision, explanation, projections |
 | `POST /v1/plan-styles` | Each plan style's rule order through the engine (no AI) |
-| `/v1/history/*` | Save, list, compare and delete plans (Tiger Data) |
-| `/v1/funds/*` | Reviewed fund catalog and shortlist |
-| `POST /v1/education/chat` | Retirement Q&A |
-| `GET /health` · `GET /v1/demo-profiles` | Status and the three demo profiles |
+| `GET /v1/history/status` · `POST/GET /v1/history/runs` · `DELETE /v1/history/runs/{id}` · `GET /v1/history/compare` | Scenario history on Tiger Data |
+| `GET /v1/funds/catalog` · `POST /v1/funds/shortlist` | Reviewed fund catalog and shortlist |
+| `POST /v1/education/chat` | Bounded retirement Q&A |
+| `GET /health` · `GET /v1/demo-profiles` | Status (including `ai_available`) and the three demo profiles |
 
-Money is integer cents. Full schema: [`contracts/openapi.json`](contracts/openapi.json).
+Money is integer USD cents; rates are decimals. Full schema: [`contracts/openapi.json`](contracts/openapi.json), regenerated from the app and checked by tests.
 
 </details>
 
 <details>
-<summary><b>🧰 Stack and repository</b></summary>
+<summary><b>🧰 Stack, repository and docs</b></summary>
 
 | Layer | Technology | Where |
 |---|---|---|
 | Engine | Python 3.12, `Decimal` cents, deterministic simulation | `backend/app/engine/` |
-| API | FastAPI, Pydantic | `backend/app/` |
-| AI | Gemini 3.5 Flash-Lite (`google-genai`), structured output | `backend/app/ai/` |
-| Time series | Tiger Data / TimescaleDB, `psycopg` + pool | `backend/app/analytics/` |
+| API | FastAPI, Pydantic, Uvicorn | `backend/app/` |
+| AI | Gemini 3.5 Flash-Lite via `google-genai` (OpenAI optional), structured output | `backend/app/ai/` |
+| Time series | Tiger Data / TimescaleDB, `psycopg` 3 + `psycopg-pool` | `backend/app/analytics/` |
 | Desktop | React, TypeScript, Vite, Vitest | `desktop/` |
 | iPhone | SwiftUI, Swift Charts | `ios/` |
 
-Docs: [backend](docs/BACKEND.md) · [scenario history](docs/SCENARIO_HISTORY.md) · [desktop](docs/DESKTOP.md) · [funds](docs/FUNDS.md) · [education chat](docs/EDUCATION_CHAT.md) · [runbook](docs/RUNBOOK.md)
+Docs: [backend](docs/BACKEND.md) · [engine handoff](docs/ENGINE_HANDOFF.md) · [scenario history](docs/SCENARIO_HISTORY.md) · [desktop](docs/DESKTOP.md) · [funds](docs/FUNDS.md) · [education chat](docs/EDUCATION_CHAT.md) · [runbook](docs/RUNBOOK.md)
 
 </details>
 
 ---
 
+## 🧭 Scope and limitations
+
+- **Synthetic data only.** Morgan, Jordan and Casey are fictional; saved plans accept only the demo profiles, so no personal data reaches the cloud.
+- **Illustrative projections.** Steady nominal returns (stocks 6%, bonds 3%), no volatility or withdrawals, labeled hypothetical.
+- **The fund's mix never changes.** ARM adapts contributions and cash priorities, not the target-date allocation.
+- **Out of scope by design:** readiness scores, success probabilities, trading, tax optimization and real bank credentials. Plaid Sandbox is a stretch goal.
+
+---
+
 <div align="center">
 
-**ARM: a target-date plan that understands more than your retirement date.**
+**Adaptive Retirement Management (ARM): a target-date plan that understands more than your retirement date.**
 
-<sub>Educational prototype with synthetic data. Morgan, Jordan and Casey are fictional. Projections are illustrative, not guarantees. Not affiliated with or endorsed by T. Rowe Price.</sub>
+<sub>Educational prototype using synthetic data. Morgan, Jordan and Casey are fictional. Not affiliated with or endorsed by T. Rowe Price.</sub>
 
 </div>
