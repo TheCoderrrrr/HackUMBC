@@ -138,3 +138,4 @@ class RunRecord:
     input_hash: str
     assumptions: dict
     points: list[PointRow]
+    owner: str | None = None  # SHA-256 of the user's profile key; None for shared demo runs

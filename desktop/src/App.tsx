@@ -7,13 +7,14 @@ import { Overview } from "./views/Overview";
 import { Plan } from "./views/Plan";
 import { errorMessage } from "./api/client";
 import { STYLE_INFO } from "./data/styles";
-import { useStore, type Tab } from "./store";
+import { MY_ID, useStore, type Tab } from "./store";
 
 // Pages opened less often load on demand, keeping the first download small.
 const Explore = lazy(() => import("./views/Explore").then((m) => ({ default: m.Explore })));
 const Funds = lazy(() => import("./views/Funds").then((m) => ({ default: m.Funds })));
 const Learn = lazy(() => import("./views/Learn").then((m) => ({ default: m.Learn })));
 const Chat = lazy(() => import("./views/Chat").then((m) => ({ default: m.Chat })));
+const YourNumbers = lazy(() => import("./views/YourNumbers").then((m) => ({ default: m.YourNumbers })));
 
 /** Pages, grouped the way people use them: their money, planning ahead, learning. */
 const PAGES: { id: Tab; title: string; icon: string; group: string; description: (first: string) => string }[] = [
@@ -31,7 +32,8 @@ const PAGES: { id: Tab; title: string; icon: string; group: string; description:
 const GROUPS = ["Your money", "Plan ahead", "Learn"] as const;
 
 export function App() {
-  const { tab, display, profile, load, setDrawer, dataMode, savedMatchesStyle, style } = useStore();
+  const { tab, display, profile, load, setDrawer, dataMode, savedMatchesStyle, style, numbersOpen } = useStore();
+  const showNumbers = numbersOpen && tab !== "funds";
   const page = PAGES.find((p) => p.id === tab) ?? PAGES[0];
   const [chatOpen, setChatOpen] = useState(false);
   const [chatLoaded, setChatLoaded] = useState(false);
@@ -50,12 +52,14 @@ export function App() {
         <div className="main-inner">
           <header className="topbar">
             <div>
-              <h1>{page.title}</h1>
-              <p className="page-desc">{page.description(profile.name.split(" ")[0])}</p>
+              <h1>{showNumbers ? "Your numbers" : page.title}</h1>
+              <p className="page-desc">{showNumbers
+                ? "Enter your own finances; ARM builds your plan from them."
+                : page.description(profile.name.split(" ")[0])}</p>
             </div>
             <div className="topbar-actions">
               <LiveStatus />
-              {display && tab !== "funds" && tab !== "learn" && (
+              {display && !showNumbers && tab !== "funds" && tab !== "learn" && (
                 <button className="pill neutral" onClick={() => setDrawer("explanation")}>
                   <Icon name="why" /> Why this plan?
                 </button>
@@ -76,12 +80,13 @@ export function App() {
           )}
 
           <Suspense fallback={<PageLoading />}>
-            {tab === "funds" && <Funds key={profile.id} onContext={setFundContext} />}
-            {!display && tab !== "funds" && <EmptyState />}
-            {display && tab === "overview" && <Overview display={display} />}
-            {display && tab === "plan" && <Plan display={display} />}
-            {display && tab === "explore" && <Explore display={display} onContext={setExploreContext} />}
-            {display && tab === "learn" && <Learn display={display} />}
+            {tab === "funds" && <Funds />}
+            {showNumbers && <YourNumbers />}
+            {!showNumbers && !display && tab !== "funds" && <EmptyState />}
+            {!showNumbers && display && tab === "overview" && <Overview display={display} />}
+            {!showNumbers && display && tab === "plan" && <Plan display={display} />}
+            {!showNumbers && display && tab === "explore" && <Explore display={display} />}
+            {!showNumbers && display && tab === "learn" && <Learn display={display} />}
           </Suspense>
         </div>
       </main>
@@ -96,7 +101,7 @@ export function App() {
 }
 
 function Sidebar() {
-  const { tab, setTab, profiles, profile, selectProfile, connection, liveEnabled, setLiveEnabled, checkConnection, style, openGuide } = useStore();
+  const { tab, setTab, profiles, profile, selectProfile, connection, liveEnabled, setLiveEnabled, checkConnection, style, openGuide, mine, openNumbers } = useStore();
   const connectionText = {
     online: "Backend connected",
     offline: "Backend unreachable",
@@ -143,10 +148,13 @@ function Sidebar() {
             <Avatar id={p.id} name={p.name} size={38} />
             <span>
               <span className="name" style={{ display: "block" }}>{p.name}</span>
-              <span className="sub">{PROFILE_SUBTITLE[p.id] ?? `Age ${p.age}`}</span>
+              <span className="sub">{p.id === MY_ID ? "Your numbers" : PROFILE_SUBTITLE[p.id] ?? `Age ${p.age}`}</span>
             </span>
           </button>
         ))}
+        <button className="add-numbers" onClick={() => { if (mine) selectProfile(MY_ID); openNumbers(); }}>
+          <Icon name={mine ? "sliders" : "person"} size={15} /> {mine ? "Edit your numbers" : "Add your numbers"}
+        </button>
       </div>
 
       <div className="sidebar-footer">

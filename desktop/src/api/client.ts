@@ -2,8 +2,11 @@ import type { CatalogSummary, FundShortlistEnvelope, FundShortlistQuery } from "
 import type { ScreenContext } from "./chatContext";
 import type {
   Comparison, ErrorBody, EvaluateRequest, Evaluation, FinancialProfile, Health, HistoryStatus, PlanningPreference,
-  PlanStyles, RunSummary, Scenario,
+  PlanStyles, ProfileBuild, ProfileInput, RunSummary, Scenario, StoredProfile,
 } from "./types";
+
+/** Header carrying the user's anonymous profile key (the server stores only its hash). */
+const keyHeader = (key?: string | null): Record<string, string> => (key ? { "X-Profile-Key": key } : {});
 
 /** Relative to the page; the Vite dev server forwards `/api/*` to the backend. */
 const BASE = "/api";
@@ -45,7 +48,8 @@ export class APIError extends Error {
   }
 }
 
-async function send<T>(path: string, init: RequestInit, timeoutMs: number, signal?: AbortSignal): Promise<T> {
+async function send<T>(path: string, init: RequestInit, timeoutMs: number, signal?: AbortSignal,
+  extraHeaders: Record<string, string> = {}): Promise<T> {
   const controller = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
@@ -59,7 +63,7 @@ async function send<T>(path: string, init: RequestInit, timeoutMs: number, signa
   try {
     response = await fetch(BASE + path, {
       ...init,
-      headers: { Accept: "application/json", ...(init.body ? { "Content-Type": "application/json" } : {}) },
+      headers: { Accept: "application/json", ...(init.body ? { "Content-Type": "application/json" } : {}), ...extraHeaders },
       signal: controller.signal,
     });
   } catch {
@@ -114,7 +118,7 @@ export const api = {
     status: (signal?: AbortSignal) =>
       send<HistoryStatus>("/v1/history/status", { method: "GET" }, EVALUATION_TIMEOUT_MS, signal),
     /** Sends the inputs of a shown result; the server recomputes and stores its own numbers. */
-    save: (evaluation: Evaluation, scenario: Scenario | null, style: PlanningPreference | null) =>
+    save: (evaluation: Evaluation, scenario: Scenario | null, style: PlanningPreference | null, key?: string | null) =>
       send<{ run: RunSummary; created: boolean }>("/v1/history/runs", {
         method: "POST",
         body: JSON.stringify({
@@ -124,15 +128,26 @@ export const api = {
           input_hash: evaluation.input_hash,
           planning_preference: style,
         }),
-      }, EVALUATION_TIMEOUT_MS),
-    list: (profileID: string, signal?: AbortSignal) =>
+      }, EVALUATION_TIMEOUT_MS, undefined, keyHeader(key)),
+    list: (profileID: string, signal?: AbortSignal, key?: string | null) =>
       send<{ runs: RunSummary[] }>(`/v1/history/runs?profile_id=${encodeURIComponent(profileID)}`,
-        { method: "GET" }, REQUEST_TIMEOUT_MS, signal),
-    remove: (runID: string) =>
-      send<null>(`/v1/history/runs/${encodeURIComponent(runID)}`, { method: "DELETE" }, REQUEST_TIMEOUT_MS),
-    compare: (base: string, other: string, signal?: AbortSignal) =>
+        { method: "GET" }, REQUEST_TIMEOUT_MS, signal, keyHeader(key)),
+    remove: (runID: string, key?: string | null) =>
+      send<null>(`/v1/history/runs/${encodeURIComponent(runID)}`, { method: "DELETE" }, REQUEST_TIMEOUT_MS, undefined, keyHeader(key)),
+    compare: (base: string, other: string, signal?: AbortSignal, key?: string | null) =>
       send<Comparison>(`/v1/history/compare?base=${encodeURIComponent(base)}&other=${encodeURIComponent(other)}`,
-        { method: "GET" }, REQUEST_TIMEOUT_MS, signal),
+        { method: "GET" }, REQUEST_TIMEOUT_MS, signal, keyHeader(key)),
+  },
+  /** The user's own numbers: preview without storing, and store/load/erase under their key. */
+  profiles: {
+    build: (form: ProfileInput, signal?: AbortSignal) =>
+      send<ProfileBuild>("/v1/profiles/build", { method: "POST", body: JSON.stringify(form) }, REQUEST_TIMEOUT_MS, signal),
+    save: (form: ProfileInput, key: string) =>
+      send<ProfileBuild>("/v1/profiles/me", { method: "PUT", body: JSON.stringify(form) }, REQUEST_TIMEOUT_MS, undefined, keyHeader(key)),
+    load: (key: string, signal?: AbortSignal) =>
+      send<StoredProfile>("/v1/profiles/me", { method: "GET" }, REQUEST_TIMEOUT_MS, signal, keyHeader(key)),
+    erase: (key: string) =>
+      send<null>("/v1/profiles/me", { method: "DELETE" }, REQUEST_TIMEOUT_MS, undefined, keyHeader(key)),
   },
 };
 

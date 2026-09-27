@@ -39,10 +39,13 @@ class HistoryUnavailable(Exception):
 class HistoryStore(Protocol):
     def ping(self) -> bool: ...
     def save(self, record: RunRecord) -> tuple[RunSummary, bool]: ...
-    def list_runs(self, profile_id: str, limit: int) -> list[RunSummary]: ...
-    def get_runs(self, run_ids: list[str]) -> dict[str, RunSummary]: ...
+    def list_runs(self, profile_id: str, limit: int, owner: str | None = None) -> list[RunSummary]: ...
+    def get_runs(self, run_ids: list[str], owner: str | None = None) -> dict[str, RunSummary]: ...
     def yearly(self, pairs: list[tuple[str, str]]) -> dict[str, list[YearRow]]: ...
-    def delete(self, run_id: str) -> bool: ...
+    def delete(self, run_id: str, owner: str | None = None) -> bool: ...
+    def save_profile(self, owner: str, form: dict, profile: dict) -> None: ...
+    def get_profile(self, owner: str) -> tuple[dict, dict] | None: ...
+    def delete_profile(self, owner: str) -> bool: ...
 
 
 def migrations(schema: str) -> list[str]:
@@ -105,6 +108,18 @@ def migrations(schema: str) -> list[str]:
             END IF;
         END $$""",
         f"SELECT add_compression_policy('{s}.projection_point', compress_after => {_CHUNK_MONTHS}, if_not_exists => TRUE)",
+        # Users' own profiles (stored under a hash of an anonymous browser key) and their runs.
+        f"ALTER TABLE {s}.scenario_run ADD COLUMN IF NOT EXISTS owner_key_hash text",
+        f"ALTER TABLE {s}.scenario_run DROP CONSTRAINT IF EXISTS scenario_run_input_hash_key",
+        f"CREATE UNIQUE INDEX IF NOT EXISTS scenario_run_hash_owner ON {s}.scenario_run (input_hash, (coalesce(owner_key_hash, '')))",
+        f"CREATE INDEX IF NOT EXISTS scenario_run_owner_idx ON {s}.scenario_run (owner_key_hash, profile_id, created_at DESC)",
+        f"""CREATE TABLE IF NOT EXISTS {s}.user_profile (
+            owner_key_hash text PRIMARY KEY CHECK (owner_key_hash ~ '^[0-9a-f]{{64}}$'),
+            form jsonb NOT NULL,
+            profile jsonb NOT NULL,
+            created_at timestamptz NOT NULL DEFAULT now(),
+            updated_at timestamptz NOT NULL DEFAULT now()
+        )""",
     ]
 
 
@@ -197,16 +212,16 @@ class TigerHistoryStore:
                     f"""INSERT INTO {s}.scenario_run (run_id, input_hash, profile_id, label, as_of_date, scenario,
                             primary_strategy, retirement_age, final_retirement_balance_cents, decision_source,
                             model_id, prompt_version, ordered_priorities, schema_version, model_version,
-                            policy_version, assumptions)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (input_hash) DO NOTHING
+                            policy_version, assumptions, owner_key_hash)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (input_hash, (coalesce(owner_key_hash, ''))) DO NOTHING
                         RETURNING run_id""",
                     (record.run_id, record.input_hash, record.profile_id, record.label, record.as_of_date,
                      json.dumps(record.scenario.model_dump(mode="json")) if record.scenario else None,
                      record.primary_strategy, record.retirement_age, record.final_retirement_balance_cents,
                      record.decision_source, record.model_id, record.prompt_version, record.ordered_priorities,
                      record.schema_version, record.model_version, record.policy_version,
-                     json.dumps(record.assumptions)),
+                     json.dumps(record.assumptions), record.owner),
                 ).fetchone()
                 created = inserted is not None
                 if created:
@@ -221,23 +236,28 @@ class TigerHistoryStore:
             # Also runs for a repeated save, so a refresh that failed earlier is retried.
             last = max((p.month for p in record.points), default=0)
             conn.execute(f"CALL refresh_continuous_aggregate('{s}.projection_yearly', 0, %s)", (last + 12,))
-            row = conn.execute(f"SELECT {_SUMMARY_COLUMNS} FROM {s}.scenario_run WHERE input_hash = %s",
-                               (record.input_hash,)).fetchone()
+            row = conn.execute(f"SELECT {_SUMMARY_COLUMNS} FROM {s}.scenario_run "
+                               f"WHERE input_hash = %s AND owner_key_hash IS NOT DISTINCT FROM %s",
+                               (record.input_hash, record.owner)).fetchone()
             return _summary(row), created
 
         return self._run(write)
 
-    def list_runs(self, profile_id: str, limit: int) -> list[RunSummary]:
+    def list_runs(self, profile_id: str, limit: int, owner: str | None = None) -> list[RunSummary]:
+        """A profile's runs: the owner's own for a user profile, the shared ones (owner NULL) for demos."""
         s = self.schema
         return self._run(lambda conn: [_summary(r) for r in conn.execute(
             f"SELECT {_SUMMARY_COLUMNS} FROM {s}.scenario_run WHERE profile_id = %s "
-            f"ORDER BY created_at DESC, run_id LIMIT %s", (profile_id, limit)).fetchall()])
+            f"AND owner_key_hash IS NOT DISTINCT FROM %s ORDER BY created_at DESC, run_id LIMIT %s",
+            (profile_id, owner, limit)).fetchall()])
 
-    def get_runs(self, run_ids: list[str]) -> dict[str, RunSummary]:
+    def get_runs(self, run_ids: list[str], owner: str | None = None) -> dict[str, RunSummary]:
+        """Runs this caller may see: shared demo runs, plus their own when `owner` is given."""
         s = self.schema
         rows = self._run(lambda conn: conn.execute(
-            f"SELECT {_SUMMARY_COLUMNS} FROM {s}.scenario_run WHERE run_id = ANY(%s::uuid[])",
-            (run_ids,)).fetchall())
+            f"SELECT {_SUMMARY_COLUMNS} FROM {s}.scenario_run WHERE run_id = ANY(%s::uuid[]) "
+            f"AND (owner_key_hash IS NULL OR owner_key_hash = %s)",
+            (run_ids, owner)).fetchall())
         return {r.run_id: r for r in map(_summary, rows)}
 
     def yearly(self, pairs: list[tuple[str, str]]) -> dict[str, list[YearRow]]:
@@ -259,19 +279,53 @@ class TigerHistoryStore:
 
         return self._run(read)
 
-    def delete(self, run_id: str) -> bool:
-        """Removes a run and its points (ON DELETE CASCADE), then refreshes the yearly roll-up."""
+    def delete(self, run_id: str, owner: str | None = None) -> bool:
+        """Removes a run the caller may see (points go by ON DELETE CASCADE), then refreshes the roll-up."""
         s = self.schema
 
         def remove(conn):
             with conn.transaction():
                 last = conn.execute(f"SELECT max(month) FROM {s}.projection_point WHERE run_id = %s", (run_id,)).fetchone()[0]
-                gone = conn.execute(f"DELETE FROM {s}.scenario_run WHERE run_id = %s RETURNING run_id", (run_id,)).fetchone()
+                gone = conn.execute(f"DELETE FROM {s}.scenario_run WHERE run_id = %s "
+                                    f"AND (owner_key_hash IS NULL OR owner_key_hash = %s) RETURNING run_id",
+                                    (run_id, owner)).fetchone()
             if gone and last is not None:
                 conn.execute(f"CALL refresh_continuous_aggregate('{s}.projection_yearly', 0, %s)", (last + 12,))
             return gone is not None
 
         return self._run(remove)
+
+    # --- users' own profiles ---------------------------------------------------------
+
+    def save_profile(self, owner: str, form: dict, profile: dict) -> None:
+        s = self.schema
+        self._run(lambda conn: conn.execute(
+            f"""INSERT INTO {s}.user_profile (owner_key_hash, form, profile) VALUES (%s, %s, %s)
+                ON CONFLICT (owner_key_hash) DO UPDATE
+                SET form = EXCLUDED.form, profile = EXCLUDED.profile, updated_at = now()""",
+            (owner, json.dumps(form), json.dumps(profile))))
+
+    def get_profile(self, owner: str) -> tuple[dict, dict] | None:
+        s = self.schema
+        row = self._run(lambda conn: conn.execute(
+            f"SELECT form, profile FROM {s}.user_profile WHERE owner_key_hash = %s", (owner,)).fetchone())
+        return (row[0], row[1]) if row else None
+
+    def delete_profile(self, owner: str) -> bool:
+        """Erases the profile and every run it owns."""
+        s = self.schema
+
+        def erase(conn):
+            with conn.transaction():
+                runs = conn.execute(f"DELETE FROM {s}.scenario_run WHERE owner_key_hash = %s RETURNING run_id",
+                                    (owner,)).fetchall()
+                gone = conn.execute(f"DELETE FROM {s}.user_profile WHERE owner_key_hash = %s RETURNING owner_key_hash",
+                                    (owner,)).fetchone()
+            if runs:
+                conn.execute(f"CALL refresh_continuous_aggregate('{s}.projection_yearly', 0, NULL)")
+            return gone is not None
+
+        return self._run(erase)
 
 
 def build_history_store() -> TigerHistoryStore | None:
