@@ -555,10 +555,11 @@ h1, h2, h3, p { margin: 0; }
 .style-table td.chosen { color: var(--text); font-weight: 500; }
 
 /* Sidebar plan-style chip */
-.style-chip { display: grid; gap: 6px; margin: 14px 4px 18px; padding: 12px; border-radius: 14px; text-align: left; background: rgba(255, 255, 255, 0.03); box-shadow: inset 0 0 0 0.75px var(--hairline); transition: background 0.2s; }
-.style-chip:hover { background: rgba(255, 255, 255, 0.06); }
+.style-chip { display: grid; gap: 6px; margin: 14px 4px 18px; padding: 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.03); box-shadow: inset 0 0 0 0.75px var(--hairline); }
 .style-chip-row { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text); }
 .style-chip-row i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.style-chip select { min-width: 0; width: 100%; padding: 5px 4px; color: var(--text); background: var(--sheet); border: 1px solid var(--hairline-strong); border-radius: 8px; font: inherit; cursor: pointer; }
+.style-chip select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ---------- Learn ---------- */
 .learn-intro { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
@@ -724,9 +725,6 @@ p.lesson-apply { padding-top: 16px; }
 .explore-tabs .tab-panel > .glass::before { display: none; }
 
 /* Getting started pages */
-.guide-agenda { list-style: none; display: grid; gap: 10px; margin-top: 20px; }
-.guide-agenda li { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--text); }
-.guide-agenda svg { color: var(--accent); flex: none; }
 .guide-order { list-style: none; counter-reset: order; display: grid; gap: 8px; margin-top: 18px; }
 .guide-order li {
   counter-increment: order; display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 14px;
@@ -738,14 +736,6 @@ p.lesson-apply { padding-top: 16px; }
 .guide-order li .chip { margin-left: auto; }
 .guide-order-text { display: grid; gap: 2px; }
 .guide-order-text b { font-size: 15px; font-weight: 500; }
-.guide-ideas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 20px; }
-.guide-idea { padding: 18px; border-radius: 18px; background: rgba(255, 255, 255, 0.025); box-shadow: inset 0 0 0 0.75px var(--hairline); }
-.guide-tour { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
-.guide-place { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.025); }
-.guide-place > span:last-child { display: grid; gap: 1px; }
-.guide-place b { font-size: 14.5px; font-weight: 500; }
-.term-demo { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; font-size: 10px; font-weight: 600; color: var(--caption); box-shadow: inset 0 0 0 1px var(--hairline-strong); vertical-align: 1px; }
-@media (max-width: 760px) { .guide-ideas, .guide-tour { grid-template-columns: 1fr; } }
 
 /* ---------- Interactive projection chart ---------- */
 .chart.pickable { cursor: crosshair; }
