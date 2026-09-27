@@ -197,7 +197,8 @@ struct OverviewView: View {
                 .foregroundStyle(Palette.accent)
                 .padding(.horizontal, Space.l)
                 .frame(minHeight: 40)
-                .glassCapsule(tint: Palette.accent)
+                // Non-interactive glass: interactive glass on a button label swallows the tap.
+                .glassCapsule(tint: Palette.accent, interactive: false)
                 .frame(minHeight: 44)
                 .contentShape(Capsule())
             }

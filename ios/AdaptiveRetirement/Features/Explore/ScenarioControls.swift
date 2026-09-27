@@ -354,7 +354,8 @@ private struct PresetChip<Label: View>: View {
                 .foregroundStyle(isSelected ? Palette.accent : Palette.textSecondary)
                 .padding(.horizontal, 14)
                 .frame(minHeight: 36)
-                .glassCapsule(tint: isSelected ? Palette.accent : nil)
+                // Non-interactive glass: interactive glass on a button label swallows the tap.
+                .glassCapsule(tint: isSelected ? Palette.accent : nil, interactive: false)
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
         }

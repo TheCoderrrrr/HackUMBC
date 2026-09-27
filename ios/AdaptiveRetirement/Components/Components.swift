@@ -160,7 +160,8 @@ struct HeaderAvatarButton: View {
         } label: {
             AvatarView(profile: store.profile, size: 40)
                 .padding(3)
-                .glassSurface(Circle(), interactive: true)
+                // Non-interactive glass: interactive glass on a tappable label swallows the tap.
+                .glassSurface(Circle(), interactive: false)
         }
         .accessibilityLabel("\(store.profile.name), account menu")
     }
@@ -237,7 +238,8 @@ struct SecondaryButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity, minHeight: 50)
             .background {
                 if bordered {
-                    Capsule().fill(.clear).glassCapsule()
+                    // Button label: the glass must not be interactive, or it swallows the tap.
+                    Capsule().fill(.clear).glassCapsule(interactive: false)
                 }
             }
             .opacity(configuration.isPressed ? 0.7 : 1)
@@ -575,8 +577,10 @@ extension View {
         glassSurface(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous), tint: tint)
     }
 
-    /// Liquid Glass capsule, interactive by default (chips, pills, small buttons).
-    func glassCapsule(tint: Color? = nil, interactive: Bool = true) -> some View {
+    /// Liquid Glass capsule, non-interactive by default. Interactive glass on a button
+    /// label takes the touch and the action never fires (iOS 26), so only opt in on
+    /// non-button decorations.
+    func glassCapsule(tint: Color? = nil, interactive: Bool = false) -> some View {
         glassSurface(Capsule(), tint: tint, interactive: interactive)
     }
 }
