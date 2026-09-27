@@ -67,8 +67,10 @@ def revalidate(profile: FinancialProfile, decision: DecisionSummary) -> Decision
 
 
 def build_run(body_profile_id: str, scenario: Scenario | None, decision: DecisionSummary,
-              expected_hash: str, planning_preference: str | None = None) -> RunRecord:
-    profile = demo_profile(body_profile_id)
+              expected_hash: str, planning_preference: str | None = None,
+              profile: FinancialProfile | None = None, owner: str | None = None) -> RunRecord:
+    """`profile` is the stored user profile for owner runs; demo runs look it up by ID."""
+    profile = profile if profile is not None else demo_profile(body_profile_id)
     style = None
     if planning_preference and planning_preference != profile.planning_preference:
         profile = profile.model_copy(update={"planning_preference": planning_preference})
@@ -115,6 +117,7 @@ def build_run(body_profile_id: str, scenario: Scenario | None, decision: Decisio
         input_hash=core.input_hash,
         assumptions=core.assumptions.model_dump(mode="json"),
         points=points,
+        owner=owner,
     )
 
 

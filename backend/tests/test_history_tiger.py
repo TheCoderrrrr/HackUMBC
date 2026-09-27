@@ -134,3 +134,32 @@ def test_pool_reuses_connections(tiger):
     stats = tiger._get_pool().get_stats()
     assert "connections_num" in stats and stats["connections_num"] <= 2  # five calls, not five TLS handshakes
 
+
+
+@needs_tiger
+def test_user_profiles_and_owner_scoped_runs_on_tiger(tiger):
+    import dataclasses
+    import hashlib
+
+    alice, bob = hashlib.sha256(b"alice-key").hexdigest(), hashlib.sha256(b"bob-key").hexdigest()
+    record, _ = _record("jordan")
+
+    # The profile table round-trips JSON and upserts.
+    tiger.save_profile(alice, {"age": 35}, {"id": "me"})
+    tiger.save_profile(alice, {"age": 36}, {"id": "me"})
+    assert tiger.get_profile(alice) == ({"age": 36}, {"id": "me"})
+    assert tiger.get_profile(bob) is None
+
+    # The same plan saved by two owners is two private runs, and a shared demo run stays separate.
+    mine = dataclasses.replace(record, run_id=str(uuid.uuid4()), profile_id="me", owner=alice)
+    theirs = dataclasses.replace(record, run_id=str(uuid.uuid4()), profile_id="me", owner=bob)
+    assert tiger.save(mine)[1] and tiger.save(theirs)[1]
+    assert not tiger.save(dataclasses.replace(mine, run_id=str(uuid.uuid4())))[1]  # idempotent per owner
+    assert [r.run_id for r in tiger.list_runs("me", 10, alice)] == [mine.run_id]
+    assert set(tiger.get_runs([mine.run_id, theirs.run_id], alice)) == {mine.run_id}
+    assert tiger.delete(theirs.run_id, alice) is False and tiger.delete(theirs.run_id) is False
+
+    # Erasing a profile removes its runs, and only its runs.
+    assert tiger.delete_profile(alice) is True
+    assert tiger.list_runs("me", 10, alice) == [] and tiger.get_profile(alice) is None
+    assert [r.run_id for r in tiger.list_runs("me", 10, bob)] == [theirs.run_id]

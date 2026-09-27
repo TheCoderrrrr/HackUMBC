@@ -32,6 +32,7 @@ class FakeHistoryStore:
     def __init__(self):
         self.records: dict[str, RunRecord] = {}
         self.created: dict[str, datetime] = {}
+        self.profiles: dict[str, tuple[dict, dict]] = {}  # owner hash -> (form, profile)
         self.down = False
         self._clock = datetime(2026, 9, 27, tzinfo=timezone.utc)
 
@@ -54,29 +55,49 @@ class FakeHistoryStore:
     def save(self, record):
         self._check()
         for existing in self.records.values():
-            if existing.input_hash == record.input_hash:
+            if existing.input_hash == record.input_hash and existing.owner == record.owner:
                 return self._summary(existing), False
         self._clock += timedelta(seconds=1)
         self.records[record.run_id], self.created[record.run_id] = record, self._clock
         return self._summary(record), True
 
-    def list_runs(self, profile_id, limit):
+    def list_runs(self, profile_id, limit, owner=None):
         self._check()
-        runs = [self._summary(r) for r in self.records.values() if r.profile_id == profile_id]
+        runs = [self._summary(r) for r in self.records.values() if r.profile_id == profile_id and r.owner == owner]
         return sorted(runs, key=lambda s: s.created_at, reverse=True)[:limit]
 
-    def get_runs(self, run_ids):
+    def _visible(self, run_id, owner):
+        r = self.records.get(run_id)
+        return r is not None and (r.owner is None or r.owner == owner)
+
+    def get_runs(self, run_ids, owner=None):
         self._check()
-        return {i: self._summary(self.records[i]) for i in run_ids if i in self.records}
+        return {i: self._summary(self.records[i]) for i in run_ids if self._visible(i, owner)}
 
     def yearly(self, pairs):
         self._check()
         return {i: service.yearly_reference(i, self.records[i].points, s) for i, s in pairs}
 
-    def delete(self, run_id):
+    def delete(self, run_id, owner=None):
         self._check()
+        if not self._visible(run_id, owner):
+            return False
         self.created.pop(run_id, None)
-        return self.records.pop(run_id, None) is not None
+        return self.records.pop(run_id) is not None
+
+    def save_profile(self, owner, form, profile):
+        self._check()
+        self.profiles[owner] = (form, profile)
+
+    def get_profile(self, owner):
+        self._check()
+        return self.profiles.get(owner)
+
+    def delete_profile(self, owner):
+        self._check()
+        for run_id in [i for i, r in self.records.items() if r.owner == owner]:
+            del self.records[run_id]
+        return self.profiles.pop(owner, None) is not None
 
 
 # --- helpers ---------------------------------------------------------------------

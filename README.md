@@ -10,7 +10,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=FFD43B) ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?style=flat-square&logo=fastapi&logoColor=white) ![Gemini](https://img.shields.io/badge/Gemini-3.5_Flash--Lite-8E75B2?style=flat-square&logo=googlegemini&logoColor=white) ![Tiger Data](https://img.shields.io/badge/Tiger_Data-TimescaleDB-F5A623?style=flat-square&logo=postgresql&logoColor=white) ![React](https://img.shields.io/badge/React-desktop-61DAFB?style=flat-square&logo=react&logoColor=black) ![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS_17+-F05138?style=flat-square&logo=swift&logoColor=white)
 <br/>
-![Backend tests](https://img.shields.io/badge/backend_tests-541_passing-22C55E?style=flat-square) ![Desktop tests](https://img.shields.io/badge/desktop_tests-95_passing-22C55E?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-2563EB?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-EC4899?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_only-0EA5E9?style=flat-square)
+![Backend tests](https://img.shields.io/badge/backend_tests-558_passing-22C55E?style=flat-square) ![Desktop tests](https://img.shields.io/badge/desktop_tests-116_passing-22C55E?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-2563EB?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-EC4899?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_only-0EA5E9?style=flat-square)
 
 <sub><b>HackUMBC 2026</b> · University of Maryland, Baltimore County</sub>
 
@@ -236,7 +236,7 @@ flowchart LR
 | **Hypertable** | `projection_point`: every monthly balance, cash and debt value, partitioned on the month | 5,887 points across 8 saved runs |
 | **Continuous aggregate** | `projection_yearly`: `time_bucket(12, month)` + `first()`, real-time mode, refreshed on save | Matches the desktop chart's yearly points **row for row** (tested) |
 | **Compression** | Segmented by `(run_id, strategy)`, ordered by `month`, with a policy | **1.38 MB → 262 KB (81% smaller)** |
-| **Relational + time series** | `scenario_run` (provenance, JSON assumptions) joins the points in one Postgres | `ON DELETE CASCADE` removes a run cleanly |
+| **Relational + time series** | `scenario_run` (provenance, JSON assumptions) and `user_profile` (the user's own numbers, keyed by a hashed anonymous key) join the points in one Postgres | `ON DELETE CASCADE` removes a run cleanly; erasing a profile removes its plans |
 | **Connection pool** | 0–4 connections, health-checked, opened lazily | First call about 336 ms, then about **20 ms** |
 
 > [!TIP]
@@ -299,6 +299,7 @@ ORDER BY y.month, r.created_at;
 | **Overview** | See your next step, three at-a-glance tiles, where you're heading, and a first-steps checklist |
 | **Your plan** | An always-visible projection (plan vs. current habits, shaded difference, pin any age, goal line), then one topic per tab, each with **Why this matters** |
 | **Explore** | Try another retirement age or contribution; Compare, Timeline and **Saved runs** (Tiger Data: save, compare, delete) |
+| **Your numbers** | Enter your own finances; the engine previews what it sees as you type, then builds your plan. Stored in Tiger Data under an anonymous key |
 | **Fund shortlist** | Explainable target-date fund ranking for a 401(k) or IRA |
 | **Learn** · **Ask** | Six lessons, each with **Try** to apply it to your numbers, and the Gemini education chat |
 
@@ -308,10 +309,10 @@ The iPhone app uses the same API and ships an offline bundle of saved results, s
 
 ## ✅ Engineering quality
 
-- **541 backend tests** (`pytest`): engine, policy, simulation, AI pipeline, history, plan styles, funds, education chat, contracts.
-- **5/5 real Tiger Data tests**: hypertable, continuous aggregate = chart values, compression, delete, pool reuse (opt-in with `TIGER_DATABASE_URL`).
-- **95 desktop tests** (`vitest`): chart math, sync tests on real engine output, the API↔UI contract test, the API client.
-- **7/7 live tests** against a running server, including save and delete through Tiger Data.
+- **558 backend tests** (`pytest`): engine, policy, simulation, AI pipeline, history, plan styles, funds, education chat, contracts.
+- **6/6 real Tiger Data tests**: hypertable, continuous aggregate = chart values, compression, delete, pool reuse, user profiles with private runs (opt-in with `TIGER_DATABASE_URL`).
+- **116 desktop tests** (`vitest`): chart math, sync tests on real engine output, the API↔UI contract test (19 schemas), form conversion, the API client.
+- **8/8 live tests** against a running server, including save/delete and the full *Your numbers* flow through Tiger Data.
 - **Mutation-checked:** deliberate bugs (off-by-one dates, reversed differences, sampling drift, a skipped hash check) each make the suites fail.
 - **Performance:** first download 255 KB instead of 1,126 KB; plan-style comparisons cached (about 340 ms → 2.5 ms); rate-limiter memory bounded against spoofed client keys.
 
@@ -405,7 +406,7 @@ Docs: [backend](docs/BACKEND.md) · [engine handoff](docs/ENGINE_HANDOFF.md) · 
 
 ## 🧭 Scope and limitations
 
-- **Synthetic data only.** Morgan, Jordan and Casey are fictional; saved plans accept only the demo profiles, so no personal data reaches the cloud.
+- **Your own numbers, stored anonymously.** Morgan, Jordan and Casey are fictional. Users can enter their own finances; these are stored in Tiger Data under a random browser key (the server keeps only its hash), with no account, and can be erased with one click.
 - **Illustrative projections.** Steady nominal returns (stocks 6%, bonds 3%), no volatility or withdrawals, labeled hypothetical.
 - **The fund's mix never changes.** ARM adapts contributions and cash priorities, not the target-date allocation.
 - **Out of scope by design:** readiness scores, success probabilities, trading, tax optimization and real bank credentials. Plaid Sandbox is a stretch goal.
