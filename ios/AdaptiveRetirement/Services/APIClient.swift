@@ -98,13 +98,32 @@ final class LiveAPIClient: APIClient {
             if let envelope = try? JSONDecoder().decode(API.ErrorEnvelope.self, from: data) {
                 throw APIError.server(status: http.statusCode, body: envelope.error)
             }
+            debugLogUndecodable(status: http.statusCode, data: data)
+            // ngrok answers with an HTML page when the tunnel or the laptop behind it is
+            // down (ngrok-error-code header, 404 ERR_NGROK_3200, 502 ERR_NGROK_8012).
+            // That is a dead connection, not a server answer: treat as unreachable,
+            // which is retryable and eligible for the saved-preset fallback.
+            if http.value(forHTTPHeaderField: "ngrok-error-code") != nil
+                || [404, 502, 503, 504].contains(http.statusCode) {
+                throw APIError.unreachable
+            }
             throw APIError.unexpectedStatus(http.statusCode)
         }
         do {
             return try JSONDecoder().decode(Response.self, from: data)
         } catch {
+            debugLogUndecodable(status: http.statusCode, data: data)
             throw APIError.invalidResponse
         }
+    }
+
+    /// DEBUG-only peek at a failure body (status + first 200 bytes). Response only;
+    /// request bodies and tokens are never logged (FRONTEND.md §5).
+    private func debugLogUndecodable(status: Int, data: Data) {
+        #if DEBUG
+        let preview = String(data: data.prefix(200), encoding: .utf8) ?? "<\(data.count) non-UTF8 bytes>"
+        print("[APIClient] HTTP \(status), body not the contract: \(preview)")
+        #endif
     }
 }
 

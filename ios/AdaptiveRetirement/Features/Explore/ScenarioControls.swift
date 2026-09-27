@@ -297,8 +297,26 @@ struct ScenarioControls: View {
                     : "Live calculation for this scenario."
             } catch {
                 guard !Task.isCancelled, comparedDraft == compared else { return }
-                status = Self.message(for: error)
+                // A transport failure shouldn't hide a saved preset the draft matches:
+                // show it and say so, instead of an error that suggests retrying (A3).
+                if Self.isTransport(error),
+                   let preset = compared.preset?.demoPreset,
+                   let saved = store.savedEvaluation(for: profile.id, preset: preset) {
+                    result = saved.evaluation
+                    status = "Offline. Showing the saved calculation for this preset."
+                } else {
+                    status = Self.message(for: error)
+                }
             }
+        }
+    }
+
+    /// Failures where no server answer exists, so a matching saved preset is the better
+    /// result (A3). A `.server` envelope is a real answer (e.g. infeasible) and is shown.
+    private static func isTransport(_ error: Error) -> Bool {
+        switch error as? APIError {
+        case .unreachable, .timedOut, .invalidBaseURL, .unexpectedStatus, .invalidResponse: return true
+        default: return false
         }
     }
 
@@ -307,6 +325,10 @@ struct ScenarioControls: View {
         case .server(_, let body): return body.message
         case .timedOut: return "The calculation took too long. Try again."
         case .unreachable, .invalidBaseURL: return "Reconnect for a custom scenario. Saved presets still work offline."
+        case .unexpectedStatus(let status):
+            return "The server answered with an error (\(status)). Check that the backend is running."
+        case .invalidResponse:
+            return "The server's answer didn't match what the app expects. Check that the backend is up to date."
         default: return "Couldn't calculate this scenario."
         }
     }
