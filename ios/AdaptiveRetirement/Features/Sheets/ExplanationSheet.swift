@@ -49,7 +49,10 @@ struct ExplanationSheet: View {
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            SheetFooterAction(title: "Got it") { dismiss() }
+            SheetFooterAction(title: "Got it") {
+                store.sheet = nil  // the app's sheet state; dismiss() is a fallback
+                dismiss()
+            }
         }
     }
 }

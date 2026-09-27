@@ -204,7 +204,9 @@ private struct PrimaryFill: ViewModifier {
 
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *), !reduceTransparency {
-            content.glassEffect(.regular.tint(Palette.accentStrong).interactive(), in: Capsule())
+            // Not .interactive(): interactive glass on a button label takes the touch, so the
+            // action never fires. Press feedback comes from the style's scale effect.
+            content.glassEffect(.regular.tint(Palette.accentStrong), in: Capsule())
         } else {
             content.background {
                 Capsule()
