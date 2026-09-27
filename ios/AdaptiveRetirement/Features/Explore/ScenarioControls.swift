@@ -143,6 +143,9 @@ struct ScenarioControls: View {
     @Binding var draft: ScenarioDraft
     /// Engine result for the compared draft (live, or an exact saved preset).
     @Binding var result: API.Evaluation?
+    /// The scenario behind `result` (the one sent, or the saved preset's), so Scenario history
+    /// can save that result's inputs.
+    var resultScenario: Binding<API.Scenario?> = .constant(nil)
     @State private var comparedDraft: ScenarioDraft?
     @State private var status: String?
     @State private var compareTask: Task<Void, Never>?
@@ -289,6 +292,7 @@ struct ScenarioControls: View {
             if let preset = compared.preset?.demoPreset,
                let saved = store.savedEvaluation(for: profile.id, preset: preset) {
                 result = saved.evaluation
+                resultScenario.wrappedValue = store.savedArtifact(for: profile.id, preset: preset)?.scenario
                 status = "Saved calculation for this preset."
             } else {
                 status = "Reconnect for a custom scenario. Saved presets still work offline."
@@ -304,6 +308,7 @@ struct ScenarioControls: View {
                 let loaded = try await store.evaluateScenario(scenario)
                 guard !Task.isCancelled, comparedDraft?.requestShape == compared.requestShape else { return }
                 result = loaded.evaluation
+                resultScenario.wrappedValue = scenario
                 status = loaded.evaluation.projections.custom?.feasible == false
                     ? "This scenario can't be funded as entered. See the outcomes below."
                     : "Live calculation for this scenario."
@@ -315,6 +320,7 @@ struct ScenarioControls: View {
                    let preset = compared.preset?.demoPreset,
                    let saved = store.savedEvaluation(for: profile.id, preset: preset) {
                     result = saved.evaluation
+                    resultScenario.wrappedValue = store.savedArtifact(for: profile.id, preset: preset)?.scenario
                     status = "Offline. Showing the saved calculation for this preset."
                 } else {
                     status = Self.message(for: error)

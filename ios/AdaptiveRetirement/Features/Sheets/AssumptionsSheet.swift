@@ -152,6 +152,9 @@ private struct ServerSection: View {
     @EnvironmentObject private var store: AppStore
     @State private var text = ""
     @State private var rejected = false
+    /// From `/health`: whether this server can run the AI steps. nil until it answers, or for
+    /// an older server that doesn't report it.
+    @State private var aiAvailable: Bool?
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -196,10 +199,18 @@ private struct ServerSection: View {
                 }
             }
             .frame(minHeight: 44)
+            if let aiAvailable, !rejected {
+                Text(aiAvailable ? "AI: available on this server"
+                                 : "AI: not configured on this server (plans use the rules order)")
+                    .font(.geist(13, .regular, relativeTo: .footnote))
+                    .foregroundStyle(Palette.textCaption)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Hairline(color: Palette.hairlineStrong)
                 .padding(.top, 8)
         }
         .onAppear { text = store.serverBaseURL }
+        .task(id: store.serverGeneration) { await checkAI() }
         .onChange(of: text) { _, _ in rejected = false }
     }
 
@@ -212,5 +223,12 @@ private struct ServerSection: View {
     private func reconnect() {
         focused = false
         store.refreshEvaluation()
+        Task { await checkAI() }
+    }
+
+    private func checkAI() async {
+        aiAvailable = nil
+        guard let client = store.apiClient else { return }
+        aiAvailable = try? await client.health().aiAvailable
     }
 }

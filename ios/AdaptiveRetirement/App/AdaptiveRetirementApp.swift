@@ -55,6 +55,9 @@ struct MainTabView: View {
             ExploreView()
                 .tabItem { Label("Explore", systemImage: "point.topleft.down.to.point.bottomright.curvepath") }
                 .tag(MainTab.explore)
+            FundsView()
+                .tabItem { Label("Funds", systemImage: "chart.pie") }
+                .tag(MainTab.funds)
         }
         .sensoryFeedback(.selection, trigger: store.tab)
         .sheet(item: $store.sheet) { sheet in

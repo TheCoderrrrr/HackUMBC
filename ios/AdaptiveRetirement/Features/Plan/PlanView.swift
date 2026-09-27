@@ -228,7 +228,7 @@ struct PlanView: View {
 
 // MARK: - Palette
 
-private enum PlanPalette {
+enum PlanPalette {
     /// Employer match: a paler, cooler green beside "You".
     static let employer = [Color(hex: 0x7FC98A), Color(hex: 0x5EA36C), Color(hex: 0x3A5E42)]
     /// Required minimum: muted, so the extra payment reads as the decision.
@@ -237,6 +237,8 @@ private enum PlanPalette {
 }
 
 // MARK: - Pieces
+// HeroFigure, StatusChip, SegmentedBand, StatBlock, Footnote and PlanPalette are shared with
+// the Funds tab; the rest are Plan-only.
 
 /// A 19 pt Medium section title with a trailing **Why?** link.
 private struct PlanSectionHeader: View {
@@ -266,7 +268,7 @@ private struct PlanSectionHeader: View {
 }
 
 /// The section's single large figure.
-private struct HeroFigure: View {
+struct HeroFigure: View {
     let text: String
     var size: CGFloat = 52
 
@@ -282,7 +284,7 @@ private struct HeroFigure: View {
 }
 
 /// Small capsule status: "✓ Full match", "25% APR".
-private struct StatusChip: View {
+struct StatusChip: View {
     var symbol: String? = nil
     let text: String
     var tint: Color = Palette.accent
@@ -304,7 +306,7 @@ private struct StatusChip: View {
 }
 
 /// A proportional band whose segments carry their own label and amount.
-private struct SegmentedBand: View {
+struct SegmentedBand: View {
     struct Segment: Identifiable {
         var id: String { label }
         let label: String
@@ -362,7 +364,7 @@ private struct SegmentedBand: View {
 }
 
 /// Figure with a quiet unit and caption beneath.
-private struct StatBlock: View {
+struct StatBlock: View {
     let value: String
     let unit: String?
     let caption: String
@@ -503,7 +505,7 @@ private struct LegendFigure: View {
 }
 
 /// Supporting sentence set small and quiet.
-private struct Footnote: View {
+struct Footnote: View {
     let text: String
 
     var body: some View {
