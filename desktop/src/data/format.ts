@@ -1,24 +1,10 @@
 const whole = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const exact = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
-const compact = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
 
 /** "$35,000" */
 export const money = (cents: number) => whole.format(Math.round(cents / 100));
 /** "$963.80" */
 export const moneyExact = (cents: number) => exact.format(cents / 100);
-/** Whole dollars when exact, otherwise cents. */
-export const moneyAuto = (cents: number) => (cents % 100 === 0 ? money(cents) : moneyExact(cents));
-/** "$1.5M" */
-export const moneyCompact = (cents: number) => compact.format(cents / 100);
-
-export function splitMoney(cents: number): { dollars: string; cents: string } {
-  return { dollars: money(cents - (cents % 100)), cents: String(Math.abs(cents % 100)).padStart(2, "0") };
-}
 
 /** 0.05 → "5%", 0.605 → "60.5%" */
 export function percent(rate: number): string {
@@ -39,6 +25,12 @@ export function monthLabel(asOf: string, month: number): string {
   const [year, mon] = asOf.split("-").map(Number);
   const absolute = mon - 1 + month;
   return `${MONTHS[absolute % 12]} ${year + Math.floor(absolute / 12)}`;
+}
+
+/** "Sep 2027" for a plan month, or the given words for "already" (month 0) and "never within the plan" (null). */
+export function when(month: number | null, asOf: string, done = "Already", never = "Not before retirement"): string {
+  if (month === null) return never;
+  return month === 0 ? done : monthLabel(asOf, month);
 }
 
 export function asOfLabel(asOf: string): string {

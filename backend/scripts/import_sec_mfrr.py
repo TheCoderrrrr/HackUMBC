@@ -127,7 +127,7 @@ def _create_table(conn: sqlite3.Connection, kind: str, header: list[str]) -> Non
     for ordinal, column in enumerate(header):
         conn.execute("INSERT INTO source_schema VALUES (?, ?, ?)", (kind, column, ordinal))
     if kind == "sub":
-        conn.execute(f"CREATE UNIQUE INDEX idx_sub_unique ON sec_sub (adsh)")
+        conn.execute("CREATE UNIQUE INDEX idx_sub_unique ON sec_sub (adsh)")
     else:
         # The SEC archive can repeat a documented fact key, sometimes with a
         # different value. Source row number is the staging identity instead.

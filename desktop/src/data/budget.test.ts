@@ -1,7 +1,7 @@
 /** "This month" must add up, on real engine output. */
 import { describe, expect, it } from "vitest";
 import type { Evaluation, FinancialProfile } from "../api/types";
-import { buildDisplay, monthBudget } from "./display";
+import { buildDisplay, monthBudget, monthStepCents } from "./display";
 
 const examples = import.meta.glob("../../../contracts/examples/evaluate-{jordan,morgan,casey}.response.json", { eager: true, import: "default" }) as Record<string, Evaluation>;
 const bundle = import.meta.glob("../../../ios/AdaptiveRetirement/Resources/Demo/*.json", { eager: true, import: "default" }) as Record<string, { evaluation?: Evaluation }>;
@@ -22,6 +22,11 @@ describe.each(cases)("%s", (_, evaluation) => {
   });
   it("every line adds up to exactly the money to plan with", () => {
     expect(b.totalCents).toBe(b.toPlanCents);
+  });
+  it("the Getting started steps cover every line once and add up to the same total", () => {
+    const steps = monthStepCents(b.lines);
+    expect(steps).toHaveLength(4);
+    expect(steps.reduce((s, c) => s + c, 0)).toBe(b.totalCents);
   });
   it("no line is negative", () => {
     expect(b.lines.every((l) => l.cents >= 0)).toBe(true);

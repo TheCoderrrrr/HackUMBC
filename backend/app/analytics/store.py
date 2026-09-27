@@ -200,7 +200,7 @@ class TigerHistoryStore:
     def _ensure_schema(self) -> None:
         if self._ready:
             return
-        pool = self._get_pool()  # outside the lock: _get_pool takes it too
+        self._get_pool()  # create the pool outside the lock: _get_pool takes it too
         with self._lock:
             if self._ready:
                 return

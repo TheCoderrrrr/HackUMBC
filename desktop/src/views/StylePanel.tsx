@@ -3,7 +3,7 @@ import type { PlanningPreference, Priority, StyleOutcome } from "../api/types";
 import { Drawer, Icon } from "../components/ui";
 import { Term } from "../components/Term";
 import type { TermId } from "../data/glossary";
-import { monthLabel } from "../data/format";
+import { when } from "../data/format";
 import { STYLE_INFO, STYLE_ORDER, outcomeFor, stylesDiffer } from "../data/styles";
 import { useStore } from "../store";
 import { StyleComparison } from "./StyleComparison";
@@ -94,10 +94,6 @@ function StyleDetail({ style, name }: { style: PlanningPreference; name: string 
   );
 }
 
-function when(month: number | null, asOf: string, done: string, never: string): string {
-  if (month === null) return never;
-  return month === 0 ? done : monthLabel(asOf, month);
-}
 
 function Facts({ outcome, asOf }: { outcome: StyleOutcome; asOf: string }) {
   return (

@@ -3,16 +3,12 @@ import { errorMessage } from "../api/client";
 import type { PlanStyles, StyleOutcome } from "../api/types";
 import { LineChart, type Series } from "../components/LineChart";
 import { Term } from "../components/Term";
-import { money, monthLabel } from "../data/format";
+import { money, monthLabel, when } from "../data/format";
 import { PRIORITY_LABEL, STYLE_INFO, STYLE_ORDER, stylesDiffer } from "../data/styles";
 import { useStore } from "../store";
 
 const CURRENT_COLOR = "var(--blue)";
 
-function when(month: number | null, asOf: string, done: string, never: string): string {
-  if (month === null) return never;
-  return month === 0 ? done : monthLabel(asOf, month);
-}
 
 const cents = (v: number | null) => (v === null ? "–" : money(v));
 

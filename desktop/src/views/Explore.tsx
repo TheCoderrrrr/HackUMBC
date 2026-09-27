@@ -29,7 +29,7 @@ export const original = (d: Display): Draft => ({
   fixedRate: d.currentRate * 100,
   preset: "original",
 });
-export const sameDraft = (a: Draft, b: Draft) =>
+const sameDraft = (a: Draft, b: Draft) =>
   a.retirementAge === b.retirementAge && a.policy === b.policy && (a.policy === "adaptive" || a.fixedRate === b.fixedRate);
 
 const SECONDS_PER_MONTH = 0.11;

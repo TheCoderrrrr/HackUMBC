@@ -1,4 +1,4 @@
-import type { Evaluation, FinancialProfile, Priority, Projection } from "../api/types";
+import type { Evaluation, FinancialProfile, Projection } from "../api/types";
 import { money, moneyExact, percent } from "./format";
 
 // Maps an engine evaluation onto what the screens show. Every figure comes from the
@@ -13,11 +13,8 @@ export const DATA_MODE_LABEL: Record<DataMode, string> = {
   lastLive: "Last live calculation",
 };
 
-export const PRIORITY_LABEL: Record<Priority, string> = {
-  starter_reserve: "Starter emergency reserve",
-  high_apr_debt: "High-interest debt",
-  full_reserve: "Full emergency reserve",
-};
+// One wording for the three reorderable priorities everywhere in the app.
+export { PRIORITY_LABEL } from "./styles";
 
 export const DISCLOSURE = {
   fictional: "Fictional customer • Synthetic data • Not affiliated with or endorsed by T. Rowe Price.",
@@ -245,6 +242,17 @@ export function explanationSteps(display: Display): { title: string; detail: str
     });
   }
   return steps;
+}
+
+/**
+ * Getting started walks this month's budget in four steps: essentials, match and retirement,
+ * the plan style's goals, and what's left. Every budget line belongs to exactly one step.
+ */
+export const MONTH_STEP_LINES = [["living", "minimums"], ["retirement"], ["debt", "emergency"], ["remaining"]] as const;
+
+/** Cents per step of MONTH_STEP_LINES. */
+export function monthStepCents(lines: BudgetLine[]): number[] {
+  return MONTH_STEP_LINES.map((keys) => lines.filter((l) => (keys as readonly string[]).includes(l.key)).reduce((s, l) => s + l.cents, 0));
 }
 
 export interface BudgetLine {
