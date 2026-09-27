@@ -1,5 +1,7 @@
 import type { CatalogSummary, FundShortlistEnvelope, FundShortlistQuery } from "./funds";
-import type { ErrorBody, EvaluateRequest, Evaluation, FinancialProfile, Health } from "./types";
+import type {
+  Comparison, ErrorBody, EvaluateRequest, Evaluation, FinancialProfile, Health, HistoryStatus, RunSummary, Scenario,
+} from "./types";
 
 /** Relative to the page; the Vite dev server forwards `/api/*` to the backend. */
 const BASE = "/api";
@@ -89,6 +91,27 @@ export const api = {
     send<CatalogSummary>("/v1/funds/catalog", { method: "GET" }, REQUEST_TIMEOUT_MS, signal),
   fundShortlist: (query: FundShortlistQuery, signal?: AbortSignal) =>
     send<FundShortlistEnvelope>("/v1/funds/shortlist", { method: "POST", body: JSON.stringify(query) }, REQUEST_TIMEOUT_MS, signal),
+  history: {
+    status: (signal?: AbortSignal) =>
+      send<HistoryStatus>("/v1/history/status", { method: "GET" }, REQUEST_TIMEOUT_MS, signal),
+    /** Sends the inputs of a shown result; the server recomputes and stores its own numbers. */
+    save: (evaluation: Evaluation, scenario: Scenario | null) =>
+      send<{ run: RunSummary; created: boolean }>("/v1/history/runs", {
+        method: "POST",
+        body: JSON.stringify({
+          profile_id: evaluation.profile_id,
+          scenario,
+          decision_summary: evaluation.decision_summary,
+          input_hash: evaluation.input_hash,
+        }),
+      }, EVALUATION_TIMEOUT_MS),
+    list: (profileID: string, signal?: AbortSignal) =>
+      send<{ runs: RunSummary[] }>(`/v1/history/runs?profile_id=${encodeURIComponent(profileID)}`,
+        { method: "GET" }, REQUEST_TIMEOUT_MS, signal),
+    compare: (base: string, other: string, signal?: AbortSignal) =>
+      send<Comparison>(`/v1/history/compare?base=${encodeURIComponent(base)}&other=${encodeURIComponent(other)}`,
+        { method: "GET" }, REQUEST_TIMEOUT_MS, signal),
+  },
 };
 
 export function errorMessage(error: unknown): string {

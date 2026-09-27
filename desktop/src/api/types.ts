@@ -181,3 +181,44 @@ export interface ErrorBody {
   field_paths: string[];
   retryable: boolean;
 }
+
+// Scenario history (Tiger Data). Saved runs are rebuilt on the server from their inputs.
+export interface RunSummary {
+  run_id: string;
+  profile_id: string;
+  label: string;
+  created_at: string;
+  as_of_date: string;
+  scenario: Scenario | null;
+  primary_strategy: "adaptive" | "custom";
+  retirement_age: number;
+  final_retirement_balance_cents: number | null;
+  decision_source: "ai" | "rules_fallback";
+  model_id: string | null;
+  prompt_version: string;
+  model_version: string;
+  policy_version: string;
+  input_hash: string;
+}
+
+export interface YearValues {
+  retirement_balance_cents: number;
+  cash_cents: number;
+  debt_cents: number;
+}
+
+export interface Comparison {
+  profile_id: string;
+  as_of_date: string;
+  base: RunSummary;
+  other: RunSummary;
+  years: { year: number; month: number; projected_on: string; base: YearValues | null; other: YearValues | null }[];
+  horizons: { years: number; month: number; projected_on: string; base: YearValues | null; other: YearValues | null }[];
+  source: "tiger_data";
+  method: string;
+}
+
+export interface HistoryStatus {
+  enabled: boolean;
+  available: boolean;
+}

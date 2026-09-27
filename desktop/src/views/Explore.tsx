@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { errorMessage } from "../api/client";
-import type { Evaluation, Projection } from "../api/types";
+import type { Evaluation, Projection, Scenario } from "../api/types";
 import { Icon, Stepper } from "../components/ui";
 import { LineChart, type Series } from "../components/LineChart";
 import { pointAtMonth, yearlyBalances, type Display } from "../data/display";
 import { money, monthLabel, percent } from "../data/format";
 import type { Preset } from "../data/saved";
 import { useStore } from "../store";
+import { History, type Shown } from "./History";
 
 type Policy = "adaptive" | "fixed";
 interface Draft {
@@ -31,7 +32,8 @@ const SECONDS_PER_MONTH = 0.11;
 export function Explore({ display }: { display: Display }) {
   const { profile, evaluation } = display;
   const { setDrawer } = useStore();
-  const [custom, setCustom] = useState<Evaluation | null>(null);
+  const [compared, setCompared] = useState<Shown | null>(null);
+  const custom = compared?.evaluation ?? null;
 
   return (
     <div className="grid explore fade-in" key={profile.id}>
@@ -39,9 +41,10 @@ export function Explore({ display }: { display: Display }) {
         <Timeline display={display} />
         <Comparison display={display} custom={custom?.projections.custom ?? null} />
         <Outcomes evaluation={evaluation} custom={custom?.projections.custom ?? null} asOf={profile.as_of_date} />
+        <History shown={compared ?? { evaluation, scenario: null }} />
       </div>
       <div className="stack" style={{ position: "sticky", top: 84 }}>
-        <ScenarioControls display={display} onResult={setCustom} />
+        <ScenarioControls display={display} onResult={setCompared} />
         <button className="link" style={{ display: "inline-flex", gap: 8, alignItems: "center", fontSize: 15, alignSelf: "flex-start" }}
           onClick={() => setDrawer("assumptions")}>
           <Icon name="sliders" size={16} /> Modeling assumptions
@@ -220,7 +223,12 @@ function Comparison({ display, custom }: { display: Display; custom: Projection 
 
 // ---------- Scenario controls ----------
 
-function ScenarioControls({ display, onResult }: { display: Display; onResult: (e: Evaluation | null) => void }) {
+const scenarioOf = (d: Draft): Scenario => ({
+  retirement_age: d.retirementAge,
+  employee_contribution_rate: d.policy === "fixed" ? d.fixedRate / 100 : null,
+});
+
+function ScenarioControls({ display, onResult }: { display: Display; onResult: (shown: Shown | null) => void }) {
   const { liveEnabled, evaluateScenario, savedPreset } = useStore();
   const { profile } = display;
   const [draft, setDraft] = useState<Draft>(() => original(display));
@@ -254,7 +262,7 @@ function ScenarioControls({ display, onResult }: { display: Display; onResult: (
   const showSaved = (d: Draft, fallback: string) => {
     const saved = d.preset ? savedPreset(d.preset) : undefined;
     if (saved && d.preset !== "original") {
-      onResult(saved);
+      onResult({ evaluation: saved, scenario: scenarioOf(d) });
       setStatus("Saved calculation for this preset.");
     } else {
       setStatus(fallback);
@@ -277,12 +285,10 @@ function ScenarioControls({ display, onResult }: { display: Display; onResult: (
     setBusy(true);
     setStatus(null);
     try {
-      const result = await evaluateScenario({
-        retirement_age: d.retirementAge,
-        employee_contribution_rate: d.policy === "fixed" ? d.fixedRate / 100 : null,
-      });
+      const scenario = scenarioOf(d);
+      const result = await evaluateScenario(scenario);
       if (id !== requestID.current) return;
-      onResult(result);
+      onResult({ evaluation: result, scenario });
       setStatus(result.projections.custom?.feasible === false
         ? "This scenario can't be funded as entered. See the outcomes below."
         : "Live calculation for this scenario.");
