@@ -4,53 +4,34 @@ import SwiftUI
 /// what a target-date fund knows, what it misses, what that costs this profile,
 /// and what Adaptive does about it. Every dollar figure comes from the engine's
 /// current (autopilot) and adaptive projections; without an evaluation the slides
-/// fall back to profile facts and schematic curves.
+/// fall back to profile facts and schematic curves. Slides only move when asked.
 enum IntroSlide: Int, CaseIterable, Comparable {
     case autopilot, blindSpots, example, adaptive, howItWorks
     static func < (l: Self, r: Self) -> Bool { l.rawValue < r.rawValue }
 
     var next: IntroSlide? { IntroSlide(rawValue: rawValue + 1) }
     var previous: IntroSlide? { IntroSlide(rawValue: rawValue - 1) }
-
-    /// Seconds before auto-advancing, sized to the reading load. The last slide waits.
-    var dwell: Double? {
-        switch self {
-        case .autopilot: 6
-        case .blindSpots: 7
-        case .example: 9
-        case .adaptive: 9
-        case .howItWorks: nil
-        }
-    }
 }
 
 struct IntroFlow: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
-
-    /// Fill of the current progress segment, 0…1.
-    @State private var progress: Double = 0
-    /// Pressing on the slide holds the slideshow.
-    @GestureState private var holding = false
 
     private var slide: IntroSlide { store.introSlide }
     private var profile: Profile { store.displayProfile }
 
     var body: some View {
         VStack(spacing: 0) {
-            topBar
+            progressBar
 
-            GeometryReader { geo in
-                ZStack(alignment: .top) {
-                    slideContent
-                        .id(slide)
-                        .transition(transition)
-                }
-                .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
-                .contentShape(Rectangle())
-                .gesture(navigationGesture(width: geo.size.width))
+            ZStack(alignment: .top) {
+                slideContent
+                    .id(slide)
+                    .transition(transition)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .contentShape(Rectangle())
+            .gesture(swipe)
             .padding(.top, Space.xl)
 
             actions
@@ -59,7 +40,6 @@ struct IntroFlow: View {
         .sensoryFeedback(trigger: slide) { old, new in
             .impact(weight: new > old ? .medium : .light)
         }
-        .task(id: slide) { await runSlide() }
     }
 
     // MARK: Slides
@@ -82,50 +62,23 @@ struct IntroFlow: View {
                            removal: .opacity.animation(Motion.select))
     }
 
-    // MARK: Top bar
+    // MARK: Progress
 
-    private var topBar: some View {
-        HStack(spacing: Space.l) {
-            Button(action: back) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(Palette.textPrimary)
-                    .frame(width: 44, height: 44)
-                    .background(SetupStyle.disc, in: Circle())
+    /// One segment per slide; segments up to the current slide are lit.
+    private var progressBar: some View {
+        HStack(spacing: 6) {
+            ForEach(IntroSlide.allCases, id: \.self) { item in
+                Capsule()
+                    .fill(item <= slide ? Palette.textPrimary : Color.white.opacity(0.18))
+                    .frame(height: 3)
             }
-            .buttonStyle(PressableStyle())
-            .accessibilityLabel("Back")
-            .opacity(slide.previous == nil ? 0 : 1)
-            .disabled(slide.previous == nil)
-
-            HStack(spacing: 6) {
-                ForEach(IntroSlide.allCases, id: \.self) { item in
-                    Capsule()
-                        .fill(Color.white.opacity(0.18))
-                        .overlay(alignment: .leading) {
-                            GeometryReader { geo in
-                                Capsule()
-                                    .fill(Palette.textPrimary)
-                                    .frame(width: geo.size.width * fill(for: item))
-                            }
-                        }
-                        .frame(height: 3)
-                }
-            }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Intro")
-            .accessibilityValue("\(slide.rawValue + 1) of \(IntroSlide.allCases.count)")
-
-            // Balances the back button so the segments stay centred.
-            Color.clear.frame(width: 44, height: 44)
         }
+        .frame(height: 44)
+        .padding(.horizontal, Space.xl)
         .padding(.top, Space.s)
-    }
-
-    private func fill(for item: IntroSlide) -> Double {
-        if item < slide { return 1 }
-        if item > slide { return 0 }
-        return slide.dwell == nil ? 1 : progress
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Intro")
+        .accessibilityValue("\(slide.rawValue + 1) of \(IntroSlide.allCases.count)")
     }
 
     // MARK: Actions
@@ -138,58 +91,38 @@ struct IntroFlow: View {
             }
             .buttonStyle(SetupPrimaryButtonStyle())
 
-            // Space stays reserved so the primary button doesn't jump on the last slide.
-            Button(action: finish) {
-                Text("Skip intro")
+            // Space stays reserved so the primary button doesn't jump on the first slide.
+            Button(action: back) {
+                Text("Back")
                     .font(SetupStyle.secondaryAction)
                     .foregroundStyle(Palette.textPrimary)
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .contentShape(Rectangle())
             }
             .buttonStyle(PressableStyle())
-            .opacity(slide.next == nil ? 0 : 1)
-            .disabled(slide.next == nil)
+            .opacity(slide.previous == nil ? 0 : 1)
+            .disabled(slide.previous == nil)
         }
         .padding(.bottom, 15)
     }
 
     // MARK: Navigation
 
-    /// Tap the right two-thirds to go forward, the left third to go back; swipe either way.
-    /// Pressing holds the auto-advance.
-    private func navigationGesture(width: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 0)
-            .updating($holding) { _, state, _ in state = true }
+    private var swipe: some Gesture {
+        DragGesture(minimumDistance: 24)
             .onEnded { value in
                 let dx = value.translation.width
-                if abs(dx) > 40, abs(dx) > abs(value.translation.height) {
-                    dx < 0 ? advanceIfPossible() : back()
-                } else if abs(dx) < 10, abs(value.translation.height) < 10 {
-                    value.location.x < width / 3 ? back() : advanceIfPossible()
+                guard abs(dx) > 40, abs(dx) > abs(value.translation.height) else { return }
+                if dx < 0 {
+                    if let next = slide.next { go(to: next) }
+                } else {
+                    back()
                 }
             }
     }
 
-    /// Fills the current segment, then moves on. Paused while pressing; off under VoiceOver.
-    private func runSlide() async {
-        progress = 0
-        guard let dwell = slide.dwell, !voiceOver, !Self.holdsSlides else { return }
-        let tick = 1.0 / 30
-        while progress < 1 {
-            try? await Task.sleep(for: .seconds(tick))
-            guard !Task.isCancelled else { return }
-            if !holding { progress = min(1, progress + tick / dwell) }
-        }
-        advanceIfPossible()
-    }
-
     private func advance() {
-        if slide.next == nil { finish() } else { advanceIfPossible() }
-    }
-
-    private func advanceIfPossible() {
-        guard let next = slide.next else { return }
-        go(to: next)
+        if let next = slide.next { go(to: next) } else { finish() }
     }
 
     private func back() {
@@ -209,15 +142,6 @@ struct IntroFlow: View {
             store.onboardingStep = .profile
             store.phase = .onboarding
         }
-    }
-
-    /// `-hold 1` stops auto-advance for screenshots.
-    private static var holdsSlides: Bool {
-        #if DEBUG
-        UserDefaults.standard.bool(forKey: "hold")
-        #else
-        false
-        #endif
     }
 }
 
@@ -282,28 +206,28 @@ struct IntroFacts {
 
 // MARK: - 1 · Autopilot
 
+/// The opening slide leads with the chart: no icon disc, no flame field behind it.
 private struct AutopilotSlide: View {
     var body: some View {
         VStack(spacing: 0) {
-            SetupHeader(
-                heading: "Your 401(k) runs on one number.",
-                subtitle: Text("Target-date funds are the default in many\nplans. They only know when you'll retire.")
-            ) {
-                HeaderGlyph(symbol: "calendar")
+            VStack(spacing: Space.s) {
+                Text("Your 401(k) runs on one number.")
+                    .font(SetupStyle.heading)
+                    .foregroundStyle(Palette.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
+                Text("Target-date funds are the default in many\nplans. They only know when you'll retire.")
+                    .font(SetupStyle.instruction)
+                    .foregroundStyle(SetupStyle.secondaryText)
+                    .lineSpacing(2)
             }
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity)
 
             GlidePathVisual()
-                .frame(height: 190)
+                .frame(maxHeight: .infinity)
                 .padding(.top, Space.xxl)
-
-            Text("As retirement nears, it shifts from stocks to bonds.\nNothing else about you changes the plan.")
-                .font(SetupStyle.rowDetail)
-                .foregroundStyle(SetupStyle.secondaryText)
-                .multilineTextAlignment(.center)
-                .lineSpacing(2)
-                .padding(.top, Space.xl)
-
-            Spacer(minLength: 0)
+                .padding(.bottom, Space.xl)
         }
     }
 }
@@ -315,46 +239,69 @@ private struct GlidePathVisual: View {
 
     private static let startAge = 25
     private static let endAge = 65
+    private static let green = Color(hex: 0x86DB8F)
     private let glide = ModelAssumptions.illustrative.glidePath
 
     var body: some View {
-        VStack(spacing: Space.s) {
+        let equity = samples()
+        VStack(spacing: Space.l) {
+            HStack(alignment: .bottom) {
+                endpoint(equity.first ?? 0.9, caption: "stocks at \(Self.startAge)", alignment: .leading)
+                Spacer(minLength: Space.m)
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 17, weight: .regular))
+                    .foregroundStyle(Palette.textCaption)
+                    .padding(.bottom, 24)
+                Spacer(minLength: Space.m)
+                endpoint(equity.last ?? 0.5, caption: "stocks at \(Self.endAge)", alignment: .trailing)
+            }
+
             GeometryReader { geo in
-                let equity = samples()
-                ZStack {
-                    area(equity, in: geo.size, top: true)
-                        .fill(LinearGradient(colors: [Palette.blue.opacity(0.30), Palette.blue.opacity(0.08)],
+                let size = geo.size
+                ZStack(alignment: .topLeading) {
+                    area(equity, in: size, top: true)
+                        .fill(LinearGradient(colors: [Palette.blue.opacity(0.42), Palette.blue.opacity(0.16)],
                                              startPoint: .top, endPoint: .bottom))
-                    area(equity, in: geo.size, top: false)
-                        .fill(LinearGradient(colors: [Color(hex: 0x86DB8F).opacity(0.42), Color(hex: 0x86DB8F).opacity(0.10)],
+                    area(equity, in: size, top: false)
+                        .fill(LinearGradient(colors: [Self.green.opacity(0.62), Self.green.opacity(0.22)],
                                              startPoint: .top, endPoint: .bottom))
                         .fillGrain()
-                    line(equity, in: geo.size)
-                        .stroke(Palette.accent, style: StrokeStyle(lineWidth: 1.3, lineCap: .round, lineJoin: .round))
-
-                    VStack {
-                        label("Bonds", color: Palette.blue)
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                            .padding(.top, Space.s)
-                        Spacer()
-                        label("Stocks", color: Palette.accent)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.bottom, Space.m)
+                    ForEach([0.25, 0.5, 0.75], id: \.self) { level in
+                        Rectangle()
+                            .fill(Color.white.opacity(0.07))
+                            .frame(height: 1)
+                            .offset(y: size.height * (1 - level))
                     }
-                    .padding(.horizontal, Space.m)
+                    line(equity, in: size)
+                        .stroke(Palette.accent, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+
+                    bandLabel("Bonds")
+                        .padding(.horizontal, SetupStyle.gutter)
+                        .padding(.vertical, Space.l)
+                        .frame(width: size.width, alignment: .topTrailing)
+                    bandLabel("Stocks")
+                        .padding(.horizontal, SetupStyle.gutter)
+                        .padding(.vertical, Space.l)
+                        .frame(width: size.width, height: size.height, alignment: .bottomLeading)
                 }
                 .mask(alignment: .leading) {
-                    Rectangle().frame(width: revealed ? geo.size.width : 0)
+                    Rectangle().frame(width: revealed ? size.width : 0)
                 }
             }
+            .frame(minHeight: 220)
+            // Full bleed: the chart runs past the setup gutter to the screen edges.
+            .padding(.horizontal, -SetupStyle.gutter)
 
+            // The axis spans the same full width as the chart so ages sit under their years.
             HStack {
-                Text("Age \(Self.startAge) · 90% stocks")
-                Spacer(minLength: 0)
-                Text("Age \(Self.endAge) · 50%")
+                ForEach(Array(stride(from: Self.startAge, through: Self.endAge, by: 10).enumerated()), id: \.offset) { index, age in
+                    if index > 0 { Spacer(minLength: 0) }
+                    Text(index == 0 ? "Age \(age)" : "\(age)")
+                }
             }
-            .font(.geist(12, .regular, relativeTo: .caption))
+            .font(.numeral(12, .regular, relativeTo: .caption))
             .foregroundStyle(Palette.textCaption)
+            .padding(.horizontal, Space.s - SetupStyle.gutter)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Illustrative glide path: 90% stocks at age 25, easing to 50% at 65.")
@@ -365,13 +312,22 @@ private struct GlidePathVisual: View {
         }
     }
 
-    private func label(_ text: String, color: Color) -> some View {
-        HStack(spacing: 6) {
-            Circle().fill(color).frame(width: 6, height: 6)
-            Text(text)
-                .font(.geist(12, .medium, relativeTo: .caption))
-                .foregroundStyle(Palette.textPrimary.opacity(0.85))
+    private func endpoint(_ weight: Double, caption: String, alignment: HorizontalAlignment) -> some View {
+        VStack(alignment: alignment, spacing: 2) {
+            Text(weight.formatted(.percent.precision(.fractionLength(0))))
+                .font(.numeral(48, .light, relativeTo: .largeTitle))
+                .tracking(-1.2)
+                .foregroundStyle(Palette.accent)
+            Text(caption)
+                .font(.geist(13, .medium, relativeTo: .footnote))
+                .foregroundStyle(SetupStyle.secondaryText)
         }
+    }
+
+    private func bandLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.geist(15, .medium, relativeTo: .subheadline))
+            .foregroundStyle(Palette.textPrimary)
     }
 
     /// Equity weight at each age, interpolated between glide-path anchors.

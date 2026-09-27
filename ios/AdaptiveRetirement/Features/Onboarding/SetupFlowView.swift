@@ -7,6 +7,7 @@ struct SetupFlowView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var isSplash: Bool { store.phase == .splash }
+    private var isPlainPage: Bool { store.phase == .intro && store.introSlide == .autopilot }
 
     var body: some View {
         ZStack {
@@ -14,6 +15,11 @@ struct SetupFlowView: View {
             AtmosphereView()
             EmberAtmosphereView()
                 .opacity(isSplash ? 0 : 1)
+            // The intro's opening chart sits on the plain page.
+            Palette.page
+                .ignoresSafeArea()
+                .opacity(isPlainPage ? 1 : 0)
+                .allowsHitTesting(false)
 
             if isSplash {
                 SplashWordmark(onTap: advanceFromSplash)
