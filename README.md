@@ -163,7 +163,7 @@ flowchart LR
 | API, contracts, AI pipeline (OpenAI or Gemini) | ✅ Done | Developer A |
 | Financial state, policy, validation | ✅ Done | Developer B |
 | Monthly simulation and evaluator | ✅ Done | Developer C |
-| Saved AI decisions and offline demo bundle | 🟡 In progress | Developer C |
+| Saved AI decisions and offline demo bundle | ✅ Done (not yet copied into the iOS app) | Developer C |
 | SwiftUI iPhone app | 🟡 In progress | Frontend |
 | Plaid Sandbox import | ⚪ Stretch goal | Developer A |
 
@@ -256,32 +256,13 @@ What's still to build between Developer A (Neil) and Developer C (Eric). Everyth
 
 ### Neil (Developer A)
 
-1. ~~Revoke the Gemini key committed in `backend/.env.example`~~ **Done:** the key is revoked and `.env.example` is empty. It still exists in git history, but it no longer works. Keep real keys only in the git-ignored `backend/.env`.
-2. **Measure live latency against the 4-second budget. Done for Gemini; OpenAI still to measure.** Run: 15 live `POST /v1/evaluate` calls (5 each for Jordan, Morgan and Casey), `gemini-3.5-flash-lite`, `AI_THINKING_LEVEL=minimal`, 2026-09-26.
-
-   | Measure | Median | Slowest |
-   |---|---|---|
-   | Recommendation call | 1.5 s | 1.8 s |
-   | Explanation call | 0.9 s | 1.4 s |
-   | Whole request, both calls ran (8 requests) | 2.6 s | 3.1 s |
-
-   - Every request that reached the AI finished inside the 4-second budget, with at least 0.9 s to spare. None timed out.
-   - One of 8 AI explanations was rejected for containing numbers and replaced with the template, as designed.
-   - The limit that bites is the Gemini rate limit, not speed. The ninth request got `RATE_LIMITED` after about 17 calls in roughly 30 seconds. The breaker then returned `AI_COOLDOWN` fallbacks in about 0.1 s each, labeled honestly.
-   - Still to do: repeat with OpenAI (`AI_REASONING_EFFORT=low`, then `none`) once an `OPENAI_API_KEY` is available.
-
-Done in PR #12: the OpenAI client (`OpenAIModel`, `build_model`), provider configuration, the `openai` pin, and guards for every name C relies on (`Evaluation`, `permitted_orders`, `explanation_facts`, `OpenAIModel`, `build_model`).
+1. **Measure OpenAI latency against the 4-second budget**, with `AI_REASONING_EFFORT=low`, then `none`, once an `OPENAI_API_KEY` is available. For comparison, Gemini (`gemini-3.5-flash-lite`) took a median of 2.6 s and at most 3.1 s per request with both AI calls, over 15 live calls on 2026-09-26. Its free-tier rate limit, not speed, was the constraint.
 
 ### Eric (Developer C)
 
-1. **Generate the saved content:**
-   - Put the OpenAI key in `backend/.env` (`OPENAI_API_KEY=`) and make sure the OpenAI account has billing enabled.
-   - From `backend`, run `python -m scripts.prepare_decisions` (done: `fixtures/decisions.json` is committed).
-2. **Export the bundle:** run `python -m scripts.export_demo` twice, compare the bytes, commit `fixtures/generated/`, and hand the twelve files to the frontend for `Resources/Demo/`.
+1. **Get the bundle into the app:** the twelve files in `backend/fixtures/generated/` go into `ios/AdaptiveRetirement/Resources/Demo/` (see `ios/IOS_INTEGRATION.md`). Until then, `DemoRepository` reports `bundleMissing` and the app falls back to `DemoData`.
 
 No human sign-off step (team decision): the saved AI text is demo placeholder content. To change it later, edit `fixtures/decisions.json` or regenerate, then re-export. The exporter still rejects text with numbers, invalid decisions, and stale hashes.
-
-Done: `prepare_decisions` builds the model with Neil's `build_model` (the provider in `backend/.env`) and uses his `permitted_orders` and `explanation_facts`, so saved prompts match the live API's exactly.
 
 **Order matters:** the model ID and prompt version are part of every saved hash. Changing the provider, model or prompt version after generating means regenerating and re-exporting.
 
