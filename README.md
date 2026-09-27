@@ -6,7 +6,7 @@
 
 **Retirement plans built from your real finances, not just your birth year.**
 
-<img src="./assets/hero.svg" width="100%" alt="A standard target-date fund uses only your retirement year. Adaptive Retirement combines cash flow, debt, emergency savings, employer match and retirement year into an affordable contribution, next-dollar priorities and a month-by-month projection." />
+<img src="./assets/hero.svg" width="100%" alt="A target-date fund plans from your birth year alone, so everyone that age gets the same plan. Adaptive Retirement uses your income, debt, savings and employer match to show how much to save, where it goes and what it builds." />
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=FFD43B) ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?style=flat-square&logo=fastapi&logoColor=white) ![OpenAI](https://img.shields.io/badge/OpenAI-GPT--6_Luna-412991?style=flat-square&logo=openai&logoColor=white) ![Gemini](https://img.shields.io/badge/Gemini-Flash_Lite-8E75B2?style=flat-square&logo=googlegemini&logoColor=white) ![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS_17+-F05138?style=flat-square&logo=swift&logoColor=white) ![Tests](https://img.shields.io/badge/tests-341_passing-22C55E?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-2563EB?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-EC4899?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_only-0EA5E9?style=flat-square)
 
@@ -152,6 +152,19 @@ flowchart LR
 | 🏷️ **Honest labels** | Every response says `ai` or `rules_fallback`, with a reason such as `TIMEOUT` or `AI_COOLDOWN` |
 | 🔒 **Privacy** | Prompts contain only computed indicators: no names, IDs or account data |
 
+### ⚡ Speed
+
+Live `POST /v1/evaluate` calls for Jordan, Morgan and Casey on a laptop, 2026-09-26. "Both AI calls" is the recommendation plus the explanation.
+
+| Mode | Median | Slowest | Result within the 4-second budget |
+|---|---:|---:|---|
+| Rules only (AI off) | 0.11 s | 0.13 s | Always; this is also the fallback path |
+| Gemini 3.5 Flash-Lite, `minimal` thinking | 2.6 s | 3.1 s | Both AI calls finish ✅; free-tier rate limit hit after about 17 calls in 30 s |
+| OpenAI GPT-6 Luna, effort `none` | 4.7 s | 5.8 s | AI decision 9/9; AI explanation 2/9 (the rest use the template) |
+| OpenAI GPT-6 Luna, effort `low` | 7.6 s | 8.5 s | Recommendation times out → rules fallback, then AI cooldown |
+
+The OpenAI rows were timed with the budget raised to 20 s so every call could finish; the last column is what the real 4-second budget produces. Every response stays labeled `ai`, `template` or `rules_fallback`.
+
 ---
 
 ## 🚦 Project status
@@ -254,7 +267,10 @@ What's still to build between Developer A (Neil) and Developer C (Eric). Everyth
 
 ### Neil (Developer A)
 
-1. **Measure OpenAI latency against the 4-second budget**, with `AI_REASONING_EFFORT=low`, then `none`, once an `OPENAI_API_KEY` is available. For comparison, Gemini (`gemini-3.5-flash-lite`) took a median of 2.6 s and at most 3.1 s per request with both AI calls, over 15 live calls on 2026-09-26. Its free-tier rate limit, not speed, was the constraint.
+1. **Team decision needed: GPT-6 Luna doesn't fit the 4-second budget** (see [⚡ Speed](#-speed)). With the default effort `low`, every recommendation times out and the demo runs on the rules fallback. Options:
+   - Set `AI_REASONING_EFFORT=none`. The AI decision fits, but most explanations fall back to the template.
+   - Switch the live demo to Gemini (`AI_PROVIDER=gemini`). Both calls fit, but the free tier rate-limits bursts.
+   - Raise the budget toward the config maximum of 7 s. iOS allows 8 s per request (`scripts/smoke.py`).
 
 ### Eric (Developer C)
 
