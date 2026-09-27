@@ -257,9 +257,8 @@ final class AppStore: ObservableObject {
         let evaluation = try await client.evaluate(
             API.EvaluateRequest(profile: apiProfile, scenario: scenario, previousDecisionID: previousID)
         )
-        if profile.id == profileID {
-            lastLiveDecision = (profileID, evaluation.decisionSummary.decisionID)
-        }
+        // Scenario decisions deliberately stay out of lastLiveDecision: the next base
+        // refresh must diff against the base plan's decision, not a scenario's (REPORT E1).
         return LoadedEvaluation(evaluation: evaluation, mode: .live, apiProfile: apiProfile)
     }
 

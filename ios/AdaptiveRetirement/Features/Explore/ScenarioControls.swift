@@ -28,6 +28,16 @@ struct ScenarioDraft: Equatable {
     var fixedRate: Double
     var preset: Preset? = .original
 
+    /// The fields that change the request; `preset` is only a chip highlight, so editing a
+    /// control and reverting it no longer sends an identical request (REPORT E2).
+    var requestShape: RequestShape { RequestShape(age: retirementAge, policy: policy, rate: fixedRate) }
+
+    struct RequestShape: Equatable {
+        let age: Int
+        let policy: Policy
+        let rate: Double
+    }
+
     static func original(for profile: Profile) -> ScenarioDraft {
         ScenarioDraft(retirementAge: profile.retirementAge, fixedRate: profile.currentEmployeeRate * 100)
     }
@@ -253,7 +263,7 @@ struct ScenarioControls: View {
         .sensoryFeedback(.selection, trigger: draft)
         .sensoryFeedback(trigger: comparedDraft) { _, new in new != nil ? .impact(weight: .medium) : nil }
         .onChange(of: draft) { _, new in
-            if new != comparedDraft {
+            if new.requestShape != comparedDraft?.requestShape {
                 compareTask?.cancel()
                 compareTask = nil
                 comparedDraft = nil
@@ -269,7 +279,7 @@ struct ScenarioControls: View {
         let compared = draft
         comparedDraft = compared
         result = nil
-        guard compared != .original(for: profile) else {
+        guard compared.requestShape != ScenarioDraft.original(for: profile).requestShape else {
             status = "This is the saved plan. The chart already shows it."
             return
         }
@@ -287,16 +297,16 @@ struct ScenarioControls: View {
         let scenario = API.Scenario(retirementAge: compared.retirementAge,
                                     employeeContributionRate: compared.policy == .fixed ? compared.fixedRate / 100 : nil)
         compareTask = Task {
-            defer { if comparedDraft == compared { compareTask = nil } }
+            defer { if comparedDraft?.requestShape == compared.requestShape { compareTask = nil } }
             do {
                 let loaded = try await store.evaluateScenario(scenario)
-                guard !Task.isCancelled, comparedDraft == compared else { return }
+                guard !Task.isCancelled, comparedDraft?.requestShape == compared.requestShape else { return }
                 result = loaded.evaluation
                 status = loaded.evaluation.projections.custom?.feasible == false
                     ? "This scenario can't be funded as entered. See the outcomes below."
                     : "Live calculation for this scenario."
             } catch {
-                guard !Task.isCancelled, comparedDraft == compared else { return }
+                guard !Task.isCancelled, comparedDraft?.requestShape == compared.requestShape else { return }
                 // A transport failure shouldn't hide a saved preset the draft matches:
                 // show it and say so, instead of an error that suggests retrying (A3).
                 if Self.isTransport(error),

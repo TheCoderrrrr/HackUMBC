@@ -176,11 +176,13 @@ private struct ServerSection: View {
                     .onSubmit(save)
                     .frame(minHeight: 44)
                     .accessibilityLabel("Server address")
-                Button(text == store.serverBaseURL ? "Saved" : "Save", action: save)
+                // With the saved URL in the field this becomes Reconnect, so there's always
+                // a way to force a fresh request from this sheet (REPORT E4).
+                Button(text == store.serverBaseURL ? "Reconnect" : "Save",
+                       action: text == store.serverBaseURL ? reconnect : save)
                     .font(.geist(15, .medium, relativeTo: .callout))
                     .foregroundStyle(Palette.accent)
                     .buttonStyle(PressableStyle())
-                    .disabled(text == store.serverBaseURL)
                     .frame(minHeight: 44)
             }
             .padding(.top, 8)
@@ -205,5 +207,10 @@ private struct ServerSection: View {
         focused = false
         rejected = !store.setServerBaseURL(text)
         if !rejected { text = store.serverBaseURL }
+    }
+
+    private func reconnect() {
+        focused = false
+        store.refreshEvaluation()
     }
 }
