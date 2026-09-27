@@ -21,3 +21,5 @@ htmlcov/
 
 # Unreviewed draft bundles (scripts.export_demo --draft)
 backend/fixtures/draft/
+# Export lock files (scripts.export_demo)
+backend/fixtures/*.lock
