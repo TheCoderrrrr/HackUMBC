@@ -23,6 +23,7 @@ struct SetupFlowView: View {
                     .transition(.opacity)
             }
         }
+        .sensoryFeedback(.impact(weight: .light), trigger: isSplash)
         .task(id: isSplash) {
             guard isSplash, !Self.holdsSplash else { return }
             // Preview hold only; tapping advances immediately.
@@ -80,6 +81,10 @@ struct OnboardingFlow: View {
             actions
         }
         .padding(.horizontal, SetupStyle.gutter)
+        .sensoryFeedback(trigger: step) { old, new in
+            .impact(weight: new > old ? .medium : .light)
+        }
+        .sensoryFeedback(.selection, trigger: store.focus)
         .overlayPreferenceValue(SetupSlotKey.self) { slots in
             GeometryReader { proxy in
                 continuityLayer(slots: slots, proxy: proxy)
@@ -92,10 +97,10 @@ struct OnboardingFlow: View {
     @ViewBuilder
     private var stepContent: some View {
         switch step {
-        case .profile: ProfileStep(profile: store.profile)
-        case .accounts: AccountsStep(profile: store.profile)
-        case .focus: FocusStep(profile: store.profile, selection: store.focus, select: select)
-        case .result: ResultStep(profile: store.profile, focus: store.focus)
+        case .profile: ProfileStep(profile: store.displayProfile)
+        case .accounts: AccountsStep(profile: store.displayProfile)
+        case .focus: FocusStep(profile: store.displayProfile, selection: store.focus, select: select)
+        case .result: ResultStep(profile: store.displayProfile, focus: store.focus)
         }
     }
 
@@ -207,7 +212,7 @@ struct OnboardingFlow: View {
     @ViewBuilder
     private func continuityLayer(slots: [String: Anchor<CGRect>], proxy: GeometryProxy) -> some View {
         if let avatarSlot = Slot.avatar(for: step), let anchor = slots[avatarSlot] {
-            SetupAvatar(profile: store.profile)
+            SetupAvatar(profile: store.displayProfile)
                 .place(in: proxy[anchor], baseSize: SetupAvatar.baseSize)
                 // Reduce Motion: crossfade between positions instead of travelling.
                 .id(reduceMotion ? avatarSlot : "avatar")

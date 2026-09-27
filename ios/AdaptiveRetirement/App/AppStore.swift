@@ -71,12 +71,14 @@ final class AppStore: ObservableObject {
     /// Explore's "Drag to a date" hint shows once after onboarding.
     @Published var showsPlayheadHint = true
 
-    /// Backend evaluation for `profile`. Screens still read `DemoData` until they adopt this.
+    /// Backend evaluation for `profile`. `.idle` until a bundle or server supplies one.
     @Published private(set) var evaluationLoad: EvaluationLoad = .idle
     /// Public HTTPS base URL, e.g. the Cloudflare tunnel. Empty means saved data only.
     @Published private(set) var serverBaseURL: String
 
     static let serverBaseURLKey = "serverBaseURL"
+    /// Fixed ngrok domain used until someone saves a different URL (or an empty one for saved-only).
+    static let defaultServerBaseURL = "https://coral-sandbox-apron.ngrok-free.dev"
 
     private let demo: DemoRepository
     private var client: APIClient?
@@ -89,7 +91,7 @@ final class AppStore: ObservableObject {
     /// `client` overrides the URL-based client (previews and tests).
     init(demo: DemoRepository = DemoRepository(), client: APIClient? = nil, defaults: UserDefaults = .standard) {
         self.demo = demo
-        let url = defaults.string(forKey: Self.serverBaseURLKey) ?? ""
+        let url = defaults.string(forKey: Self.serverBaseURLKey) ?? Self.defaultServerBaseURL
         self.serverBaseURL = url
         self.client = client ?? LiveAPIClient(baseURLString: url)
         #if DEBUG
@@ -99,10 +101,22 @@ final class AppStore: ObservableObject {
     }
 
     #if DEBUG
+    /// `-evaluationFixtures <dir>` treats `<dir>/evaluate-<profile>.response.json` (for example
+    /// the repo's `contracts/examples`) as the saved result, to preview engine data without a bundle.
+    private func debugFixtureEvaluation(for profileID: String) -> LoadedEvaluation? {
+        guard let dir = UserDefaults.standard.string(forKey: "evaluationFixtures") else { return nil }
+        let url = URL(fileURLWithPath: dir).appendingPathComponent("evaluate-\(profileID).response.json")
+        guard let data = try? Data(contentsOf: url),
+              let evaluation = try? JSONDecoder().decode(API.Evaluation.self, from: data),
+              evaluation.profileID == profileID else { return nil }
+        return LoadedEvaluation(evaluation: evaluation, mode: .saved)
+    }
+
     /// `-screen <name>` jumps straight to a screen for previews and screenshots:
     /// splash, profile, accounts, focus, result, overview, plan, explore,
     /// and sheet names (picker, snapshot, explanation, assumptions, accountPreview).
-    /// `-focus debt|cash|retirement`, `-profile morgan|jordan|casey`, `-hint 0`.
+    /// `-focus debt|cash|retirement`, `-profile morgan|jordan|casey`, `-hint 0`,
+    /// `-serverBaseURL https://…` (read in `init`), `-evaluationFixtures <dir>`.
     private func applyDebugLaunchArguments() {
         let defaults = UserDefaults.standard
         if let id = defaults.string(forKey: "profile"), let p = Profile.all.first(where: { $0.id == id }) { profile = p }
@@ -127,6 +141,16 @@ final class AppStore: ObservableObject {
         }
     }
     #endif
+
+    /// What screens render: the fixture with the current evaluation applied, or the plain
+    /// `DemoData` fixture while `evaluationLoad` is `.idle`.
+    var displayProfile: Profile { profile.applying(evaluationLoad.current) }
+
+    /// Retryable failure to surface as a banner; nil while loading or when nothing can be retried.
+    var retryableError: APIError? {
+        guard case .failed(_, let error) = evaluationLoad, let api = error as? APIError, api.isRetryable else { return nil }
+        return api
+    }
 
     func select(_ profile: Profile) {
         guard profile.id != self.profile.id else { return }
@@ -213,6 +237,9 @@ final class AppStore: ObservableObject {
 
     /// Exact saved artifact, or nil until Eric's bundle is in `Resources/Demo/`.
     func savedEvaluation(for profileID: String, preset: DemoPreset = .original) -> LoadedEvaluation? {
+        #if DEBUG
+        if preset == .original, let fixture = debugFixtureEvaluation(for: profileID) { return fixture }
+        #endif
         guard let artifact = try? demo.artifact(profileID: profileID, preset: preset) else { return nil }
         return LoadedEvaluation(evaluation: artifact.evaluation, mode: .saved)
     }

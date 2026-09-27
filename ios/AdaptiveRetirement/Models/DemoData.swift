@@ -93,6 +93,8 @@ struct Profile: Identifiable, Hashable {
     let equityWeight: Double
     let explanation: Explanation
     let origin: DecisionOrigin
+    /// Backend evaluation this profile was built from; nil for the bundled fixture.
+    var evaluation: API.Evaluation? = nil
 
     var totalDebtCents: Int64 { debts.reduce(0) { $0 + $1.balanceCents } }
     var yearsToRetirement: Int { retirementAge - age }

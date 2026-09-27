@@ -12,6 +12,8 @@ struct TimelineScrubber: View {
     var onSeek: (Int) -> Void
 
     @State private var isDragging = false
+    /// Whole month under the finger while dragging; drives the per-month haptic tick.
+    @State private var dragMonth: Int?
 
     private static let trackLabels: [(title: String, symbol: String, tint: Color)] = [
         ("Retirement", "building.columns.fill", Palette.accent),
@@ -99,7 +101,15 @@ struct TimelineScrubber: View {
         .frame(width: width, height: Self.height, alignment: .topLeading)
         .contentShape(Rectangle())
         .gesture(scrub(width: width))
-        .sensoryFeedback(.selection, trigger: timeline.milestone(at: Int(month.rounded()))?.month)
+        // Dragging ticks every month, with a firmer bump on milestones; playback and taps
+        // tick milestones only.
+        .sensoryFeedback(trigger: dragMonth) { _, new in
+            guard let new else { return nil }
+            return timeline.milestone(at: new) != nil ? .impact(weight: .medium) : .selection
+        }
+        .sensoryFeedback(trigger: timeline.milestone(at: Int(month.rounded()))?.month) { _, _ in
+            isDragging ? nil : .selection
+        }
         .accessibilityElement()
         .accessibilityLabel("Timeline")
         .accessibilityValue(accessibilityValue)
@@ -145,10 +155,12 @@ struct TimelineScrubber: View {
                     onInteract()
                 }
                 month = clampedMonth(value.location.x, width)
+                dragMonth = Int(month.rounded())
             }
             .onEnded { value in
                 if isDragging {
                     isDragging = false
+                    dragMonth = nil
                     onSeek(Int(clampedMonth(value.location.x, width).rounded()))
                 } else {
                     onInteract()

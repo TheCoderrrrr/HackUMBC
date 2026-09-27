@@ -27,6 +27,7 @@ struct ProfilePickerSheet: View {
             }
             .padding(.top, 20)
         }
+        .sensoryFeedback(.selection, trigger: store.profile.id)
     }
 }
 

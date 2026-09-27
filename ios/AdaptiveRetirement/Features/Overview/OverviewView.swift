@@ -6,8 +6,9 @@ struct OverviewView: View {
     @EnvironmentObject private var store: AppStore
     /// 0…1 playhead on the projection while scrubbing.
     @State private var scrub: Double?
+    @State private var isScrolled = !ScreenHeaderScroll.isTrackable
 
-    private var profile: Profile { store.profile }
+    private var profile: Profile { store.displayProfile }
 
     var body: some View {
         ScrollView {
@@ -29,9 +30,10 @@ struct OverviewView: View {
             .padding(.bottom, Space.xl)
         }
         .scrollIndicators(.hidden)
+        .tracksScrolled($isScrolled)
         .background(Palette.page.ignoresSafeArea())
         .safeAreaInset(edge: .top, spacing: 0) {
-            ScreenHeader {
+            ScreenHeader(isScrolled: isScrolled) {
                 ProfileSwitcher()
             } trailing: {
                 HeaderAvatarButton()
@@ -93,7 +95,7 @@ struct OverviewView: View {
             .padding(.horizontal, Space.xl)
             .accessibilityHint("Opens Explore")
 
-            ProjectionChart(adaptive: IllustrativeProjection.overview(),
+            ProjectionChart(adaptive: OverviewCopy.curve(for: profile),
                             adaptiveName: "Retirement savings",
                             selection: $scrub,
                             selectionSteps: profile.yearsToRetirement)
@@ -259,10 +261,7 @@ struct OverviewView: View {
             }
             .buttonStyle(PrimaryButtonStyle())
 
-            HStack(alignment: .firstTextBaseline, spacing: Space.s) {
-                DataModeBadge(mode: store.dataMode)
-                Spacer(minLength: 0)
-            }
+            LiveStatusRow()
             Text(Disclosure.fictional)
                 .font(.geist(12, .regular, relativeTo: .caption))
                 .foregroundStyle(Palette.textCaption)
@@ -382,11 +381,15 @@ enum OverviewCopy {
 
     static func retirementYear(for profile: Profile) -> Int { asOfYear + profile.yearsToRetirement }
 
-    /// Illustrative balance `years` from today, read off the drawn curve so the number matches
+    /// Balance `years` from today: the engine's adaptive projection when an evaluation is loaded.
+    /// Otherwise an illustrative balance read off the drawn curve so the number matches
     /// where the playhead sits. The curve runs from today's balance to a nominal future value at
     /// retirement: monthly compounding of the saved balance plus employee and employer
     /// contributions at the allocation-weighted ModelAssumptions return. Display only.
     static func projectedCents(for profile: Profile, years: Int) -> Int64 {
+        if let balance = profile.evaluation?.projections.adaptive.retirementBalance(atYear: years) {
+            return years == 0 ? balance : (balance + 5_000) / 10_000 * 10_000
+        }
         let n = max(profile.yearsToRetirement, 1)
         let a = ModelAssumptions.illustrative
         let annual = profile.equityWeight * a.annualEquityReturn + (1 - profile.equityWeight) * a.annualBondReturn
@@ -401,6 +404,14 @@ enum OverviewCopy {
         let t = (ProjectionChart.sample(curve, at: Double(years) / Double(n)) - c0) / max(c1 - c0, 0.0001)
         let value = start + (end - start) * t
         return years == 0 ? profile.retirementBalanceCents : Int64((value / 10_000).rounded()) * 10_000
+    }
+
+    /// The engine's yearly adaptive balances, normalised, or the schematic curve without an evaluation.
+    static func curve(for profile: Profile) -> [Double] {
+        guard let adaptive = profile.evaluation?.projections.adaptive else { return IllustrativeProjection.overview() }
+        let balances = adaptive.yearlyRetirementBalances(years: profile.yearsToRetirement)
+        let top = Double(max(balances.max() ?? 1, 1))
+        return balances.count > 1 ? balances.map { Double($0) / top } : IllustrativeProjection.overview()
     }
 
     static func percent(_ rate: Double) -> String {

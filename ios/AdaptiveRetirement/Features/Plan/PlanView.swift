@@ -6,7 +6,9 @@ import SwiftUI
 struct PlanView: View {
     @EnvironmentObject private var store: AppStore
 
-    private var profile: Profile { store.profile }
+    @State private var isScrolled = !ScreenHeaderScroll.isTrackable
+
+    private var profile: Profile { store.displayProfile }
 
     var body: some View {
         ScrollView {
@@ -28,9 +30,10 @@ struct PlanView: View {
             .padding(.bottom, 28)
         }
         .scrollIndicators(.hidden)
+        .tracksScrolled($isScrolled)
         .background(Palette.page.ignoresSafeArea())
         .safeAreaInset(edge: .top, spacing: 0) {
-            ScreenHeader {
+            ScreenHeader(isScrolled: isScrolled) {
                 Text("Your plan")
                     .font(.geist(32, .regular, relativeTo: .largeTitle))
                     .tracking(-0.7)

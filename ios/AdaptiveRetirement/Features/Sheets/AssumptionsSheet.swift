@@ -7,6 +7,7 @@ struct AssumptionsSheet: View {
     var body: some View {
         SheetScaffold(title: "Assumptions", subtitle: "Illustrative and nominal. Not forecasts.") {
             VStack(alignment: .leading, spacing: 0) {
+                ServerSection()
                 AssumptionSection(title: "Annual returns", note: model.returnsNetOfFees ? "Net of fees" : nil, rows: [
                     ("Stocks", pct(model.annualEquityReturn)),
                     ("Bonds", pct(model.annualBondReturn)),
@@ -83,5 +84,66 @@ private struct AssumptionSection: View {
             Hairline(color: Palette.hairlineStrong)
                 .padding(.top, 16)
         }
+    }
+}
+
+/// Server URL for live calculations (the Cloudflare tunnel). HTTPS only; empty uses saved data.
+private struct ServerSection: View {
+    @EnvironmentObject private var store: AppStore
+    @State private var text = ""
+    @State private var rejected = false
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SheetSectionTitle("Live calculation")
+                .padding(.top, 19)
+            Text("Paste the server's https:// address. Leave empty to use saved demo data.")
+                .font(.geist(13, .regular, relativeTo: .footnote))
+                .foregroundStyle(Palette.textCaption)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 4)
+            HStack(spacing: Space.s) {
+                TextField("https://your-name.ngrok-free.app", text: $text)
+                    .font(.geist(15, .regular, relativeTo: .subheadline))
+                    .foregroundStyle(Palette.textPrimary)
+                    .keyboardType(.URL)
+                    .textContentType(.URL)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.done)
+                    .focused($focused)
+                    .onSubmit(save)
+                    .frame(minHeight: 44)
+                    .accessibilityLabel("Server address")
+                Button(text == store.serverBaseURL ? "Saved" : "Save", action: save)
+                    .font(.geist(15, .medium, relativeTo: .callout))
+                    .foregroundStyle(Palette.accent)
+                    .buttonStyle(PressableStyle())
+                    .disabled(text == store.serverBaseURL)
+                    .frame(minHeight: 44)
+            }
+            .padding(.top, 8)
+            HStack(spacing: Space.s) {
+                if rejected {
+                    Text("Use a full https:// address.")
+                        .font(.geist(13, .regular, relativeTo: .footnote))
+                        .foregroundStyle(Palette.textSecondary)
+                } else {
+                    LiveStatusRow()
+                }
+            }
+            .frame(minHeight: 44)
+            Hairline(color: Palette.hairlineStrong)
+                .padding(.top, 8)
+        }
+        .onAppear { text = store.serverBaseURL }
+        .onChange(of: text) { _, _ in rejected = false }
+    }
+
+    private func save() {
+        focused = false
+        rejected = !store.setServerBaseURL(text)
+        if !rejected { text = store.serverBaseURL }
     }
 }

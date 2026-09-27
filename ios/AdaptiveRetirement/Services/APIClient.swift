@@ -70,6 +70,8 @@ final class LiveAPIClient: APIClient {
         var request = URLRequest(url: baseURL.appendingPathComponent(path), timeoutInterval: timeout)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        // ngrok's free tier can interpose a browser warning page; this header opts out.
+        request.setValue("1", forHTTPHeaderField: "ngrok-skip-browser-warning")
         if let body {
             request.httpBody = body
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")

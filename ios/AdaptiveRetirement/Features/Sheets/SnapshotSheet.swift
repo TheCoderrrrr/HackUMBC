@@ -6,7 +6,7 @@ struct SnapshotSheet: View {
     @EnvironmentObject private var store: AppStore
 
     var body: some View {
-        let profile = store.profile
+        let profile = store.displayProfile
         SheetScaffold(title: "Financial snapshot") {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: Space.m) {

@@ -120,3 +120,16 @@ To check it worked, select Morgan and confirm `store.dataMode == .live` and that
 - **Gemini key:** goes only in the git-ignored `backend/.env`. No iOS changes are needed; decisions just switch from `rules` to `ai`.
 
 Questions about the contract or engine: ask Kevin. Questions about the bundle: ask Eric.
+
+## 8. Status on the Mac (2026-09-26)
+
+- **Build:** compiles clean for the iOS simulator with no warnings; no Swift fixes were needed in the data layer.
+- **Contract:** every file in `contracts/examples` decodes with `API.*`. Against a local backend, Swift-encoded `EvaluateRequest`s (base, retire +2, fixed 11%, `previous_decision_id` chaining) all return 200 and decode; a bad scenario returns a 422 envelope. No mismatches found.
+- **Screens:** `AppStore.displayProfile` is the `DemoData` fixture with the current evaluation applied (`Models/EvaluationDisplay.swift`). Overview, Plan, Explore, onboarding and the sheets read it, so they show `DemoData` while `evaluationLoad` is `.idle`, and engine values otherwise:
+  - Overview chart and scrub values use `projections.adaptive`.
+  - Explore's comparison chart uses the Current and Adaptive projections; Morgan's milestones use `debt_free_month` and `full_reserve_month`; "Compare scenario" calls `evaluateScenario` (or an exact saved preset offline); the outcome rows show projection values.
+  - `LiveStatusRow` shows a spinner while loading and Retry after a retryable failure.
+- **Server URL:** built-in default `AppStore.defaultServerBaseURL` (the team's fixed ngrok domain; see `backend/RUNBOOK.md` and `backend/scripts/serve_demo.sh`). Override in Explore › Modeling assumptions › Live calculation, or with `-serverBaseURL https://…`. Requests send `ngrok-skip-browser-warning`.
+- **Preview without a bundle (DEBUG):** `-evaluationFixtures /path/to/contracts/examples` loads `evaluate-<profile>.response.json` as the saved result.
+- **End to end:** verified through `https://coral-sandbox-apron.ngrok-free.dev` (`smoke.py` RESULT: OK; a fresh simulator install shows "Live calculation" with no setup). Start it with `backend/scripts/serve_demo.sh coral-sandbox-apron.ngrok-free.dev`. The bundle is still waiting on Eric's `fixtures/decisions.json`.
+- `test_openapi_is_current` fails on newer Starlette only because the 413/422 reason phrases were renamed. That is not a contract change.

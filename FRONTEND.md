@@ -64,22 +64,46 @@ Apple documents personal-account setup, automatic signing, and device provisioni
 
 ## 3. Navigation and exact screens
 
-Use Welcome followed by three tabs. Each tab has its own NavigationStack.
+Use a guided first-run setup followed by three tabs. Each tab has its own NavigationStack. Onboarding finishes in Explore, where the user first tries the dated playhead.
 
-### Welcome
+### Splash and onboarding material
 
-Copy:
+[Figma splash](https://www.figma.com/design/G4MMU5TTVZzGmRvWTSC9cU/Fintech-investing-app?node-id=61-263)
 
-> Adaptive Retirement  
-> Your retirement plan should understand more than your retirement date.
+Use the centered white Adaptive wordmark over an indigo/lavender glow that dissolves into charcoal at the screen edges. The splash includes subtle organic contour lines and fine grain behind the wordmark; see DESIGN.md for the editable vector and noise settings. Keep the current design static. Future implementation should support a gentle pulse and ripple in the contours and glow while the wordmark remains still, with a static Reduce Motion fallback. This motion must never extend startup time.
 
-Actions:
+Carry the same anchored background into onboarding, fading out the wordmark and splash contours as a dark frosted system material and the setup content appear. Keep the background outside layout flow and behind all text, icons, and controls. Reuse it across every setup step and focus branch without restarting the background. Return to the existing charcoal surface on entering Explore.
 
-- Primary: **Explore demo profiles**.
-- Secondary: **Connect Sandbox accounts**, visible only after the complete flow passes its gate.
-- Connection Settings toolbar action.
+The Figma material reference uses 48 px background blur, a 68% charcoal layer, and fine duotone grain; see DESIGN.md for shared colors and effects. Use the native material as the implementation baseline and verify contrast on device. Reduce Transparency substitutes an opaque charcoal surface; Reduce Motion uses a brief crossfade or immediate update. Decorative layers must not intercept touches or appear in VoiceOver. The prototype's 0.9-second hold and 550 ms transition demonstrate the handoff only: app startup must not impose an artificial minimum delay or replay the splash on Back navigation.
 
-Show: **Educational prototype using synthetic or Sandbox data.** Morgan is a fictional T. Rowe Price customer; Jordan and Casey are fictional comparison profiles. Display **Fictional customer • Synthetic data • Not affiliated with or endorsed by T. Rowe Price.**
+### Welcome and guided onboarding
+
+[Figma entry](https://www.figma.com/design/G4MMU5TTVZzGmRvWTSC9cU/Fintech-investing-app?node-id=3-2) · [Four-step sequence](https://www.figma.com/design/G4MMU5TTVZzGmRvWTSC9cU/Fintech-investing-app?node-id=46-129)
+
+Use four concise setup screens, following the user's simple profile / connection / suggestions reference. Each has one heading, one short instruction, one main action, and a visual that serves that step. The money river first appears in Explore.
+
+1. **Profile:** show Morgan's avatar and name, “Try a sample financial life,” and **Continue with Morgan**. **Use my accounts** opens the separate connection preview. Keep the fictional-profile disclosure discreet and legible.
+2. **Accounts:** move the same avatar into a simple dotted connection graphic beside an account icon. Show only three sample balances: retirement $35,000, cash $3,600, and credit card $18,000. Primary: **Use sample accounts**. Do not imply that a bank has been linked.
+3. **Focus:** “Choose what you'd like to explore.” Three selectable rows introduce debt, a cash buffer, and retirement. This is a presentation choice, not a change to the financial planning preference or calculation. Default to debt for Morgan. Each choice has a working prototype state and a corresponding result.
+4. **Next step:** expand the selected icon into the central visual and explain that part of the saved plan with one amount and brief context. Debt: $963.80 extra each month, $1,363.80 including the minimum. Cash: $3,600 saved, one month covered, next target three months. Retirement: $700 each month, comprising $350 employee and $350 employer contributions. Primary: **See it over time**.
+
+Then open Explore with the river and a short **Drag to a date** hint. **Start exploring** dismisses it; seeking or playing also enters an existing dated state. Keep the river fixed when dismissing the hint. Figma's future dates are illustrative; the native lesson must use actual available projection data.
+
+Keep primary actions in one stable location, offer Back, preserve the selected focus, and allow replay. No timed auto-advance or artificial loading. The earlier confirm-details and priorities lecture screens were removed from the sample walkthrough; canonical facts remain available through Financial Snapshot and Plan. All three focus paths show the same saved Balanced plan, not freshly calculated recommendations.
+
+The **Use my accounts** branch explicitly says account linking is unavailable in this demo and offers sample data. In the native app, expose **Connect Sandbox accounts** only after its integration gate passes. A real import still requires source/date review and confirmation of missing or unconfirmed balances, elections, income, costs, matching rules, tax assumptions, retirement age, and planning preference. Do not infer these from bank balances or omit required confirmation merely to shorten the demo. Evaluate only a complete validated profile. Never substitute Morgan's result for connected data. Jordan and Casey remain in the profile picker; Connection Settings remains available for backend configuration.
+
+#### Motion and continuity contract
+
+Continuity belongs to persistent identities, not a river repeated on every setup screen. Preserve the same avatar in a common presentation layer: at the 393 × 852 reference size it moves from (140.5, 290, 112 × 112) on Profile to (44, 302, 80 × 80) on Accounts, then settles at (325, 69, 44 × 44) in the header. It remains there through the result and Explore. Derive these positions from layout at other sizes; support larger text without clipping controls.
+
+- Profile → accounts and accounts → focus use 500 ms Smart Animate with cubic-bezier (0.77, 0, 0.175, 1). Keep the avatar identity stable while other content fades.
+- Selecting a focus changes selection feedback in 180 ms. Continuing carries that exact icon from the row into an 80 pt central icon over 500 ms. Unselected rows fade out in 180 ms; the result fades in over 240 ms with at most 8 pt translation. Never animate monetary amounts through intermediate values.
+- The avatar is stationary after reaching the header. Moving into Explore takes about 350 ms. Its river is introduced once and stays mounted while the hint is dismissed and the dated playhead is used.
+- Back and rapid navigation retarget from the current presentation state; never lock controls during animation. The Explore scrubber follows the finger directly and pauses playback. Discrete navigation easing must not slow functional scrubbing.
+- Reduce Motion removes translation and scale, using immediate updates or brief opacity changes. Keep every action available. Provide VoiceOver labels and month adjustment; avoid announcing every animation frame.
+
+The Figma flow has linked selection states and a separate timeline study of the selected-icon transition. It is a design prototype, not a running SwiftUI implementation or proof of continuous scrubbing.
 
 ### Overview tab
 
@@ -118,6 +142,12 @@ Label the bar: **Illustrative allocation — not a specific T. Rowe Price fund**
 ### Explore tab
 
 Default: compare Current and Adaptive at the profile's original retirement age.
+
+Lead with the approved **money river and dated playhead**. Place the existing comparison chart and scenario controls below it. The river shows the selected plan's monthly contribution take-home cost, emergency-savings allocation, additional debt payment, and any remaining cash. Keep employer matching separate from take-home cash; do not silently omit a nonzero remaining-cash allocation.
+
+The playhead selects a calendar month from already calculated monthly results. Display month/year prominently, with plan milestones at their actual projected dates. Update the river and the selected retirement, cash, and debt balances together. Scrubbing is local presentation state: it must not submit a scenario, modify the recommendation, or trigger financial recalculation. Play advances through available months and stops at the end; dragging pauses playback. Respect Reduce Motion and provide accessible month-by-month adjustment. Reset or clamp the selected month when the profile or submitted scenario changes. Never extrapolate past a trajectory's retirement date.
+
+The Figma prototype has three illustrative date states (Sep 2026, Sep 2028, Jan 2030) to demonstrate the interaction. Those dates and future ribbon widths are not forecasts and must not become hardcoded financial outputs. The current projection contract contains monthly balances but not monthly allocation amounts: the backend must expose its allocator's monthly cash flows and an explicit projection calendar anchor before a data-backed river can be implemented. Never infer allocation from differences in account balances, which also contain returns and interest. Preserve a clear unavailable state until these fields exist.
 
 Controls:
 
@@ -163,7 +193,12 @@ Snapshot shows canonical inputs, sources, and as-of dates. No transaction feed o
 ~~~text
 AdaptiveRetirementApp
   RootView
-    WelcomeView
+    OnboardingView
+      SharedProfileIdentity
+      ProfileStep
+      AccountsStep
+      FocusStep
+      NextStep
     MainTabView
       OverviewView
         ProfileHeader
@@ -177,13 +212,15 @@ AdaptiveRetirementApp
         EmergencyProgress
         AllocationBar
       ExploreView
+        MoneyRiverView
+        PlayheadLesson
         ScenarioControls
         PresetPicker
         ProjectionChart
         OutcomeCards
 ~~~
 
-Use system typography, one accent color, neutral cards, consistent spacing, and standard controls. Distinguish chart series with labels and line style as well as color. Support larger text and VoiceOver.
+Use the current Geist typography and dark palette in DESIGN.md, with native control structure, open sections, and fine separators. Keep SF Symbols and system status text native. Distinguish chart series with labels and line style as well as color. Support larger text and VoiceOver.
 
 Use Swift Charts for the line chart and SwiftUI shapes for allocation and cash bars. No 3D graphics, animated gauges, or custom chart packages. [Apple Swift Charts](https://developer.apple.com/documentation/charts)
 
@@ -200,6 +237,7 @@ Owns:
 - Public HTTPS base URL.
 - Profile-selection generation counter.
 - Connection state and demo/live preference.
+- Onboarding step, selected presentation focus, draft source, completion state, and replay state. Changing a step or focus must not recalculate a plan or alter planning_preference.
 
 It contains no financial policy or private credentials.
 
@@ -645,6 +683,7 @@ Required checks:
 - Repair a changed tunnel URL without rebuilding.
 - Correct nominal/today-dollar labels and differing chart horizons.
 - Larger text and accessible labels.
+- Onboarding Continue/Back, all three focus paths, replay, interruption during a morph, and Reduce Motion. Check avatar and selected-icon continuity, that the river first appears in Explore, and that hidden controls cannot receive taps.
 - Stretch: Link cancellation, partial imports, expired sessions.
 
 Use focused decoding tests and a written device checklist; do not build a large UI-test framework.
@@ -653,12 +692,11 @@ Use focused decoding tests and a written device checklist; do not build a large 
 
 Three-minute sequence:
 
-1. **0:00–0:20:** introduce same retirement date, different financial lives.
-2. **0:20–0:50:** Jordan: strong reserves, full match, maintain contributions.
-3. **0:50–1:25:** Morgan: same baseline allocation, preserve match, accelerate expensive debt.
-4. **1:25–2:10:** Why sheet and debt/cash/retirement comparison.
-5. **2:10–2:35:** retire-two-years-later preset or live scenario.
-6. **2:35–3:00:** show the AI-selected priority order and structured decision summary; explain that Python computes and validates every amount.
+1. **0:00–1:00:** take Morgan through the guided setup, reveal the first plan, and try one dated playhead interaction in Explore.
+2. **1:00–1:30:** explain preserving the match while accelerating expensive debt; open Why and show the validated priority order and its supporting facts.
+3. **1:30–2:00:** switch to Jordan to contrast the same retirement date with stronger reserves and different cash priorities.
+4. **2:00–2:35:** compare the retire-two-years-later preset or a live scenario, including debt and cash alongside retirement.
+5. **2:35–3:00:** show the structured decision summary; explain that Python computes and validates every amount. Distinguish the currently illustrative Figma river from actual generated results.
 
 Show Plaid afterward only if asked and working.
 

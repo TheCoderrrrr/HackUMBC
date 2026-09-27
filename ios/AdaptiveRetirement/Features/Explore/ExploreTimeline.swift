@@ -2,11 +2,10 @@ import SwiftUI
 
 // Illustrative money-river timeline for Explore.
 //
-// The backend does not yet expose monthly allocator cash flows or a projection
-// calendar anchor (FRONTEND.md, Explore tab), so the dated states below are the
-// Figma prototype's illustrative states — labelled on screen as "not calculated
-// results". Swap `ExploreTimeline.illustrative(for:)` for engine data once the
-// monthly allocation fields exist. Nothing here computes a recommendation.
+// The backend does not yet expose monthly allocator cash flows (FRONTEND.md, Explore
+// tab), so the river's flows are the Figma prototype's illustrative states. When an
+// evaluation is loaded, the opening split and Morgan's milestone months come from it.
+// Nothing here computes a recommendation.
 
 /// Where one month's cash goes, as shown under the river.
 struct RiverDestination: Hashable {
@@ -154,10 +153,17 @@ extension ExploreTimeline {
         return counts
     }
 
-    /// Morgan: the three dated Figma states — card cleared Sep 2028, reserve target Jan 2030.
+    /// Morgan: the three dated Figma states. Milestone months come from the engine's adaptive
+    /// projection when an evaluation is loaded; otherwise the prototype's Sep 2028 / Jan 2030.
     private static func morgan(_ profile: Profile) -> ExploreTimeline {
         let open = opening(profile)
-        let debtCleared = 24, reserveMet = 40
+        var debtCleared = 24, reserveMet = 40
+        if let adaptive = profile.evaluation?.projections.adaptive,
+           let debt = adaptive.debtFreeMonth, let reserve = adaptive.fullReserveMonth,
+           0 < debt, debt < reserve, reserve <= 48 {
+            debtCleared = debt
+            reserveMet = reserve
+        }
         return ExploreTimeline(
             lastMonth: 48,
             keyframes: [

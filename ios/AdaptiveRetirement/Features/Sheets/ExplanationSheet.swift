@@ -7,7 +7,7 @@ struct ExplanationSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        let profile = store.profile
+        let profile = store.displayProfile
         SheetScaffold(title: "Why this plan?") {
             VStack(alignment: .leading, spacing: 0) {
                 Text(profile.explanationHeadline)
