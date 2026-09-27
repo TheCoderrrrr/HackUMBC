@@ -127,7 +127,8 @@ struct FocusStep: View {
         VStack(spacing: 0) {
             SetupHeader(
                 heading: "What comes first?",
-                subtitle: Text("Pick one to start with.\nYou can change it anytime.")
+                // A view preference, not a planning input: the plan is unchanged (REPORT B7).
+                subtitle: Text("Choose what you'd like to explore first.\nIt changes the view, not the plan.")
             ) {
                 HeaderGlyph(symbol: "flag")
             }

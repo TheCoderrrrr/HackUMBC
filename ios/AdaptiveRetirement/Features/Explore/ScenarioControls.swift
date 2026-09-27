@@ -251,9 +251,11 @@ struct ScenarioControls: View {
                         + Text(" years").font(.geist(12, .medium, relativeTo: .caption))
                 } action: { apply(.retireLater) }
                 PresetChip(isSelected: draft.preset == .ratePlusOne) {
-                    Text("Rate ").font(.geist(12, .medium, relativeTo: .caption))
-                        + Text("+1").font(.geist(12, .medium, relativeTo: .caption))
-                        + Text(" pt").font(.geist(12, .medium, relativeTo: .caption))
+                    // The label says what the preset actually is — a fixed rate, which can
+                    // be below the current election (Morgan: 6% vs 8%) — never "+1 pt"
+                    // implying more saving (REPORT B9).
+                    Text("Fixed at \(percent(ratePlusOneRate))")
+                        .font(.geist(12, .medium, relativeTo: .caption))
                 } action: { apply(.ratePlusOne) }
             }
             }
@@ -356,15 +358,19 @@ struct ScenarioControls: View {
         Binding { draft.fixedRate } set: { draft.fixedRate = $0; draft.preset = nil }
     }
 
+    /// Matches export_demo.py: the opening Adaptive rate plus one point, held fixed.
+    private var ratePlusOneRate: Double {
+        min(((profile.adaptiveEmployeeRate * 100 + 1) * 2).rounded() / 2, 20)
+    }
+
     private func apply(_ preset: ScenarioDraft.Preset) {
         var next = ScenarioDraft.original(for: profile)
         switch preset {
         case .original: break
         case .retireLater: next.retirementAge = min(profile.retirementAge + 2, 80)
-        // Matches export_demo.py: the opening Adaptive rate plus one point, held fixed.
         case .ratePlusOne:
             next.policy = .fixed
-            next.fixedRate = min(((profile.adaptiveEmployeeRate * 100 + 1) * 2).rounded() / 2, 20)
+            next.fixedRate = ratePlusOneRate
         }
         next.preset = preset
         draft = next

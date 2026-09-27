@@ -86,11 +86,16 @@ extension Focus {
     func result(for profile: Profile) -> (amount: String, unit: String, context: String) {
         switch self {
         case .debt:
-            let extra = profile.debts.first?.extraCents ?? 0
-            let minimum = profile.debts.first?.minimumCents ?? 0
-            return (Money.exact(extra),
-                    "Extra to your credit card each month",
-                    "\(Money.exact(extra + minimum)) total, including the minimum.")
+            // The debt's own name, and an honest empty state when the plan has no extra
+            // payment — not "credit card" and $0 for everyone (REPORT B8).
+            guard let debt = profile.debts.first, debt.extraCents > 0 else {
+                return (Money.whole(0),
+                        "No extra debt payment needed",
+                        "Your required minimums keep you on schedule.")
+            }
+            return (Money.exact(debt.extraCents),
+                    "Extra to your \(debt.name.lowercased()) each month",
+                    "\(Money.exact(debt.extraCents + debt.minimumCents)) total, including the minimum.")
         case .cash:
             let months = Int(profile.emergencyMonths.rounded())
             return (Money.whole(profile.emergencyCashCents),
