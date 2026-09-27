@@ -1,7 +1,6 @@
 import { useMemo, type ReactNode } from "react";
 import { errorMessage } from "../api/client";
 import type { PlanStyles, StyleOutcome } from "../api/types";
-import { Icon } from "../components/ui";
 import { LineChart, type Series } from "../components/LineChart";
 import { Term } from "../components/Term";
 import { money, monthLabel } from "../data/format";
@@ -22,20 +21,15 @@ const cents = (v: number | null) => (v === null ? "–" : money(v));
  * the chosen style highlighted. Every number comes from /v1/plan-styles.
  */
 export function StyleComparison() {
-  const { planStyles, style, profile, openGuide, liveEnabled } = useStore();
+  const { planStyles, style, profile, liveEnabled } = useStore();
 
   return (
     <section aria-labelledby="styles-title">
-      <div className="section-head">
-        <div>
-          <h2 id="styles-title" className="h-section" tabIndex={-1}>How your plan style compares</h2>
-          <p className="caption" style={{ marginTop: 3 }}>
-            You're on <span style={{ color: STYLE_INFO[style].color, fontWeight: 500 }}>{STYLE_INFO[style].label}</span>.
-            Projected retirement balance by year.
-          </p>
-        </div>
-        <button className="pill neutral" onClick={openGuide}><Icon name="sliders" /> Change style</button>
-      </div>
+      <h2 id="styles-title" className="h-section" tabIndex={-1}>How the three styles compare</h2>
+      <p className="subtitle">
+        Projected retirement balance by year · you're on{" "}
+        <span style={{ color: STYLE_INFO[style].color, fontWeight: 500 }}>{STYLE_INFO[style].label}</span>
+      </p>
 
       {planStyles.status === "idle" && (
         <p className="body state-note">{liveEnabled ? "Loading…" : "Turn on live calculation to compare plan styles on your numbers."}</p>

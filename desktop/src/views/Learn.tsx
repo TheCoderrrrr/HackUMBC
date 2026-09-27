@@ -21,7 +21,7 @@ interface Lesson {
  * scenario or the plan style) and opens the result. Every number is the profile's own or the engine's.
  */
 export function Learn({ display }: { display: Display }) {
-  const { setTab, setPendingScenario, setStyle, openPlan, style, openGuide } = useStore();
+  const { setTab, setPendingScenario, setStyle, style, openStyle } = useStore();
   const { profile, evaluation } = display;
   const a = evaluation.assumptions;
   const fullMatchRate = evaluation.financial_state.employee_rate_for_full_match;
@@ -30,7 +30,8 @@ export function Learn({ display }: { display: Display }) {
 
   const showStyles = (next?: PlanningPreference) => {
     if (next) setStyle(next);
-    openPlan("style");
+    setTab("plan");
+    openStyle();
   };
   const tryScenario = (retirementAge: number, rate: number | null) => {
     setPendingScenario({ retirement_age: retirementAge, employee_contribution_rate: rate });
@@ -92,7 +93,7 @@ export function Learn({ display }: { display: Display }) {
     <div className="learn fade-in">
       <div className="learn-intro">
         <p className="body">Six ideas behind your plan. <b className="strong">Try</b> applies one to your own numbers.</p>
-        <button className="pill neutral" onClick={openGuide}><Icon name="compare" /> Choose a plan style</button>
+        <button className="pill neutral" onClick={openStyle}><Icon name="compare" /> Choose a plan style</button>
       </div>
       <div className="learn-grid">
         {lessons.map((l) => (

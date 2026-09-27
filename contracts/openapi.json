@@ -4383,6 +4383,22 @@
           "input_hash": {
             "type": "string",
             "title": "Input Hash"
+          },
+          "planning_preference": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "balanced",
+                  "cash_security",
+                  "debt_reduction"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planning Preference"
           }
         },
         "additionalProperties": false,

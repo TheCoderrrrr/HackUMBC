@@ -44,6 +44,9 @@ class RunSummary(Strict):
     model_version: str
     policy_version: str
     input_hash: str
+    # The plan style the run was calculated with, so the app can restore it; None for runs saved
+    # before the style was recorded.
+    planning_preference: PlanningPreference | None = None
 
 
 class SaveRunResponse(Strict):
@@ -139,3 +142,4 @@ class RunRecord:
     assumptions: dict
     points: list[PointRow]
     owner: str | None = None  # SHA-256 of the user's profile key; None for shared demo runs
+    planning_preference: str | None = None  # the plan style the engine ran with

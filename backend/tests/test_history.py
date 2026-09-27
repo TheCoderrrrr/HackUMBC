@@ -47,6 +47,7 @@ class FakeHistoryStore:
             retirement_age=r.retirement_age, final_retirement_balance_cents=r.final_retirement_balance_cents,
             decision_source=r.decision_source, model_id=r.model_id, prompt_version=r.prompt_version,
             model_version=r.model_version, policy_version=r.policy_version, input_hash=r.input_hash,
+            planning_preference=r.planning_preference,
         )
 
     def ping(self):
@@ -377,3 +378,21 @@ def test_delete_rejects_a_bad_id_and_reports_outages(client, store):
     res = client.delete("/v1/history/runs/00000000-0000-0000-0000-000000000000")
     assert res.status_code == 503 and res.json()["error"]["code"] == "HISTORY_UNAVAILABLE"
 
+
+
+@pytest.mark.parametrize("style", [None, "balanced", "cash_security", "debt_reduction"])
+def test_a_run_remembers_every_choice_behind_it(client, style):
+    """Opening a saved run restores its scenario and plan style, so both come back from the database."""
+    base = profile("morgan")
+    scenario = {"retirement_age": base.retirement_age + 2, "employee_contribution_rate": None}
+    styled = base.model_copy(update={"planning_preference": style}) if style else base
+    res = client.post("/v1/evaluate", json={"profile": styled.model_dump(mode="json"), "scenario": scenario})
+    assert res.status_code == 200, res.text
+    body = save_body(res.json(), scenario) | ({"planning_preference": style} if style else {})
+    saved = client.post("/v1/history/runs", json=body)
+    assert saved.status_code == 201, saved.text
+    run = saved.json()["run"]
+    assert run["scenario"] == scenario
+    assert run["planning_preference"] == (style or base.planning_preference or "balanced")
+    listed = client.get("/v1/history/runs", params={"profile_id": "morgan"}).json()["runs"]
+    assert listed[0]["planning_preference"] == run["planning_preference"]

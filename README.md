@@ -10,7 +10,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=FFD43B) ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?style=flat-square&logo=fastapi&logoColor=white) ![Gemini](https://img.shields.io/badge/Gemini-3.5_Flash--Lite-8E75B2?style=flat-square&logo=googlegemini&logoColor=white) ![Tiger Data](https://img.shields.io/badge/Tiger_Data-TimescaleDB-F5A623?style=flat-square&logo=postgresql&logoColor=white) ![React](https://img.shields.io/badge/React-desktop-61DAFB?style=flat-square&logo=react&logoColor=black) ![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS_17+-F05138?style=flat-square&logo=swift&logoColor=white)
 <br/>
-![Backend tests](https://img.shields.io/badge/backend_tests-563_passing-22C55E?style=flat-square) ![Desktop tests](https://img.shields.io/badge/desktop_tests-154_passing-22C55E?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-2563EB?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-EC4899?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_only-0EA5E9?style=flat-square)
+![Backend tests](https://img.shields.io/badge/backend_tests-567_passing-22C55E?style=flat-square) ![Desktop tests](https://img.shields.io/badge/desktop_tests-160_passing-22C55E?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-2563EB?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-EC4899?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_only-0EA5E9?style=flat-square)
 
 <sub><b>HackUMBC 2026</b> · University of Maryland, Baltimore County</sub>
 
@@ -263,7 +263,7 @@ ORDER BY y.month, r.created_at;
 - **AI is contained by design, not by prompt alone.** A JSON schema limits what Gemini can say, the engine re-validates it, and a numeric claim in its prose triggers a fallback.
 - **Saved numbers are recomputed before they're stored.** Tiger Data holds engine output verified by `input_hash`, never numbers sent from the browser.
 - **Frontend and backend can't drift.** A contract test compares 14 API schemas against the desktop types, and sync tests check that the charts sample exactly the engine's yearly points.
-- **Beginners are guided, not flooded.** A five-page Getting started guide, a **?** beside every key term (numbers read from the engine), and a **Why this matters** for each section of the plan.
+- **Beginners are guided, not flooded.** A short, skippable Getting started guide, a **?** beside every key term (numbers read from the engine), and a **Why this matters** for each section of the plan.
 - **Honest about limits.** Styles that make no difference for someone are shown as the same, and an AI override of the chosen style is disclosed on screen.
 
 ---
@@ -282,10 +282,10 @@ ORDER BY y.month, r.created_at;
 
 ## 🎬 Demo script
 
-1. **Getting started** opens → walk through *how ARM decides*, then pick **Debt payoff first** for Morgan.
+1. **Getting started** opens → walk through *how ARM decides*. In **Your plan**, click **Plan style** and pick **Debt payoff first** for Morgan.
 2. **Your plan** → $1.46M at 67 vs. $1.32M on current habits. Drag the chart, set a **$1M goal line**, read "N years sooner".
 3. **Debt → Why this matters** → card cleared in month 16 instead of 135, with interest on both sides.
-4. **Explore** → retire two years later → **Save to history** → **Saved runs**: two plans compared from Tiger Data.
+4. **Explore** → retire two years later → **Save run** → **Saved runs**: click a run to reopen it with its style and scenario, or compare two from Tiger Data.
 5. Turn **Live calculation** off → the app keeps working on saved results, with honest labels.
 6. **Ask** → "What is a target-date fund?" → answered by Gemini, with server-owned sources.
 
@@ -295,12 +295,12 @@ ORDER BY y.month, r.created_at;
 
 | Page | What you do there |
 |---|---|
-| **Getting started** | Five short pages: welcome, how ARM decides, three ideas that matter most, choose a plan style, where to find things |
+| **Getting started** | Two short, skippable pages: welcome and how ARM decides. The plan style is set from **Plan style** in Your plan or the sidebar menu |
 | **Overview** | See your next step, three at-a-glance tiles, where you're heading, and a first-steps checklist |
 | **Your plan** | An always-visible projection (plan vs. current habits, shaded difference, pin any age, goal line), then one topic per tab, each with **Why this matters** |
-| **Explore** | Try another retirement age or contribution; Compare, Timeline and **Saved runs** (Tiger Data: save, compare, delete) |
+| **Explore** | Try another retirement age or contribution; Compare, Timeline and **Saved runs** (Tiger Data: save, reopen with the same choices, compare, delete) |
 | **Your people** | Add up to 10 people with their own finances; the engine previews what it sees as you type, then builds each plan. Stored in Tiger Data under an anonymous key, each with private saved plans |
-| **Fund shortlist** | Explainable target-date fund ranking for a 401(k) or IRA |
+| **Fund shortlist** | A screener: criteria bar, side-by-side table of the matches, and a detail card per fund (costs, holdings, score breakdown, returns, sources) |
 | **Learn** · **Ask** | Six lessons, each with **Try** to apply it to your numbers, and the Gemini education chat |
 
 The iPhone app uses the same API and ships an offline bundle of saved results, so the demo works with no network.
@@ -309,10 +309,10 @@ The iPhone app uses the same API and ships an offline bundle of saved results, s
 
 ## ✅ Engineering quality
 
-- **563 backend tests** (`pytest`): engine, policy, simulation, AI pipeline, history, plan styles, funds, education chat, contracts.
+- **567 backend tests** (`pytest`): engine, policy, simulation, AI pipeline, history, plan styles, funds, education chat, contracts.
 - **6/6 real Tiger Data tests**: hypertable, continuous aggregate = chart values, compression, delete, pool reuse, user profiles with private runs (opt-in with `TIGER_DATABASE_URL`).
-- **154 desktop tests** (`vitest`): chart math, sync tests on real engine output, the monthly budget adding up to the cent on 12 engine results, the API↔UI contract test (20 schemas), form conversion, the API client.
-- **8/8 live tests** against a running server, including save/delete and adding, planning, updating and erasing several people through Tiger Data.
+- **160 desktop tests** (`vitest`): chart math, sync tests on real engine output, the monthly budget adding up to the cent on 12 engine results, restoring saved runs, fund ranking helpers, the API↔UI contract test (20 schemas), form conversion, the API client.
+- **13/13 live tests** against a running server, including adaptive scenarios, reopening a saved run to the same `input_hash`, fund scores as weighted sums, and adding, planning, updating and erasing several people through Tiger Data.
 - **Mutation-checked:** deliberate bugs (off-by-one dates, reversed differences, sampling drift, a skipped hash check) each make the suites fail.
 - **Performance:** first download 264 KB instead of 1,126 KB; plan-style comparisons cached (about 340 ms → 2.5 ms); rate-limiter memory bounded against spoofed client keys.
 

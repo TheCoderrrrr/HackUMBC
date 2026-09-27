@@ -228,8 +228,8 @@ export function LiveStatus() {
 
 // ---------- Drawer ----------
 
-export function Drawer({ title, subtitle, onClose, children, footer }: {
-  title: string; subtitle?: string; onClose: () => void; children: ReactNode; footer?: ReactNode;
+export function Drawer({ title, subtitle, onClose, children, footer, wide }: {
+  title: string; subtitle?: string; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -239,11 +239,11 @@ export function Drawer({ title, subtitle, onClose, children, footer }: {
   return (
     <>
       <div className="scrim" onClick={onClose} />
-      <aside className="drawer" role="dialog" aria-modal="true" aria-label={title}>
+      <aside className={wide ? "drawer wide" : "drawer"} role="dialog" aria-modal="true" aria-label={title}>
         <div className="drawer-head">
           <div>
             <h2>{title}</h2>
-            {subtitle && <p className="label" style={{ marginTop: 4, color: "var(--caption)" }}>{subtitle}</p>}
+            {subtitle && <p className="subtitle">{subtitle}</p>}
           </div>
           <button className="close" onClick={onClose} aria-label="Close"><Icon name="close" size={16} /></button>
         </div>
