@@ -103,6 +103,25 @@ def test_unsupported_model_claims_fall_back(morgan, unsafe_text):
     assert unsafe_text not in str(result)
 
 
+def test_ordinary_english_rationale_is_accepted(morgan):
+    # "a certain buffer" is ordinary English, not a certainty claim (REPORT C4).
+    raw = grounded_proposal(morgan)
+    raw["rationale"][0]["summary"] = "A certain buffer comes before extra debt payments."
+    state = derive_state(morgan)
+    result = validate_decision(morgan, state, raw, model_id="review-model")
+    assert result["source"] == "ai"
+    assert result["fallback_reason"] is None
+
+
+def test_certainty_claims_still_fall_back(morgan):
+    raw = grounded_proposal(morgan)
+    raw["rationale"][0]["summary"] = "This outcome is certainly safe."
+    state = derive_state(morgan)
+    result = validate_decision(morgan, state, raw, model_id="review-model")
+    assert result["source"] == "rules_fallback"
+    assert result["fallback_reason"] == "UNSUPPORTED_RATIONALE_CLAIM"
+
+
 def test_qualitative_grounded_proposal_still_accepted(morgan):
     state = derive_state(morgan)
     result = validate_decision(morgan, state, grounded_proposal(morgan), model_id="review-model")

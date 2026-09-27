@@ -42,10 +42,15 @@ log = logging.getLogger("adaptive_retirement")
 
 PREVIOUS_DECISION_NOT_FOUND = "PREVIOUS_DECISION_NOT_FOUND"
 _FORBIDDEN_IN_PROSE = re.compile(r"[0-9$%]")
+# Number words are rejected only next to units, so ordinary English like "no one",
+# "one of your priorities" or "a quarter of the way" no longer forces the template
+# (REPORT C4). The unit words themselves stay banned, as do digits and symbols.
 _NUMBER_WORDS = re.compile(
-    r"\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|"
+    r"\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|"
     r"sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|"
-    r"thousand|million|billion|percent|percentage|dollars?|cents?|half|quarter|double|triple|twice)\b",
+    r"thousand|million|billion|half|quarter|double|triple|twice)"
+    r"(?:[\s-]+[a-z]+){0,3}[\s-]+(?:dollars?|cents?|percent(?:age)?(?: points?)?|months?|years?|times|fold)\b"
+    r"|\b(?:percent|percentage|dollars?|cents?)\b",
     re.IGNORECASE,
 )
 # Text values safe to show the model. Others (e.g. plan.primary_action_id) can embed
@@ -59,11 +64,16 @@ def profile_hash(profile: FinancialProfile) -> str:
 
 
 def valid_prose(out: ExplanationOut) -> bool:
-    for text, limit in ((out.state_summary, 400), (out.narrative, 900)):
+    for label, text, limit in (("state_summary", out.state_summary, 400), ("narrative", out.narrative, 900)):
         if not text.strip() or len(text) > limit:
+            log.info("AI explanation rejected: %s empty or over %d chars", label, limit)
             return False
-        if _FORBIDDEN_IN_PROSE.search(text) or _NUMBER_WORDS.search(text):
-            return False
+        for pattern, rule in ((_FORBIDDEN_IN_PROSE, "digit/symbol"), (_NUMBER_WORDS, "number-word claim")):
+            if match := pattern.search(text):
+                # Logged so the rejection rate can be measured (REPORT C4). The matched
+                # fragment is model output; no profile data is ever in these strings.
+                log.info("AI explanation rejected: %s in %s: %r", rule, label, match.group(0))
+                return False
     return True
 
 
