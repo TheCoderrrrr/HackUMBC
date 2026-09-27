@@ -1,6 +1,6 @@
 # Scenario history on Tiger Data
 
-Save a projection run, then compare two runs of the same profile over 5, 10 and 20 years. The desktop app's **Explore → Scenario history** panel uses it. `/v1/evaluate` never touches the database: without `TIGER_DATABASE_URL`, the history routes answer `503 HISTORY_DISABLED` and everything else works as before.
+Save a projection run, then compare two runs of the same profile over 5, 10 and 20 years. The desktop app's **Explore → Saved runs** tab uses it. `/v1/evaluate` never touches the database: without `TIGER_DATABASE_URL`, the history routes answer `503 HISTORY_DISABLED` and everything else works as before.
 
 This targets the [hackUMBC Best Use of Tiger Data prize](https://hackumbc-2026.devpost.com/), which rewards time-series analytics with a visible user benefit: two saved scenarios diverging over time, with the yearly values coming from a Tiger Data continuous aggregate. Code lives in `backend/app/analytics/`, behind its own router, so the fund shortlist and the evaluation flow don't depend on it.
 
@@ -14,7 +14,7 @@ This targets the [hackUMBC Best Use of Tiger Data prize](https://hackumbc-2026.d
    TIGER_DATABASE_URL=postgres://tsdbadmin:…@….tsdb.cloud.timescale.com:3xxxx/tsdb?sslmode=require
    TIGER_SCHEMA=arm
    ```
-3. From `backend/`: `pip install -r requirements.txt`, then optionally `python -m scripts.seed_history` to save two synthetic runs per demo profile.
+3. From `backend/`: `pip install -r requirements.txt`, then optionally `python -m scripts.seed_history` to save two synthetic runs per demo profile. The script loads `backend/.env` itself and is idempotent.
 
 Tables are created on first use (`store.migrations`). Every statement is idempotent.
 
@@ -25,6 +25,9 @@ Tables are created on first use (`store.migrations`). Every statement is idempot
 | `scenario_run` | One saved run: demo profile ID, server-built label, scenario, decision source/order/model, prompt/model/policy versions, assumptions, `input_hash` (unique). |
 | `projection_point` | Hypertable on the integer `month`, one row per `(run, strategy, month)` with retirement, cash and debt in integer cents, plus `projected_on`. |
 | `projection_yearly` | Continuous aggregate: `time_bucket(12, month)` with `first(value, month)`. Real-time mode is on, and each save refreshes its window. |
+| Compression | `projection_point` is compressed, segmented by `(run_id, strategy)` and ordered by `month`, with a compression policy. Saved projections never change. Measured on the live service: 1.38 MB → 262 KB (81% smaller) for 5,887 points. Reads and deletes work on compressed chunks. |
+
+Connections come from a small lazy pool (`psycopg-pool`, 0–4 connections, health-checked, 5-minute idle). The first call takes about 336 ms (schema check and TLS), then about 20 ms each.
 
 - **Dates:** month *m* is dated the first day of the month *m* months after the profile's `as_of_date` month, the same rule as the apps' month labels. These are projected dates under illustrative assumptions, not observed market data.
 - **Yearly values:** year *y* is the point at month 12·*y*, the same sampling as the desktop chart (`balanceAtYear`).
@@ -37,7 +40,10 @@ Tables are created on first use (`store.migrations`). Every statement is idempot
 | `GET /v1/history/status` | `{enabled, available}` |
 | `POST /v1/history/runs` | Save a run: `201` new, `200` already saved (same `input_hash`) |
 | `GET /v1/history/runs?profile_id=` | Up to 20 runs, newest first |
-| `GET /v1/history/compare?base=&other=` | Yearly timeline and 5/10/20-year horizons for two runs of one profile |
+| `GET /v1/history/compare?base=&other=` | Yearly timeline and 5/10/20-year horizons for two runs of one profile, read in one query |
+| `DELETE /v1/history/runs/{id}` | Delete a run: `204`, or `404` if it doesn't exist. Points go by `ON DELETE CASCADE`; the continuous aggregate is refreshed |
+
+Saves also record the plan style (`planning_preference`), so a result made with a non-default style recomputes to the same `input_hash`.
 
 ## Demo query
 
@@ -53,7 +59,12 @@ ORDER BY y.month, r.created_at;
 ## Tests
 
 - `backend/tests/test_history.py`: rebuild equality with live and saved-AI results, date and yearly rules against ports of the app's `monthLabel` and `balanceAtYear`, idempotency, ordering, comparison, invalid or missing runs, and outage handling (in-memory store).
-- `backend/tests/test_history_tiger.py`: the same flow against the real service in a throwaway schema. It checks that the hypertable and continuous aggregate exist, and that the aggregate returns exactly the app's yearly samples. Skipped without `TIGER_DATABASE_URL`.
+- `backend/tests/test_history_tiger.py`: the same flow against the real service in a throwaway schema. It checks the hypertable, the continuous aggregate (exactly the app's yearly samples), compression and its policy, reads through compressed chunks, delete, and pool reuse.
+- The test suite never reads `backend/.env` (REPORT C7), so the Tiger tests are opt-in. From `backend/`:
+  ```bash
+  export $(grep -E '^TIGER_(DATABASE_URL|SCHEMA)=' .env | xargs) && pytest tests/test_history_tiger.py
+  ```
+- `desktop/src/data/live.test.ts` saves and deletes a run through a running backend (`ARM_API=http://127.0.0.1:8000 npx vitest run src/data/live.test.ts`).
 
 ## Teardown
 
