@@ -4,9 +4,12 @@ import { Drawers } from "./views/Drawers";
 import { Explore } from "./views/Explore";
 import { Chat } from "./views/Chat";
 import { Funds } from "./views/Funds";
+import { Guide } from "./views/Guide";
+import { Learn } from "./views/Learn";
 import { Overview } from "./views/Overview";
 import { Plan } from "./views/Plan";
 import { errorMessage } from "./api/client";
+import { STYLE_INFO } from "./data/styles";
 import { useStore, type Tab } from "./store";
 
 const TABS: { id: Tab; title: string; icon: string }[] = [
@@ -14,10 +17,11 @@ const TABS: { id: Tab; title: string; icon: string }[] = [
   { id: "plan", title: "Your plan", icon: "plan" },
   { id: "explore", title: "Explore", icon: "explore" },
   { id: "funds", title: "Fund shortlist", icon: "funds" },
+  { id: "learn", title: "Learn", icon: "learn" },
 ];
 
 export function App() {
-  const { tab, display, profile, load, setDrawer } = useStore();
+  const { tab, display, profile, load, setDrawer, dataMode, savedMatchesStyle, style } = useStore();
   const [chatOpen, setChatOpen] = useState(false);
   const closeChat = useCallback(() => setChatOpen(false), []);
 
@@ -30,7 +34,7 @@ export function App() {
             <h1>{tab === "overview" ? profile.name : TABS.find((t) => t.id === tab)?.title}</h1>
             <div className="topbar-actions">
               <LiveStatus />
-              {display && tab !== "funds" && (
+              {display && tab !== "funds" && tab !== "learn" && (
                 <button className="pill neutral" onClick={() => setDrawer("explanation")}>
                   <Icon name="why" /> Why this plan?
                 </button>
@@ -44,11 +48,18 @@ export function App() {
             </div>
           )}
 
+          {display && dataMode === "saved" && !savedMatchesStyle && tab !== "funds" && tab !== "learn" && (
+            <div className="banner fade-in">
+              <span>This saved result uses the Balanced style. Turn on live calculation to see {STYLE_INFO[style].label}.</span>
+            </div>
+          )}
+
           {tab === "funds" && <Funds />}
           {!display && tab !== "funds" && <EmptyState />}
           {display && tab === "overview" && <Overview display={display} />}
           {display && tab === "plan" && <Plan display={display} />}
           {display && tab === "explore" && <Explore display={display} />}
+          {display && tab === "learn" && <Learn display={display} />}
         </div>
       </main>
       {display && <Drawers display={display} />}
@@ -56,12 +67,13 @@ export function App() {
         <Icon name="chat" /> Ask
       </button>
       <Chat open={chatOpen} onClose={closeChat} />
+      <Guide />
     </div>
   );
 }
 
 function Sidebar() {
-  const { tab, setTab, profiles, profile, selectProfile, connection, liveEnabled, setLiveEnabled, checkConnection } = useStore();
+  const { tab, setTab, profiles, profile, selectProfile, connection, liveEnabled, setLiveEnabled, checkConnection, style, openGuide } = useStore();
   const connectionText = {
     online: "Backend connected",
     offline: "Backend unreachable",
@@ -72,8 +84,8 @@ function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="wordmark">
-        Adaptive
-        <small>Retirement that adapts to your life</small>
+        ARM
+        <small>Adaptive Retirement Management</small>
       </div>
 
       <nav className="nav" aria-label="Sections">
@@ -83,6 +95,15 @@ function Sidebar() {
           </button>
         ))}
       </nav>
+
+      <button className="style-chip" onClick={openGuide} title="Change plan style">
+        <span className="eyebrow" style={{ padding: 0 }}>Plan style</span>
+        <span className="style-chip-row">
+          <i style={{ background: STYLE_INFO[style].color }} />
+          <span>{STYLE_INFO[style].label}</span>
+          <span className="link" style={{ marginLeft: "auto", fontSize: 12 }}>Change</span>
+        </span>
+      </button>
 
       <div className="profiles">
         <p className="eyebrow" style={{ marginBottom: 6 }}>Customer</p>

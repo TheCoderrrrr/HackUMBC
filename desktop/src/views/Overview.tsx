@@ -1,119 +1,125 @@
-import { useState } from "react";
-import { Icon, HeroAmount } from "../components/ui";
-import { LineChart } from "../components/LineChart";
-import { balanceAtYear, DISCLOSURE, yearlyBalances, type Display } from "../data/display";
+import type { ReactNode } from "react";
+import { Icon } from "../components/ui";
+import { Disclosure } from "../components/Tabs";
+import { Term } from "../components/Term";
+import { DISCLOSURE, type Display } from "../data/display";
 import { asOfLabel, money, moneyExact, months, percent } from "../data/format";
-import { useStore } from "../store";
+import { STYLE_INFO } from "../data/styles";
+import { useStore, type PlanSection } from "../store";
 
+/**
+ * Overview: where you are today and the one thing to do next. Details live one click away in
+ * Your plan; the chart lives there too, so nothing is shown twice.
+ */
 export function Overview({ display }: { display: Display }) {
-  const { setTab, setDrawer } = useStore();
-  const [year, setYear] = useState<number | null>(null);
+  const { openPlan, setTab, setDrawer } = useStore();
   const { profile, evaluation } = display;
-  const years = display.yearsToRetirement;
-  const startYear = Number(profile.as_of_date.slice(0, 4));
-  const adaptive = evaluation.projections.adaptive;
-  const balances = yearlyBalances(adaptive, years);
-  const projected = (y: number) => (y === 0 ? profile.retirement_balance_cents : Math.round(balanceAtYear(adaptive, y) / 10000) * 10000);
+  const { adaptive, current } = evaluation.projections;
+  const debtTotal = display.debts.reduce((s, d) => s + d.balanceCents, 0);
+  const costliest = [...display.debts].sort((a, b) => b.apr - a.apr)[0];
 
   return (
     <div className="grid overview fade-in" key={profile.id}>
       <div className="stack">
-        <section>
-          <p className="h-card" style={{ color: year === null ? "var(--text)" : "var(--accent)", transition: "color .18s" }}>
-            {year === null ? "Retirement savings" : `Projected at age ${profile.age + year}`}
-          </p>
-          <div style={{ marginTop: 10 }}>
-            <HeroAmount cents={year === null ? profile.retirement_balance_cents : projected(year)} />
-          </div>
-          <p className="caption" style={{ marginTop: 8 }}>
-            {year === null ? `As of ${asOfLabel(profile.as_of_date)}` : `${DISCLOSURE.illustrative} · ${startYear + year}`}
-          </p>
-        </section>
-
-        <section className="glass card" style={{ paddingBottom: 18 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 42 }}>
-            <button className="pill" onClick={() => setTab("explore")}>
-              <Icon name="explore" /> To age {profile.retirement_age} <Icon name="chevron" size={12} />
-            </button>
-            <span className="caption">Hover to scrub · {DISCLOSURE.illustrative.toLowerCase()}</span>
-          </div>
-          <LineChart
-            height={240}
-            series={[{ name: "Retirement savings", values: balances, color: "var(--accent)", area: true, width: 2.4 }]}
-            onIndex={setYear}
-            renderTooltip={(i) => <>Age {profile.age + i} · <b>{money(projected(i))}</b></>}
-          />
-          <div className="axis">
-            <span>Today</span>
-            <span>{startYear + years} · Age {profile.retirement_age}</span>
-          </div>
-        </section>
-
-        <button className="section" onClick={() => setTab("plan")} style={{ textAlign: "left" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-            <h2 className="h-card">Planned monthly contributions</h2>
-            <span style={{ color: "var(--caption)" }}><Icon name="chevron" size={16} /></span>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-            <Contribution icon="person" title="You" cents={display.employeeCents} caption={`${percent(display.rate)} of salary`} />
-            <Contribution icon="building" title="Employer" cents={display.employerCents}
-              caption={display.matchCaptured ? "Full match" : display.employerCents === null ? "Depends on the final rate" : "Partial match"} />
-          </div>
-        </button>
-      </div>
-
-      <div className="stack">
-        <section className="glass tint-green card">
-          <p className="h-card" style={{ marginBottom: 14 }}>Your next step</p>
-          <p style={{ fontSize: 20, fontWeight: 500, letterSpacing: -0.4, lineHeight: 1.3 }}>{display.nextStep.headline}</p>
-          <p className="body" style={{ marginTop: 8, fontSize: 14 }}>
+        <section className="glass tint-green card next-step" aria-labelledby="next-title">
+          <p className="eyebrow" style={{ padding: 0 }}>Your next step</p>
+          <h2 id="next-title" className="next-step-title">{display.nextStep.headline}</h2>
+          <p className="body" style={{ marginTop: 8, fontSize: 15 }}>
             {display.nextStep.amountCents !== null && <span className="strong num">{moneyExact(display.nextStep.amountCents)}</span>}
             {display.nextStep.detail}
           </p>
-          <button className="pill" style={{ marginTop: 18 }} onClick={() => setDrawer("explanation")}>
-            <Icon name="why" /> Why this plan? <Icon name="arrow" size={13} />
-          </button>
+          <div className="next-step-actions">
+            <button className="btn-primary" onClick={() => openPlan("month")}>See this month's plan <Icon name="arrow" /></button>
+            <button className="pill neutral" onClick={() => setDrawer({ why: "month" })}><Icon name="why" /> Why this step?</button>
+          </div>
         </section>
 
-        <section>
-          <div className="row" style={{ minHeight: 64 }}>
-            <div>
-              <p style={{ fontSize: 16, fontWeight: 400 }}>Emergency savings</p>
-              <p className="label" style={{ fontSize: 12, marginTop: 3 }}>
-                <span className="num strong" style={{ color: "var(--text-2)" }}>{money(profile.emergency_cash_cents)}</span> set aside
-              </p>
-            </div>
-            <span className="num" style={{ fontSize: 20, fontWeight: 500 }}>{months(display.emergencyMonths)}</span>
+        <section aria-labelledby="glance-title">
+          <h2 id="glance-title" className="h-card" style={{ marginBottom: 12 }}>At a glance</h2>
+          <div className="glance">
+            <Tile section="saving" label="Retirement savings" value={money(profile.retirement_balance_cents)}
+              sub={`${percent(display.rate)} of pay going in`} />
+            <Tile section="emergency" label={<Term id="emergency-fund">Emergency fund</Term>} value={months(display.emergencyMonths)}
+              sub={`Target: ${display.fullMonths} months`} />
+            {display.debts.length > 0 ? (
+              <Tile section="debt" label="Debt" value={money(debtTotal)} sub={`Highest rate ${percent(costliest.apr)} APR`} />
+            ) : (
+              <Tile section="month" label="Debt" value="None" sub="Nothing to pay down" />
+            )}
           </div>
-          <hr className="hairline" />
+        </section>
+
+        <button className="section heading-card" onClick={() => setTab("plan")}>
+          <span>
+            <span className="eyebrow" style={{ padding: 0 }}>Where you're heading</span>
+            <span className="heading-figure num">{money(adaptive.retirement_balance_nominal_cents ?? 0)}</span>
+            <span className="body" style={{ fontSize: 14 }}>
+              projected at age {profile.retirement_age}, compared with {money(current.retirement_balance_nominal_cents ?? 0)} on current habits
+            </span>
+          </span>
+          <span className="heading-cta">See your projection <Icon name="chevron" size={14} /></span>
+        </button>
+      </div>
+
+      <aside className="stack">
+        <FirstSteps />
+        <Disclosure title="Details" summary="Your numbers and the model's assumptions">
           <LinkRow icon="doc" title="Financial snapshot" onClick={() => setDrawer("snapshot")} />
           <hr className="hairline" />
           <LinkRow icon="sliders" title="Modeling assumptions" onClick={() => setDrawer("assumptions")} />
-          <hr className="hairline" />
-        </section>
-
-        <button className="btn-primary full" onClick={() => setTab("plan")}>
-          <Icon name="plan" /> View your plan
-        </button>
-        <p className="caption">{display.origin} · {DISCLOSURE.fictional}</p>
-      </div>
+          <p className="caption" style={{ marginTop: 12 }}>
+            {display.origin} · as of {asOfLabel(profile.as_of_date)} · {DISCLOSURE.fictional}
+          </p>
+        </Disclosure>
+      </aside>
     </div>
   );
 }
 
-function Contribution({ icon, title, cents, caption }: { icon: string; title: string; cents: number | null; caption: string }) {
+function Tile({ section, label, value, sub }: { section: PlanSection; label: ReactNode; value: string; sub: string }) {
+  const { openPlan } = useStore();
   return (
-    <div>
-      <span className="label" style={{ display: "inline-flex", gap: 6, alignItems: "center" }}><Icon name={icon} size={13} /> {title}</span>
-      <div className="figure" style={{ fontSize: 30, letterSpacing: -0.6, marginTop: 6 }}>{cents === null ? "—" : moneyExact(cents)}</div>
-      <div className="caption" style={{ marginTop: 4 }}>{caption}</div>
+    <div className="tile">
+      <span className="tile-label">{label}</span>
+      <span className="tile-value num">{value}</span>
+      <span className="tile-sub">{sub}</span>
+      <button className="tile-link" onClick={() => openPlan(section)} aria-label={`Open ${typeof label === "string" ? label : "details"} in Your plan`}>
+        Details <Icon name="chevron" size={12} />
+      </button>
     </div>
+  );
+}
+
+/** A short guided path for first-time users; the first step reflects real state. */
+function FirstSteps() {
+  const { styleChosen, style, openGuide, openPlan, setTab } = useStore();
+  const steps: { title: string; sub: string; done?: boolean; run: () => void }[] = [
+    { title: "Choose a plan style", sub: styleChosen ? `You're on ${STYLE_INFO[style].label}` : "Takes a minute", done: styleChosen, run: openGuide },
+    { title: "Review this month's money", sub: "Where each dollar goes", run: () => openPlan("month") },
+    { title: "See where you're heading", sub: "Your balance at any age", run: () => setTab("plan") },
+    { title: "Learn the basics", sub: "Six short lessons", run: () => setTab("learn") },
+  ];
+  return (
+    <section className="section first-steps" aria-labelledby="steps-title">
+      <h2 id="steps-title" className="h-card">Your first steps</h2>
+      <ol>
+        {steps.map((s, i) => (
+          <li key={s.title}>
+            <button onClick={s.run} className={s.done ? "done" : ""}>
+              <span className="fs-num" aria-hidden="true">{s.done ? <Icon name="check" size={12} /> : i + 1}</span>
+              <span className="fs-text"><b>{s.title}</b><span className="caption">{s.sub}</span></span>
+              <Icon name="chevron" size={13} />
+            </button>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
 function LinkRow({ icon, title, onClick }: { icon: string; title: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", minHeight: 52, color: "var(--accent)", fontSize: 15, fontWeight: 500 }}>
+    <button onClick={onClick} className="link-row">
       <Icon name={icon} size={16} /> {title}
       <span style={{ marginLeft: "auto", display: "flex" }}><Icon name="chevron" size={15} /></span>
     </button>

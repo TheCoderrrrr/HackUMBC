@@ -825,6 +825,57 @@
           }
         }
       }
+    },
+    "/v1/plan-styles": {
+      "post": {
+        "tags": [
+          "plan styles"
+        ],
+        "summary": "Plan Styles",
+        "operationId": "plan_styles_v1_plan_styles_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanStylesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanStyles"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2854,6 +2905,66 @@
         ],
         "title": "Plan"
       },
+      "PlanStyles": {
+        "properties": {
+          "profile_id": {
+            "type": "string",
+            "title": "Profile Id"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "policy_version": {
+            "type": "string",
+            "title": "Policy Version"
+          },
+          "current": {
+            "$ref": "#/components/schemas/StyleOutcome"
+          },
+          "styles": {
+            "items": {
+              "$ref": "#/components/schemas/StyleOutcome"
+            },
+            "type": "array",
+            "title": "Styles"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profile_id",
+          "as_of_date",
+          "model_version",
+          "policy_version",
+          "current",
+          "styles",
+          "method"
+        ],
+        "title": "PlanStyles"
+      },
+      "PlanStylesRequest": {
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/FinancialProfile"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profile"
+        ],
+        "title": "PlanStylesRequest"
+      },
       "Projection": {
         "properties": {
           "strategy": {
@@ -3490,6 +3601,22 @@
             "maxLength": 128,
             "minLength": 1,
             "title": "Input Hash"
+          },
+          "planning_preference": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "balanced",
+                  "cash_security",
+                  "debt_reduction"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planning Preference"
           }
         },
         "additionalProperties": false,
@@ -3575,6 +3702,188 @@
           "data_completeness"
         ],
         "title": "ScoreComponents"
+      },
+      "StyleOutcome": {
+        "properties": {
+          "style": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "balanced",
+                  "cash_security",
+                  "debt_reduction"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Style"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "ordered_priorities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "starter_reserve",
+                    "high_apr_debt",
+                    "full_reserve"
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ordered Priorities"
+          },
+          "retirement_age": {
+            "type": "integer",
+            "title": "Retirement Age"
+          },
+          "debt_free_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debt Free Month"
+          },
+          "starter_reserve_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starter Reserve Month"
+          },
+          "full_reserve_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Reserve Month"
+          },
+          "cumulative_debt_interest_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": -10000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cumulative Debt Interest Cents"
+          },
+          "retirement_balance_nominal_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": -10000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retirement Balance Nominal Cents"
+          },
+          "retirement_balance_today_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": -10000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retirement Balance Today Cents"
+          },
+          "yearly": {
+            "items": {
+              "$ref": "#/components/schemas/YearPoint"
+            },
+            "type": "array",
+            "title": "Yearly"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "style",
+          "label",
+          "ordered_priorities",
+          "retirement_age",
+          "debt_free_month",
+          "starter_reserve_month",
+          "full_reserve_month",
+          "cumulative_debt_interest_cents",
+          "retirement_balance_nominal_cents",
+          "retirement_balance_today_cents",
+          "yearly"
+        ],
+        "title": "StyleOutcome"
+      },
+      "YearPoint": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "month": {
+            "type": "integer",
+            "title": "Month"
+          },
+          "retirement_balance_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Retirement Balance Cents"
+          },
+          "cash_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Cash Cents"
+          },
+          "debt_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Debt Cents"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "year",
+          "month",
+          "retirement_balance_cents",
+          "cash_cents",
+          "debt_cents"
+        ],
+        "title": "YearPoint"
       },
       "YearValues": {
         "properties": {

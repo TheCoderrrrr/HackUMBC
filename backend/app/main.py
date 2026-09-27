@@ -20,6 +20,7 @@ from app.education import router as education_router
 from app.errors import envelope, install_error_handlers
 from app.fund_api import router as fund_router
 from app.limits import RateLimiter
+from app.plan_styles import router as plan_styles_router
 
 log = logging.getLogger("adaptive_retirement")
 _FROM_ENV = object()
@@ -83,6 +84,7 @@ def create_app(settings: Settings | None = None, model: StructuredModel | None =
     app.include_router(fund_router)
     app.include_router(education_router)
     app.include_router(history_router)
+    app.include_router(plan_styles_router)
     log.info("AI %s (provider=%s, model=%s)", "enabled" if model else "disabled: rules fallback",
              settings.ai_provider, settings.ai_model)
     return app

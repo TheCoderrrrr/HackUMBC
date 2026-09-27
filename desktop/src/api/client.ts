@@ -1,6 +1,7 @@
 import type { CatalogSummary, FundShortlistEnvelope, FundShortlistQuery } from "./funds";
 import type {
-  Comparison, ErrorBody, EvaluateRequest, Evaluation, FinancialProfile, Health, HistoryStatus, RunSummary, Scenario,
+  Comparison, ErrorBody, EvaluateRequest, Evaluation, FinancialProfile, Health, HistoryStatus, PlanningPreference,
+  PlanStyles, RunSummary, Scenario,
 } from "./types";
 
 /** Relative to the page; the Vite dev server forwards `/api/*` to the backend. */
@@ -104,11 +105,14 @@ export const api = {
     send<EducationReply>("/v1/education/chat", {
       method: "POST", body: JSON.stringify({ message, history: history.slice(-4) }),
     }, CHAT_TIMEOUT_MS, signal),
+  /** Each plan style's own rule order through the engine; no AI, so fast and comparable. */
+  planStyles: (profile: FinancialProfile, signal?: AbortSignal) =>
+    send<PlanStyles>("/v1/plan-styles", { method: "POST", body: JSON.stringify({ profile }) }, REQUEST_TIMEOUT_MS, signal),
   history: {
     status: (signal?: AbortSignal) =>
       send<HistoryStatus>("/v1/history/status", { method: "GET" }, REQUEST_TIMEOUT_MS, signal),
     /** Sends the inputs of a shown result; the server recomputes and stores its own numbers. */
-    save: (evaluation: Evaluation, scenario: Scenario | null) =>
+    save: (evaluation: Evaluation, scenario: Scenario | null, style: PlanningPreference | null) =>
       send<{ run: RunSummary; created: boolean }>("/v1/history/runs", {
         method: "POST",
         body: JSON.stringify({
@@ -116,6 +120,7 @@ export const api = {
           scenario,
           decision_summary: evaluation.decision_summary,
           input_hash: evaluation.input_hash,
+          planning_preference: style,
         }),
       }, EVALUATION_TIMEOUT_MS),
     list: (profileID: string, signal?: AbortSignal) =>

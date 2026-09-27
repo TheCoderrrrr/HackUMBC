@@ -222,3 +222,36 @@ export interface HistoryStatus {
   enabled: boolean;
   available: boolean;
 }
+
+// Plan styles: the same profile under each planning preference's own rule order (no AI).
+export interface StyleYear {
+  year: number;
+  month: number;
+  retirement_balance_cents: number;
+  cash_cents: number;
+  debt_cents: number;
+}
+
+export interface StyleOutcome {
+  style: PlanningPreference | null;
+  label: string;
+  ordered_priorities: Priority[] | null;
+  retirement_age: number;
+  debt_free_month: number | null;
+  starter_reserve_month: number | null;
+  full_reserve_month: number | null;
+  cumulative_debt_interest_cents: number | null;
+  retirement_balance_nominal_cents: number | null;
+  retirement_balance_today_cents: number | null;
+  yearly: StyleYear[];
+}
+
+export interface PlanStyles {
+  profile_id: string;
+  as_of_date: string;
+  model_version: string;
+  policy_version: string;
+  current: StyleOutcome;
+  styles: StyleOutcome[];
+  method: string;
+}

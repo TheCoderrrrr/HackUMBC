@@ -7,7 +7,7 @@ from typing import Literal
 
 from pydantic import Field
 
-from app.schemas import Cents, DecisionSummary, Scenario, Strict
+from app.schemas import Cents, DecisionSummary, PlanningPreference, Scenario, Strict
 
 Strategy = Literal["current", "adaptive", "custom"]
 HORIZON_YEARS = (5, 10, 20)
@@ -25,6 +25,7 @@ class SaveRunRequest(Strict):
     scenario: Scenario | None = None
     decision_summary: DecisionSummary
     input_hash: str = Field(min_length=1, max_length=128)
+    planning_preference: PlanningPreference | None = None  # the plan style the app applied, if any
 
 
 class RunSummary(Strict):

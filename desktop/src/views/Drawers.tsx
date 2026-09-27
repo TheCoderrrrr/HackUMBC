@@ -3,7 +3,10 @@ import { Drawer, Icon } from "../components/ui";
 import { debtName, explanationSteps, PRIORITY_LABEL, type Display } from "../data/display";
 import { asOfLabel, money, moneyExact, months, percent } from "../data/format";
 import { usesBundle } from "../data/saved";
-import { useStore } from "../store";
+import { useStore, type PlanSection } from "../store";
+import { Term } from "../components/Term";
+import { STYLE_INFO } from "../data/styles";
+import { when } from "./Plan";
 
 const CHECK_LABEL: Record<string, string> = {
   EXACT_PRIORITY_MEMBERSHIP: "Priorities are exactly the documented set",
@@ -32,6 +35,7 @@ export function Drawers({ display }: { display: Display }) {
   if (drawer === "explanation") return <Explanation display={display} onClose={close} />;
   if (drawer === "snapshot") return <Snapshot display={display} onClose={close} />;
   if (drawer === "assumptions") return <Assumptions display={display} onClose={close} />;
+  if (drawer && typeof drawer === "object") return <SectionWhy section={drawer.why} display={display} onClose={close} />;
   return null;
 }
 
@@ -208,6 +212,118 @@ function Row({ label, value }: { label: string; value: string }) {
     <div className="row" style={{ minHeight: 36, borderBottom: "1px solid var(--hairline)" }}>
       <span className="title" style={{ fontSize: 14 }}>{label}</span>
       <span className="value" style={{ fontSize: 14 }}>{value}</span>
+    </div>
+  );
+}
+
+// ---------- "Why this matters", one per plan section ----------
+
+type WhyContent = { title: string; what: ReactNode; effect: ReactNode; change: ReactNode; action?: { label: string; run: () => void } };
+
+/**
+ * Each section's own explanation: what it is, how it shapes the retirement fund (engine numbers,
+ * your plan next to current habits), and what could change the outcome.
+ */
+function SectionWhy({ section, display, onClose }: { section: PlanSection; display: Display; onClose: () => void }) {
+  const { setDrawer, setTab, style } = useStore();
+  const { profile, evaluation } = display;
+  const { adaptive, current } = evaluation.projections;
+  const a = evaluation.assumptions;
+  const asOf = profile.as_of_date;
+  const age = profile.retirement_age;
+  const planAt = cents(adaptive.retirement_balance_nominal_cents);
+  const habitsAt = cents(current.retirement_balance_nominal_cents);
+  const fullMatch = evaluation.financial_state.employee_rate_for_full_match;
+
+  const content: Record<PlanSection, WhyContent> = {
+    month: {
+      title: "Why the order of your money matters",
+      what: <>After living costs and minimum payments, ARM splits what's left between retirement saving, extra debt
+        payments and cash savings, in the order set by your <Term id="plan-style">plan style</Term>.</>,
+      effect: <>Money that clears expensive debt or builds a cushion now frees more for retirement later. With this
+        plan you're projected to have <b>{planAt}</b> at {age}, compared with <b>{habitsAt}</b> if you keep your current habits.</>,
+      change: <>A raise, a new bill or a paid-off debt changes what's left each month, and the split changes with it.</>,
+      action: { label: "See the full reasoning", run: () => setDrawer("explanation") },
+    },
+    saving: {
+      title: "Why saving now matters",
+      what: <>What you contribute from each paycheck, plus what your <Term id="employer-match">employer match</Term> adds.</>,
+      effect: <>Every dollar saved now has {display.yearsToRetirement} years of <Term id="compound-growth">compound growth</Term> ahead.
+        You add <b>{moneyExact(display.employeeCents)}</b> a month
+        {display.employerCents ? <> and your employer adds <b>{moneyExact(display.employerCents)}</b></> : null}.
+        That's what builds toward <b>{planAt}</b> at {age}.</>,
+      change: <>{fullMatch !== null && <>Contributing less than {percent(fullMatch)} leaves employer money unclaimed. </>}
+        Salary growth ({percent(a.annual_salary_growth)} a year assumed), market returns and contribution limits all change the result.</>,
+      action: { label: "Try a different rate in Explore", run: () => { setTab("explore"); onClose(); } },
+    },
+    debt: {
+      title: "Why paying down debt matters",
+      what: <>Your debts and what the plan pays on them each month. <Term id="high-interest-debt">High-interest debt</Term> gets
+        extra payments first.</>,
+      effect: <>Interest is money that can't grow for retirement. With this plan, high-interest debt is cleared
+        by <b>{when(adaptive.debt_free_month, asOf, "now")}</b> and you pay <b>{cents(adaptive.cumulative_debt_interest_cents)}</b> in
+        interest. On current habits: <b>{when(current.debt_free_month, asOf, "now")}</b> and <b>{cents(current.cumulative_debt_interest_cents)}</b>.
+        Once it's gone, that payment can go to savings.</>,
+      change: <>New borrowing, a missed payment or a rate increase pushes the payoff date later. The model assumes
+        your <Term id="apr">APR</Term> and minimums stay fixed.</>,
+    },
+    emergency: {
+      title: "Why an emergency fund matters",
+      what: <>Cash you can reach quickly for surprises, built as a <Term id="cushion">one-month cushion</Term> first,
+        then a full {display.fullMonths}-month fund.</>,
+      effect: <>Without it, a surprise bill often lands on a credit card or comes out of your retirement account, which
+        can mean taxes, penalties and years of lost growth. Your plan reaches the full fund
+        by <b>{when(adaptive.full_reserve_month, asOf)}</b> (current habits: <b>{when(current.full_reserve_month, asOf)}</b>).</>,
+      change: <>Living costs rising faster than the assumed {percent(a.annual_living_cost_growth)} a year raise the target.
+        Spending the fund on a real emergency is what it's for; the plan rebuilds it afterwards.</>,
+    },
+    fund: {
+      title: "Why your fund's mix matters",
+      what: <>Your <Term id="target-date-fund">target-date fund</Term> holds about {percent(display.equityWeight)} stocks
+        today and follows a <Term id="glide-path">glide path</Term> toward bonds.</>,
+      effect: <>The projection assumes stocks earn {percent(a.annual_equity_return)} and bonds {percent(a.annual_bond_return)} a
+        year after fees. More stocks early means more growth; more bonds later protects what you've built.
+        ARM doesn't change this mix; it changes how much you put in.</>,
+      change: <>Real returns rise and fall from year to year, so actual balances will differ from the steady projection.
+        A fund with higher fees or a different mix would change the result.</>,
+      action: { label: "Compare target-date funds", run: () => { setTab("funds"); onClose(); } },
+    },
+    style: {
+      title: "Why your plan style matters",
+      what: <>You're on <b>{STYLE_INFO[style].label}</b>. A <Term id="plan-style">plan style</Term> decides what your extra
+        money pays for first once the basics are covered.</>,
+      effect: <>It changes when debt is cleared and when your emergency fund is full, and so how soon more money can
+        go to retirement. For some people all three styles end up the same.</>,
+      change: <>You can switch anytime. The live plan may choose a different order within the same rules when that
+        fits your numbers better, and it tells you when it does.</>,
+    },
+  };
+
+  const c = content[section];
+  return (
+    <Drawer title={c.title} onClose={onClose}
+      footer={c.action ? <button className="btn-primary full" onClick={c.action.run}>{c.action.label}</button>
+        : <button className="btn-primary full" onClick={onClose}>Got it</button>}>
+      <WhyBlock n={1} title="What it is">{c.what}</WhyBlock>
+      <WhyBlock n={2} title="How it shapes your retirement fund">{c.effect}</WhyBlock>
+      <WhyBlock n={3} title="What could change it">{c.change}</WhyBlock>
+      <p className="caption" style={{ marginTop: 20 }}>
+        Numbers from your {display.origin.toLowerCase()} result, as of {asOfLabel(asOf)}. Illustrative, not a guarantee.
+      </p>
+    </Drawer>
+  );
+}
+
+const cents = (v: number | null) => (v === null ? "—" : money(v));
+
+function WhyBlock({ n, title, children }: { n: number; title: string; children: ReactNode }) {
+  return (
+    <div className="why-block">
+      <span className="step-num">{n}</span>
+      <div>
+        <p className="why-block-title">{title}</p>
+        <p className="body why-block-text">{children}</p>
+      </div>
     </div>
   );
 }

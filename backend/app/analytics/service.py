@@ -17,6 +17,7 @@ from app.analytics.models import (
     HORIZON_YEARS, Comparison, ComparisonYear, Horizon, PointRow, RunRecord, RunSummary, YearRow, YearValues,
 )
 from app.errors import ApiError
+from app.plan_styles import STYLE_LABELS
 from app.schemas import DecisionSummary, FinancialProfile, RecommendationProposal, Scenario
 
 METHOD = ("Yearly values from the projection_yearly continuous aggregate: "
@@ -28,13 +29,15 @@ def projected_date(as_of: date, month: int) -> date:
     return date(as_of.year + absolute // 12, absolute % 12 + 1, 1)
 
 
-def run_label(profile: FinancialProfile, scenario: Scenario | None) -> str:
-    """Built on the server from the scenario, so no free text from the client is stored."""
+def run_label(profile: FinancialProfile, scenario: Scenario | None, style: str | None = None) -> str:
+    """Built on the server from the scenario and style, so no free text from the client is stored."""
     if scenario is None:
-        return "Plan as is"
-    rate = scenario.employee_contribution_rate
-    contribution = "adaptive contribution" if rate is None else f"{rate * 100:g}% fixed contribution"
-    return f"Retire at {scenario.retirement_age} · {contribution}"
+        label = "Plan as is"
+    else:
+        rate = scenario.employee_contribution_rate
+        contribution = "adaptive contribution" if rate is None else f"{rate * 100:g}% fixed contribution"
+        label = f"Retire at {scenario.retirement_age} · {contribution}"
+    return f"{label} · {STYLE_LABELS[style]}" if style else label
 
 
 def demo_profile(profile_id: str) -> FinancialProfile:
@@ -64,8 +67,12 @@ def revalidate(profile: FinancialProfile, decision: DecisionSummary) -> Decision
 
 
 def build_run(body_profile_id: str, scenario: Scenario | None, decision: DecisionSummary,
-              expected_hash: str) -> RunRecord:
+              expected_hash: str, planning_preference: str | None = None) -> RunRecord:
     profile = demo_profile(body_profile_id)
+    style = None
+    if planning_preference and planning_preference != profile.planning_preference:
+        profile = profile.model_copy(update={"planning_preference": planning_preference})
+        style = planning_preference
     if scenario and scenario.retirement_age <= profile.age:
         raise ApiError(422, "INVALID_REQUEST", "Scenario retirement age must be greater than current age.",
                        ["scenario.retirement_age"])
@@ -92,7 +99,7 @@ def build_run(body_profile_id: str, scenario: Scenario | None, decision: Decisio
     return RunRecord(
         run_id=str(uuid.uuid4()),
         profile_id=profile.id,
-        label=run_label(profile, scenario),
+        label=run_label(profile, scenario, style),
         as_of_date=profile.as_of_date,
         scenario=scenario,
         primary_strategy=primary,

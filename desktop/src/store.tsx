@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { APIError, api } from "./api/client";
-import type { Evaluation, FinancialProfile, Health, Scenario } from "./api/types";
+import type { Evaluation, FinancialProfile, Health, PlanningPreference, PlanStyles, Scenario } from "./api/types";
 import { buildDisplay, type DataMode, type Display } from "./data/display";
 import { savedEvaluation, savedProfiles, type Preset } from "./data/saved";
 
@@ -15,8 +15,12 @@ export type Load =
   | { status: "loaded"; loaded: Loaded }
   | { status: "failed"; previous?: Loaded; error: unknown };
 
-export type Tab = "overview" | "plan" | "explore" | "funds";
-export type Drawer = "explanation" | "snapshot" | "assumptions" | null;
+export type Tab = "overview" | "plan" | "explore" | "funds" | "learn";
+export type StyleLoad = { status: "idle" | "loading" } | { status: "loaded"; data: PlanStyles } | { status: "failed"; error: unknown };
+/** Sections of Your plan, in tab order. "debt" only shows when the profile has debt. */
+export type PlanSection = "month" | "saving" | "debt" | "emergency" | "fund" | "style";
+/** A drawer: the whole-plan explanation, reference panels, or one section's "Why". */
+export type Drawer = "explanation" | "snapshot" | "assumptions" | { why: PlanSection } | null;
 export type Connection = "checking" | "online" | "offline" | "disabled";
 
 interface Store {
@@ -40,6 +44,27 @@ interface Store {
   checkConnection: () => void;
   evaluateScenario: (scenario: Scenario) => Promise<Evaluation>;
   savedPreset: (preset: Preset) => Evaluation | undefined;
+  /** The plan style applied to every evaluation of this profile. */
+  style: PlanningPreference;
+  /** True once the user picked (or skipped to) a style for this profile. */
+  styleChosen: boolean;
+  setStyle: (style: PlanningPreference) => void;
+  /** Saved (offline) results use the profile's default style; false when the chosen style differs. */
+  savedMatchesStyle: boolean;
+  planStyles: StyleLoad;
+  guideOpen: boolean;
+  openGuide: () => void;
+  closeGuide: () => void;
+  /** A scenario another view asks Explore to run next (from a Learn lesson). */
+  pendingScenario: Scenario | null;
+  setPendingScenario: (scenario: Scenario | null) => void;
+  /** The open tab inside Your plan. */
+  planSection: PlanSection;
+  setPlanSection: (section: PlanSection) => void;
+  /** Opens Your plan at a section and brings it into view (from Overview, Learn or the guide). */
+  openPlan: (section: PlanSection) => void;
+  /** Changes whenever openPlan asks Your plan to scroll its tabs into view. */
+  planJump: number;
 }
 
 const StoreContext = createContext<Store | null>(null);
@@ -72,7 +97,65 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const lastLive = useRef(new Map<string, Loaded>());
   const lastDecision = useRef<{ profileID: string; decisionID: string } | null>(null);
 
-  const profile = profiles.find((p) => p.id === profileID) ?? profiles[0];
+  const baseProfile = profiles.find((p) => p.id === profileID) ?? profiles[0];
+  const [styles, setStyles] = useState<Record<string, PlanningPreference>>(() => {
+    const out: Record<string, PlanningPreference> = {};
+    for (const p of profiles) {
+      const value = localStorage.getItem(`style:${p.id}`);
+      if (value === "balanced" || value === "cash_security" || value === "debt_reduction") out[p.id] = value;
+    }
+    return out;
+  });
+  const styleChosen = profileID in styles;
+  const style: PlanningPreference = styles[profileID] ?? baseProfile.planning_preference ?? "balanced";
+  // Every evaluation, preset and saved run uses the profile with the chosen style applied.
+  const profile = useMemo(() => ({ ...baseProfile, planning_preference: style }), [baseProfile, style]);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [pendingScenario, setPendingScenario] = useState<Scenario | null>(null);
+  const [planSection, setPlanSection] = useState<PlanSection>("month");
+  const [planJump, setPlanJump] = useState(0);
+  const openPlan = useCallback((section: PlanSection) => {
+    setPlanSection(section);
+    setTab("plan");
+    setPlanJump((n) => n + 1);
+  }, []);
+  const [planStyles, setPlanStyles] = useState<StyleLoad>({ status: "idle" });
+  const styleCache = useRef(new Map<string, PlanStyles>());
+
+  // First open, and the first time a profile (account) is opened: show the guide.
+  useEffect(() => {
+    if (!styleChosen) setGuideOpen(true);
+  }, [profileID, styleChosen]);
+
+  const setStyle = useCallback((next: PlanningPreference) => {
+    localStorage.setItem(`style:${profileID}`, next);
+    lastDecision.current = null;
+    setStyles((prev) => ({ ...prev, [profileID]: next }));
+  }, [profileID]);
+
+  // Style comparisons don't depend on the chosen style, so they're fetched per profile and cached.
+  useEffect(() => {
+    const cached = styleCache.current.get(baseProfile.id);
+    if (cached) {
+      setPlanStyles({ status: "loaded", data: cached });
+      return;
+    }
+    if (!liveEnabled) {
+      setPlanStyles({ status: "idle" });
+      return;
+    }
+    const controller = new AbortController();
+    setPlanStyles({ status: "loading" });
+    api.planStyles(baseProfile, controller.signal)
+      .then((data) => {
+        styleCache.current.set(baseProfile.id, data);
+        setPlanStyles({ status: "loaded", data });
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) setPlanStyles({ status: "failed", error });
+      });
+    return () => controller.abort();
+  }, [baseProfile, liveEnabled]);
 
   useEffect(() => localStorage.setItem("tab", tab), [tab]);
 
@@ -195,6 +278,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     checkConnection,
     evaluateScenario,
     savedPreset: (preset) => savedEvaluation(profile.id, preset),
+    style,
+    styleChosen,
+    setStyle,
+    savedMatchesStyle: style === (baseProfile.planning_preference ?? "balanced"),
+    planStyles,
+    guideOpen,
+    openGuide: () => setGuideOpen(true),
+    closeGuide: () => setGuideOpen(false),
+    pendingScenario,
+    setPendingScenario,
+    planSection,
+    setPlanSection,
+    openPlan,
+    planJump,
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

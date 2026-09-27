@@ -10,6 +10,7 @@ const paths: Record<string, ReactNode> = {
   plan: <path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" />,
   explore: <path d="M3 17l5-6 4 4 8-9M14 6h6v6" />,
   funds: <path d="M12 3v9h9A9 9 0 1 1 12 3zM15 3.5A9 9 0 0 1 20.5 9H15z" />,
+  learn: <path d="M3 7l9-4 9 4-9 4-9-4zM7 9v5c0 1.7 2.2 3 5 3s5-1.3 5-3V9M21 7v6" />,
   chat: <path d="M4 5h16v12H9l-5 4V5zM8 9h8M8 13h5" />,
   link: <path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6" />,
   why: <path d="M12 21a9 9 0 1 0-8.2-5.3L3 21l5.3-.8A9 9 0 0 0 12 21zM9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6M12 16.5v.01" />,

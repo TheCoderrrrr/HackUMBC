@@ -229,7 +229,7 @@ const scenarioOf = (d: Draft): Scenario => ({
 });
 
 function ScenarioControls({ display, onResult }: { display: Display; onResult: (shown: Shown | null) => void }) {
-  const { liveEnabled, evaluateScenario, savedPreset } = useStore();
+  const { liveEnabled, evaluateScenario, savedPreset, pendingScenario, setPendingScenario } = useStore();
   const { profile } = display;
   const [draft, setDraft] = useState<Draft>(() => original(display));
   const [compared, setCompared] = useState<Draft | null>(null);
@@ -269,8 +269,22 @@ function ScenarioControls({ display, onResult }: { display: Display; onResult: (
     }
   };
 
-  const compare = async () => {
-    const d = draft;
+  useEffect(() => {
+    if (!pendingScenario) return;
+    setPendingScenario(null);
+    const rate = pendingScenario.employee_contribution_rate;
+    const next: Draft = {
+      ...original(display),
+      retirementAge: pendingScenario.retirement_age,
+      policy: rate === null ? "adaptive" : "fixed",
+      fixedRate: rate === null ? display.currentRate * 100 : rate * 100,
+      preset: null,
+    };
+    setDraft(next);
+    void compare(next);
+  }, [pendingScenario]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const compare = async (d: Draft = draft) => {
     setCompared(d);
     onResult(null);
     if (sameDraft(d, original(display))) {
@@ -342,7 +356,7 @@ function ScenarioControls({ display, onResult }: { display: Display; onResult: (
         </div>
       )}
 
-      <button className="btn-primary full" style={{ marginTop: 22 }} onClick={compare} disabled={busy}>
+      <button className="btn-primary full" style={{ marginTop: 22 }} onClick={() => compare()} disabled={busy}>
         {busy ? <span className="spinner" /> : <Icon name="compare" />} Compare scenario
       </button>
       {compared && status && <p className="caption fade-in" style={{ marginTop: 10 }}>{status}</p>}
