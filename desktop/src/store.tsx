@@ -19,7 +19,7 @@ export type Load =
 export type Tab = "overview" | "plan" | "explore" | "funds" | "learn";
 export type StyleLoad = { status: "idle" | "loading" } | { status: "loaded"; data: PlanStyles } | { status: "failed"; error: unknown };
 /** Sections of Your plan, in tab order. "debt" only shows when the profile has debt. */
-export type PlanSection = "month" | "saving" | "debt" | "emergency" | "fund" | "style";
+export type PlanSection = "month" | "saving" | "debt" | "emergency" | "fund";
 /** A drawer: the whole-plan explanation, reference panels, or one section's "Why". */
 export type Drawer = "explanation" | "snapshot" | "assumptions" | { why: PlanSection } | null;
 export type Connection = "checking" | "online" | "offline" | "disabled";
@@ -47,15 +47,20 @@ interface Store {
   savedPreset: (preset: Preset) => Promise<Evaluation | undefined>;
   /** The plan style applied to every evaluation of this profile. */
   style: PlanningPreference;
-  /** True once the user picked (or skipped to) a style for this profile. */
+  /** True once the user picked a style for this profile. */
   styleChosen: boolean;
   setStyle: (style: PlanningPreference) => void;
   /** Saved (offline) results use the profile's default style; false when the chosen style differs. */
   savedMatchesStyle: boolean;
   planStyles: StyleLoad;
+  /** Getting started: opens by itself once per browser, and anytime from the sidebar. */
   guideOpen: boolean;
   openGuide: () => void;
   closeGuide: () => void;
+  /** The plan-style panel (choose and compare styles); open from Your plan or the sidebar. */
+  styleOpen: boolean;
+  openStyle: () => void;
+  closeStyle: () => void;
   /** A scenario another view asks Explore to run next (from a Learn lesson). */
   pendingScenario: Scenario | null;
   setPendingScenario: (scenario: Scenario | null) => void;
@@ -85,6 +90,7 @@ const StoreContext = createContext<Store | null>(null);
 export const isPersonal = (profileID: string) => profileID === "me" || profileID.startsWith("u-");
 const MINE_CACHE = "arm:myProfiles";
 export const MAX_PEOPLE = 10;
+const GUIDE_SEEN = "arm:guideSeen";
 
 function cacheMine(list: StoredProfile[]) {
   try {
@@ -189,7 +195,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const style: PlanningPreference = styles[profileID] ?? baseProfile.planning_preference ?? "balanced";
   // Every evaluation, preset and saved run uses the profile with the chosen style applied.
   const profile = useMemo(() => ({ ...baseProfile, planning_preference: style }), [baseProfile, style]);
-  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(() => localStorage.getItem(GUIDE_SEEN) === null);
+  const [styleOpen, setStyleOpen] = useState(false);
   const [pendingScenario, setPendingScenario] = useState<Scenario | null>(null);
   const [planSection, setPlanSection] = useState<PlanSection>("month");
   const [planJump, setPlanJump] = useState(0);
@@ -200,11 +207,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
   const [planStyles, setPlanStyles] = useState<StyleLoad>({ status: "idle" });
   const styleCache = useRef(new Map<string, PlanStyles>());
-
-  // First open, and the first time a profile (account) is opened: show the guide.
-  useEffect(() => {
-    if (!styleChosen) setGuideOpen(true);
-  }, [profileID, styleChosen]);
 
   const setStyle = useCallback((next: PlanningPreference) => {
     localStorage.setItem(`style:${profileID}`, next);
@@ -380,8 +382,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     savedMatchesStyle: style === (baseProfile.planning_preference ?? "balanced"),
     planStyles,
     guideOpen,
-    openGuide: () => setGuideOpen(true),
-    closeGuide: () => setGuideOpen(false),
+    openGuide: () => { setStyleOpen(false); setGuideOpen(true); },
+    closeGuide: () => {
+      setGuideOpen(false);
+      try { localStorage.setItem(GUIDE_SEEN, "1"); } catch { /* storage unavailable: it shows again next time */ }
+    },
+    styleOpen,
+    openStyle: () => { setDrawer(null); setStyleOpen(true); },
+    closeStyle: () => setStyleOpen(false),
     pendingScenario,
     setPendingScenario,
     mine,

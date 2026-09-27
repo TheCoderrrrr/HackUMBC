@@ -114,6 +114,9 @@ def migrations(schema: str) -> list[str]:
         f"ALTER TABLE {s}.scenario_run DROP CONSTRAINT IF EXISTS scenario_run_input_hash_key",
         f"CREATE UNIQUE INDEX IF NOT EXISTS scenario_run_hash_owner ON {s}.scenario_run (input_hash, (coalesce(owner_key_hash, '')))",
         f"CREATE INDEX IF NOT EXISTS scenario_run_owner_idx ON {s}.scenario_run (owner_key_hash, profile_id, created_at DESC)",
+        # The plan style each run used, so opening a saved run restores every choice behind it.
+        f"ALTER TABLE {s}.scenario_run ADD COLUMN IF NOT EXISTS planning_preference text "
+        f"CHECK (planning_preference IN ('balanced', 'cash_security', 'debt_reduction'))",
         f"""CREATE TABLE IF NOT EXISTS {s}.user_profile (
             owner_key_hash text PRIMARY KEY CHECK (owner_key_hash ~ '^[0-9a-f]{{64}}$'),
             form jsonb NOT NULL,
@@ -140,7 +143,7 @@ def migrations(schema: str) -> list[str]:
 
 _SUMMARY_COLUMNS = ("run_id::text, profile_id, label, created_at, as_of_date, scenario, primary_strategy, "
                     "retirement_age, final_retirement_balance_cents, decision_source, model_id, prompt_version, "
-                    "model_version, policy_version, input_hash")
+                    "model_version, policy_version, input_hash, planning_preference")
 
 
 def _summary(row) -> RunSummary:
@@ -227,8 +230,8 @@ class TigerHistoryStore:
                     f"""INSERT INTO {s}.scenario_run (run_id, input_hash, profile_id, label, as_of_date, scenario,
                             primary_strategy, retirement_age, final_retirement_balance_cents, decision_source,
                             model_id, prompt_version, ordered_priorities, schema_version, model_version,
-                            policy_version, assumptions, owner_key_hash)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            policy_version, assumptions, owner_key_hash, planning_preference)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (input_hash, (coalesce(owner_key_hash, ''))) DO NOTHING
                         RETURNING run_id""",
                     (record.run_id, record.input_hash, record.profile_id, record.label, record.as_of_date,
@@ -236,7 +239,7 @@ class TigerHistoryStore:
                      record.primary_strategy, record.retirement_age, record.final_retirement_balance_cents,
                      record.decision_source, record.model_id, record.prompt_version, record.ordered_priorities,
                      record.schema_version, record.model_version, record.policy_version,
-                     json.dumps(record.assumptions), record.owner),
+                     json.dumps(record.assumptions), record.owner, record.planning_preference),
                 ).fetchone()
                 created = inserted is not None
                 if created:

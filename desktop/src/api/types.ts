@@ -203,6 +203,8 @@ export interface RunSummary {
   model_version: string;
   policy_version: string;
   input_hash: string;
+  /** The plan style the run was calculated with; null for runs saved before it was recorded. */
+  planning_preference?: PlanningPreference | null;
 }
 
 export interface YearValues {

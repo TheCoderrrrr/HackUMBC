@@ -1,6 +1,8 @@
 import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import { screenContext, type ScreenFact } from "./api/chatContext";
 import { Avatar, Icon, LiveStatus, PROFILE_SUBTITLE } from "./components/ui";
+import { Brand } from "./components/Brand";
+import { StylePanel } from "./views/StylePanel";
 import { Drawers } from "./views/Drawers";
 import { Guide } from "./views/Guide";
 import { Overview } from "./views/Overview";
@@ -32,7 +34,7 @@ const PAGES: { id: Tab; title: string; icon: string; group: string; description:
 const GROUPS = ["Your money", "Plan ahead", "Learn"] as const;
 
 export function App() {
-  const { tab, display, profile, load, setDrawer, dataMode, savedMatchesStyle, style, numbersOpen, numbers } = useStore();
+  const { tab, display, profile, load, setDrawer, dataMode, savedMatchesStyle, style, numbersOpen, numbers, openStyle } = useStore();
   const showNumbers = numbersOpen && tab !== "funds";
   const page = PAGES.find((p) => p.id === tab) ?? PAGES[0];
   const [chatOpen, setChatOpen] = useState(false);
@@ -52,7 +54,15 @@ export function App() {
         <div className="main-inner">
           <header className="topbar">
             <div>
-              <h1>{showNumbers ? (numbers?.id ? "Edit numbers" : "Add a person") : page.title}</h1>
+              <div className="topbar-title">
+                <h1>{showNumbers ? (numbers?.id ? "Edit numbers" : "Add a person") : page.title}</h1>
+                {tab === "plan" && !showNumbers && (
+                  <button className="style-btn" onClick={openStyle} aria-haspopup="dialog" title="Choose or compare plan styles"
+                    style={{ ["--style" as string]: STYLE_INFO[style].color }}>
+                    <i /> <span className="style-btn-label">Plan style</span> <b>{STYLE_INFO[style].label}</b> <Icon name="chevron" size={13} />
+                  </button>
+                )}
+              </div>
               <p className="page-desc">{showNumbers
                 ? "Enter your own finances; ARM builds your plan from them."
                 : page.description(profile.name.split(" ")[0])}</p>
@@ -96,12 +106,13 @@ export function App() {
       </button>
       {chatLoaded && <Suspense fallback={null}><Chat key={profile.id} open={chatOpen} onClose={closeChat} context={context} /></Suspense>}
       <Guide />
+      <StylePanel />
     </div>
   );
 }
 
 function Sidebar() {
-  const { tab, setTab, profiles, profile, selectProfile, connection, liveEnabled, setLiveEnabled, checkConnection, style, setStyle, openGuide, mine, openNumbers } = useStore();
+  const { tab, setTab, profiles, profile, selectProfile, connection, liveEnabled, setLiveEnabled, checkConnection, style, setStyle, openGuide, openStyle, mine, openNumbers } = useStore();
   const connectionText = {
     online: "Backend connected",
     offline: "Backend unreachable",
@@ -111,10 +122,7 @@ function Sidebar() {
 
   return (
     <aside className="sidebar">
-      <div className="wordmark">
-        ARM
-        <small>Adaptive Retirement Management</small>
-      </div>
+      <Brand />
 
       <nav className="nav" aria-label="Pages">
         {GROUPS.map((group) => (
@@ -133,7 +141,10 @@ function Sidebar() {
       </nav>
 
       <div className="style-chip">
-        <label className="eyebrow" htmlFor="sidebar-plan-style">Plan style</label>
+        <span className="style-chip-head">
+          <label className="eyebrow" htmlFor="sidebar-plan-style">Plan style</label>
+          <button className="style-chip-cta" onClick={openStyle} aria-haspopup="dialog">Compare</button>
+        </span>
         <div className="style-chip-row">
           <i style={{ background: STYLE_INFO[style].color }} aria-hidden="true" />
           <select id="sidebar-plan-style" value={style} onChange={(event) => setStyle(event.target.value as typeof style)}>
@@ -145,7 +156,7 @@ function Sidebar() {
       </div>
 
       <div className="profiles">
-        <p className="eyebrow" style={{ marginBottom: 6 }}>Demo profiles</p>
+        <p className="eyebrow side-title">Demo profiles</p>
         {profiles.filter((p) => !isPersonal(p.id)).map((p) => (
           <button key={p.id} className="profile-btn" aria-pressed={p.id === profile.id} onClick={() => selectProfile(p.id)}>
             <Avatar id={p.id} name={p.name} size={34} />
@@ -156,7 +167,7 @@ function Sidebar() {
           </button>
         ))}
 
-        <p className="eyebrow" style={{ margin: "14px 0 6px" }}>Your people · {mine.length}/{MAX_PEOPLE}</p>
+        <p className="eyebrow side-title" style={{ marginTop: 12 }}>Your people · {mine.length}/{MAX_PEOPLE}</p>
         {mine.length === 0 && <p className="caption" style={{ padding: "0 12px 4px" }}>Add someone with their own numbers.</p>}
         {mine.map(({ profile: p }) => (
           <div key={p.id} className="profile-row">

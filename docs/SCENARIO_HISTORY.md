@@ -22,7 +22,7 @@ Tables are created on first use (`store.migrations`). Every statement is idempot
 
 | Object | What it holds |
 |---|---|
-| `scenario_run` | One saved run: demo profile ID, server-built label, scenario, decision source/order/model, prompt/model/policy versions, assumptions, `input_hash` (unique). |
+| `scenario_run` | One saved run: demo profile ID, server-built label, scenario, decision source/order/model, prompt/model/policy versions, assumptions, `input_hash` (unique), and `planning_preference` (the plan style used, so the app can reopen the run with the same choices). |
 | `projection_point` | Hypertable on the integer `month`, one row per `(run, strategy, month)` with retirement, cash and debt in integer cents, plus `projected_on`. |
 | `user_profiles` | People's own numbers: the form as entered and the built profile (JSON), keyed by `(owner_key_hash, profile_id)` with IDs `u-` + 8 hex digits. A profile from the earlier single-profile table is copied in once as `me`. |
 | `scenario_run.owner_key_hash` | Owner of a run saved from a user's numbers; `NULL` for shared demo runs. Uniqueness is `(input_hash, owner)`, so identical plans by different users stay separate. |
@@ -48,7 +48,7 @@ Connections come from a small lazy pool (`psycopg-pool`, 0–4 connections, heal
 | `POST /v1/profiles/build` | Validate the form and preview the engine's financial state, without storing |
 | `DELETE /v1/history/runs/{id}` | Delete a run: `204`, or `404` if it doesn't exist. Points go by `ON DELETE CASCADE`; the continuous aggregate is refreshed |
 
-Saves also record the plan style (`planning_preference`), so a result made with a non-default style recomputes to the same `input_hash`.
+Saves also record the plan style (`planning_preference`), so a result made with a non-default style recomputes to the same `input_hash`. It's stored on the run and returned in every run summary: opening a saved run in the app restores that style and the run's scenario, re-evaluates, and checks the new `input_hash` against the stored one.
 
 ## Demo query
 

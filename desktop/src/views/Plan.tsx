@@ -6,9 +6,7 @@ import { Term } from "../components/Term";
 import { monthBudget, yearlyBalances, type Display } from "../data/display";
 import { firstReach, gapAt, goalPresets, moneyShort, parseGoal, yearMarkers, yearsSooner } from "../data/chart";
 import { money, moneyExact, monthLabel, months, percent } from "../data/format";
-import { STYLE_INFO } from "../data/styles";
 import { useStore, type PlanSection } from "../store";
-import { StyleComparison } from "./StyleComparison";
 
 /** "Sep 2027", or the given words for "already" (month 0) and "never within the plan" (null). */
 export function when(month: number | null, asOf: string, done = "Already", never = "Not before retirement"): string {
@@ -22,7 +20,7 @@ export function when(month: number | null, asOf: string, done = "Already", never
  * engine's response; the app only looks values up.
  */
 export function Plan({ display }: { display: Display }) {
-  const { planSection, setPlanSection, planJump, style } = useStore();
+  const { planSection, setPlanSection, planJump } = useStore();
   const { profile } = display;
   const tabsRef = useRef<HTMLDivElement>(null);
   const hasDebt = display.debts.length > 0;
@@ -39,7 +37,6 @@ export function Plan({ display }: { display: Display }) {
     ...(hasDebt ? [{ id: "debt" as const, label: "Debt", hint: paying ? `${moneyExact(paying.extraCents)} extra` : "Minimums" }] : []),
     { id: "emergency", label: "Emergency fund", hint: months(display.emergencyMonths) },
     { id: "fund", label: "Your fund", hint: `${percent(display.equityWeight)} stocks` },
-    { id: "style", label: "Plan style", hint: STYLE_INFO[style].label },
   ];
 
   return (
@@ -53,7 +50,6 @@ export function Plan({ display }: { display: Display }) {
             {section === "debt" && <Debt display={display} />}
             {section === "emergency" && <Emergency display={display} />}
             {section === "fund" && <Fund display={display} />}
-            {section === "style" && <StyleComparison />}
           </Tabs>
         </div>
         <aside className="plan-aside">
@@ -406,7 +402,6 @@ const LESSON_FOR: Record<PlanSection, string> = {
   debt: "Clear expensive debt early",
   emergency: "Keep an emergency fund",
   fund: "Know what your fund does",
-  style: "The six ideas behind your plan",
 };
 
 /** A pointer to the Learn lesson behind the open section. */

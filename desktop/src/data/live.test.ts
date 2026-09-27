@@ -4,7 +4,8 @@
  * Fresh /v1/evaluate and /v1/plan-styles responses must satisfy the same rules the charts rely on.
  */
 import { describe, expect, it } from "vitest";
-import type { Evaluation, FinancialProfile, PlanStyles } from "../api/types";
+import type { Evaluation, FinancialProfile, PlanStyles, RunSummary } from "../api/types";
+import type { FundShortlistEnvelope } from "../api/funds";
 import { gapAt } from "./chart";
 import { balanceAtYear, yearlyBalances } from "./display";
 
@@ -95,5 +96,55 @@ describe.skipIf(!API)("live backend", async () => {
     for (const p of [a, b]) expect((await fetch(`${API}/v1/profiles/${p.id}`, { method: "DELETE", headers: h(key) })).status).toBe(204);
     expect(await runs(key)).toHaveLength(0);
   }, 60_000);
+
+  it.each(profiles.map((p) => [p.id, p] as const))("%s: an adaptive scenario at another age is compared, not dropped", async (_, profile) => {
+    const later = await post<Evaluation>("/v1/evaluate", { profile, scenario: { retirement_age: profile.retirement_age + 2, employee_contribution_rate: null } });
+    expect(later.projections.custom?.feasible).toBe(true);
+    expect(later.projections.custom?.retirement_age).toBe(profile.retirement_age + 2);
+    expect(later.projections.custom?.retirement_balance_nominal_cents).not.toBe(later.projections.adaptive.retirement_balance_nominal_cents);
+    // At the plan's own age the adaptive scenario is the plan itself (the app says so instead of comparing).
+    const same = await post<Evaluation>("/v1/evaluate", { profile, scenario: { retirement_age: profile.retirement_age, employee_contribution_rate: null } });
+    expect(same.projections.custom?.points).toEqual(same.projections.adaptive.points);
+  }, 30_000);
+
+  it("saved run: opening it restores the same choices and the same result", async () => {
+    const status = (await (await fetch(`${API}/v1/history/status`)).json()) as { enabled: boolean; available: boolean };
+    if (!status.enabled || !status.available) return;
+    const { restoreRun } = await import("./runs");
+    const base = profiles.find((p) => p.id === "morgan")!;
+    const chosen = { ...base, planning_preference: "debt_reduction" as const };
+    const scenario = { retirement_age: base.retirement_age + 2, employee_contribution_rate: 0.08 };
+    const shown = await post<Evaluation>("/v1/evaluate", { profile: chosen, scenario });
+    const res = await fetch(`${API}/v1/history/runs`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ profile_id: base.id, scenario, decision_summary: shown.decision_summary, input_hash: shown.input_hash, planning_preference: "debt_reduction" }),
+    });
+    expect([200, 201]).toContain(res.status);
+    const runID = ((await res.json()) as { run: RunSummary }).run.run_id;
+    try {
+      // Read it back from the database, the way the Saved runs list does.
+      const listed = ((await (await fetch(`${API}/v1/history/runs?profile_id=${base.id}`)).json()) as { runs: RunSummary[] }).runs;
+      const run = listed.find((r) => r.run_id === runID)!;
+      expect(run.planning_preference).toBe("debt_reduction");
+      const restored = restoreRun(run, base.retirement_age);
+      expect(restored).toEqual({ style: "debt_reduction", scenario });
+      const reopened = await post<Evaluation>("/v1/evaluate", { profile: { ...base, planning_preference: restored.style }, scenario: restored.scenario });
+      expect(reopened.input_hash).toBe(run.input_hash);
+      expect(reopened.projections.custom?.retirement_balance_nominal_cents).toBe(run.final_retirement_balance_cents);
+    } finally {
+      await fetch(`${API}/v1/history/runs/${runID}`, { method: "DELETE" });
+    }
+  }, 30_000);
+
+  it("funds: each match score is the weighted sum of its parts", async () => {
+    const { weightedScore } = await import("./fundView");
+    const data = await post<FundShortlistEnvelope>("/v1/funds/shortlist", { account_type: "401k", retirement_year: 2058, risk_tolerance: "moderate" });
+    expect(data.shortlist.recommendations.length).toBeGreaterThan(0);
+    for (const rec of data.shortlist.recommendations) {
+      expect(weightedScore(rec.score_components, data.shortlist.score_weights)).toBeCloseTo(rec.score, 9);
+    }
+    const scores = data.shortlist.recommendations.map((r) => r.score);
+    expect(scores).toEqual([...scores].sort((a, b) => b - a)); // ranked best first
+  }, 20_000);
 });
 

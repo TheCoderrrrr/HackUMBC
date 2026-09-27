@@ -5,6 +5,7 @@ import { Icon } from "../components/ui";
 import { Disclosure } from "../components/Tabs";
 import { LineChart, type Series } from "../components/LineChart";
 import { money, monthLabel } from "../data/format";
+import { runChoices } from "../data/runs";
 import { peekProfileKey } from "../data/profileKey";
 import { isPersonal, useStore } from "../store";
 
@@ -34,7 +35,18 @@ function sourceLabel(run: RunSummary): string {
   return run.decision_source === "ai" ? "AI decision" : "Rules decision";
 }
 
-export function History({ shown }: { shown: Shown }) {
+const savedAt = (run: RunSummary) =>
+  new Date(run.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+/**
+ * Saved runs (Tiger Data): save what's on screen, open a past run (restores its plan style and
+ * scenario and recalculates it), delete one, or compare two over time.
+ */
+export function History({ shown, onOpen, openedID }: {
+  shown: Shown;
+  onOpen: (run: RunSummary) => void;
+  openedID: string | null;
+}) {
   const { liveEnabled, profile, style } = useStore();
   const [state, setState] = useState<State>({ kind: "checking" });
   const [runs, setRuns] = useState<RunSummary[]>([]);
@@ -115,8 +127,8 @@ export function History({ shown }: { shown: Shown }) {
 
   return (
     <section className="section">
-      <h2 className="h-section">Scenario history</h2>
-      <p className="caption" style={{ marginTop: 3 }}>Saved runs, stored as time series in Tiger Data</p>
+      <h2 className="h-section">Saved runs</h2>
+      <p className="subtitle">Stored as time series in Tiger Data. Open a run to return to it with the same choices.</p>
 
       {state.kind === "off" && <p className="body" style={{ marginTop: 14, fontSize: 14 }}>Turn on live calculation to save and compare runs.</p>}
       {state.kind === "checking" && <p className="caption" style={{ marginTop: 14 }}><span className="spinner" /></p>}
@@ -130,39 +142,36 @@ export function History({ shown }: { shown: Shown }) {
 
       {ready && (
         <>
-          <div className="row" style={{ marginTop: 16 }}>
-            <span className="label" style={{ fontSize: 14 }}>Save {shownLabel} to compare it later.</span>
-            <button className="pill selected" style={{ height: 34, fontSize: 13 }} onClick={save} disabled={saving}>
-              {saving ? <span className="spinner" /> : <Icon name="check" />} Save to history
+          <div className="save-bar">
+            <span className="label">Save {shownLabel} to come back to it later.</span>
+            <button className="pill selected small" onClick={save} disabled={saving}>
+              {saving ? <span className="spinner" /> : <Icon name="check" />} Save run
             </button>
           </div>
-          {message && <p className="caption fade-in" style={{ marginTop: 6 }}>{message}</p>}
+          {message && <p className="caption fade-in" style={{ marginTop: 8 }} role="status">{message}</p>}
 
-          {runs.length < 2 ? (
-            <p className="body" style={{ marginTop: 16, fontSize: 14 }}>
-              {runs.length === 0 ? "No saved runs yet." : "Save one more run to compare the two over time."}
-            </p>
-          ) : null}
-          {runs.length > 0 && (
-            <Disclosure title="Manage saved runs" summary={`${runs.length} saved`}>
-              <ul className="run-list">
-                {runs.map((r) => <RunRow key={r.run_id} run={r} onDeleted={async (label) => {
+          {runs.length === 0 ? (
+            <p className="body" style={{ marginTop: 16 }}>No saved runs yet.</p>
+          ) : (
+            <ul className="run-list" style={{ marginTop: 16 }}>
+              {runs.map((r) => <RunRow key={r.run_id} run={r} open={r.run_id === openedID} onOpen={() => onOpen(r)}
+                onDeleted={async (label) => {
                   setMessage(`Deleted “${label}”.`);
                   await loadRuns();
                 }} onError={setMessage} />)}
-              </ul>
-            </Disclosure>
+            </ul>
           )}
+          {runs.length === 1 && <p className="caption" style={{ marginTop: 10 }}>Save one more run to compare the two over time.</p>}
           {runs.length >= 2 && (
-            <>
-              <div className="history-pickers">
+            <Disclosure title="Compare two runs over time" summary="Chart and 5, 10, 20-year values">
+              <div className="history-pickers" style={{ marginTop: 0 }}>
                 <RunPicker label="Compare" color={BASE_COLOR} runs={runs} value={pick.base} disabled={pick.other}
                   onChange={(base) => setPick((p) => ({ ...p, base }))} />
                 <RunPicker label="with" color={OTHER_COLOR} runs={runs} value={pick.other} disabled={pick.base}
                   onChange={(other) => setPick((p) => ({ ...p, other }))} />
               </div>
               {comparison && <ComparisonView comparison={comparison} series={series} startYear={startYear} age={profile.age} />}
-            </>
+            </Disclosure>
           )}
         </>
       )}
@@ -184,7 +193,7 @@ function RunPicker({ label, color, runs, value, disabled, onChange }: {
       <select value={value ?? ""} onChange={(e) => onChange(e.target.value)}>
         {runs.map((r) => (
           <option key={r.run_id} value={r.run_id} disabled={r.run_id === disabled}>
-            {r.label} · saved {new Date(r.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+            {r.label} · saved {savedAt(r)}
           </option>
         ))}
       </select>
@@ -255,9 +264,11 @@ function ComparisonView({ comparison, series, startYear, age }: {
   );
 }
 
-/** One saved run with a delete button that asks once more before deleting. */
-function RunRow({ run, onDeleted, onError }: {
+/** One saved run: click to open it; delete asks once more before deleting. */
+function RunRow({ run, open, onOpen, onDeleted, onError }: {
   run: RunSummary;
+  open: boolean;
+  onOpen: () => void;
   onDeleted: (label: string) => Promise<void>;
   onError: (message: string) => void;
 }) {
@@ -275,23 +286,26 @@ function RunRow({ run, onDeleted, onError }: {
     }
   };
   return (
-    <li className="run-row">
-      <span className="run-row-text">
-        <b>{run.label}</b>
-        <span className="caption">
-          Saved {new Date(run.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-          {run.final_retirement_balance_cents !== null && <> · {money(run.final_retirement_balance_cents)} at {run.retirement_age}</>}
-          {" · "}{run.decision_source === "ai" ? "AI decision" : "Rules decision"}
+    <li className={`run-row ${open ? "open" : ""}`}>
+      <button className="run-open" onClick={onOpen} aria-current={open ? "true" : undefined}
+        aria-label={`Open ${run.label}, saved ${savedAt(run)}`}>
+        <span className="run-row-text">
+          <b>{runChoices(run)}</b>
+          <span className="caption">
+            {run.final_retirement_balance_cents !== null && <><span className="num strong">{money(run.final_retirement_balance_cents)}</span> at {run.retirement_age} · </>}
+            saved {savedAt(run)} · {sourceLabel(run)}
+          </span>
         </span>
-      </span>
+        <span className="run-open-cta">{open ? "Open" : <>Open <Icon name="chevron" size={12} /></>}</span>
+      </button>
       {confirming ? (
         <span className="run-row-actions">
           <button className="link" onClick={() => setConfirming(false)} disabled={busy}>Keep</button>
           <button className="pill danger" onClick={remove} disabled={busy}>{busy ? <span className="spinner" /> : "Delete"}</button>
         </span>
       ) : (
-        <button className="pill neutral" onClick={() => setConfirming(true)} aria-label={`Delete ${run.label}`}>
-          <Icon name="close" size={12} /> Delete
+        <button className="run-delete" onClick={() => setConfirming(true)} aria-label={`Delete ${run.label}`} title="Delete">
+          <Icon name="close" size={13} />
         </button>
       )}
     </li>
