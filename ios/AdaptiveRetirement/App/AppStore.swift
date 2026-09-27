@@ -234,6 +234,33 @@ final class AppStore: ObservableObject {
         refreshEvaluation()
     }
 
+    /// Loads the anonymous, server-saved manual profile when Tiger Data is available.
+    /// A missing profile is normal on a fresh device; callers can show other errors.
+    func loadManualProfileFromServer() async -> String? {
+        guard let client else { return nil }
+        do {
+            let stored = try await client.loadProfile()
+            useManualProfile(stored.profile)
+            return nil
+        } catch let APIError.server(status, _) where status == 404 {
+            return nil
+        } catch {
+            return APIError.userMessage(for: error)
+        }
+    }
+
+    /// Removes the remote anonymous profile and its local cached copy. The backend's
+    /// delete endpoint also removes the profile owner's saved runs.
+    func deleteManualProfile() async throws {
+        guard let client else { throw APIError.unreachable }
+        try await client.deleteProfile()
+        manualProfile = nil
+        defaults.removeObject(forKey: "manualProfile")
+        if profile.id == "me" {
+            select(.morgan)
+        }
+    }
+
     private func savedStyle(for id: String) -> API.PlanningPreference {
         if let raw = defaults.string(forKey: "planStyle.\(id)"), let style = API.PlanningPreference(rawValue: raw) {
             return style

@@ -25,6 +25,7 @@ struct ManualProfileView: View {
     @State private var debts: [DebtDraft] = []
     @State private var error: String?
     @State private var saving = false
+    @State private var deleting = false
 
     private struct DebtDraft: Identifiable {
         let id = UUID()
@@ -106,10 +107,27 @@ struct ManualProfileView: View {
                 }
             }
             .navigationTitle("Your numbers")
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
+                if store.manualProfile != nil {
+                    ToolbarItem(placement: .destructiveAction) {
+                        Button(deleting ? "Deleting…" : "Delete saved profile", role: .destructive) {
+                            Task { await deleteSavedProfile() }
+                        }
+                        .disabled(deleting || store.apiClient == nil)
+                    }
+                }
+            }
         }
         .task {
-            if let saved = store.manualProfile { populate(saved) }
+            if let saved = store.manualProfile {
+                populate(saved)
+            } else if let message = await store.loadManualProfileFromServer() {
+                // An unavailable database should not prevent a local entry.
+                error = message
+            } else if let saved = store.manualProfile {
+                populate(saved)
+            }
             guard let client = store.apiClient else { return }
             catalog = (try? await client.fundCatalog().funds) ?? []
         }
@@ -168,6 +186,17 @@ struct ManualProfileView: View {
             store.useManualProfile(result.profile)
             dismiss()
         } catch { self.error = APIError.userMessage(for: error) }
+    }
+
+    private func deleteSavedProfile() async {
+        deleting = true
+        defer { deleting = false }
+        do {
+            try await store.deleteManualProfile()
+            dismiss()
+        } catch {
+            self.error = APIError.userMessage(for: error)
+        }
     }
 
     private func populate(_ input: API.FinancialProfile) {

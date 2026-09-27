@@ -1,4 +1,5 @@
 import Foundation
+import Security
 
 /// Failures the UI can distinguish (FRONTEND.md §5 APIClient, §6 error envelope).
 enum APIError: Error, Equatable {
@@ -53,6 +54,8 @@ protocol APIClient: Sendable {
     func planStyles(_ profile: API.FinancialProfile) async throws -> API.PlanStyles
     func buildProfile(_ input: API.ManualProfileInput) async throws -> API.ProfileBuild
     func saveProfile(_ input: API.ManualProfileInput) async throws -> API.ProfileBuild
+    func loadProfile() async throws -> API.StoredProfile
+    func deleteProfile() async throws
 
     // Fund shortlist (`backend/app/fund_api.py`)
     func fundCatalog() async throws -> API.Funds.CatalogSummary
@@ -68,7 +71,75 @@ protocol APIClient: Sendable {
 extension APIClient {
     func buildProfile(_ input: API.ManualProfileInput) async throws -> API.ProfileBuild { throw APIError.unreachable }
     func saveProfile(_ input: API.ManualProfileInput) async throws -> API.ProfileBuild { try await buildProfile(input) }
+    func loadProfile() async throws -> API.StoredProfile { throw APIError.unreachable }
+    func deleteProfile() async throws { throw APIError.unreachable }
 }
+
+/// The anonymous credential that owns a manual profile and its history. It is an opaque,
+/// random identifier—not an account login—and belongs in Keychain rather than UserDefaults.
+/// A one-time migration preserves existing local profiles created before this storage change.
+private enum ProfileCredential {
+    private static let service = "com.hackumbc.adaptiveretirement"
+    private static let account = "anonymous-profile-key"
+    private static let legacyDefaultsKey = "arm:profileKey"
+
+    static func loadOrCreate() -> String {
+        if let key = read() { return key }
+        if let legacy = UserDefaults.standard.string(forKey: legacyDefaultsKey), !legacy.isEmpty {
+            if save(legacy) {
+                UserDefaults.standard.removeObject(forKey: legacyDefaultsKey)
+            }
+            return legacy
+        }
+        let key = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+            + UUID().uuidString.replacingOccurrences(of: "-", with: "")
+        // Keychain is available on supported iOS versions; if it transiently rejects an
+        // item, keep the credential in memory rather than downgrading it into UserDefaults.
+        _ = save(key)
+        return key
+    }
+
+    private static func read() -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var result: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let data = result as? Data,
+              let key = String(data: data, encoding: .utf8),
+              !key.isEmpty else { return nil }
+        return key
+    }
+
+    @discardableResult
+    private static func save(_ key: String) -> Bool {
+        let data = Data(key.utf8)
+        let item: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+        ]
+        let status = SecItemAdd(item as CFDictionary, nil)
+        if status == errSecDuplicateItem {
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: account,
+            ]
+            return SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary) == errSecSuccess
+        }
+        return status == errSecSuccess
+    }
+}
+
+/// Marker for an HTTP response that intentionally has no body (for example DELETE 204).
+private struct EmptyResponse: Decodable {}
 
 /// URLSession client for the FastAPI backend. Never logs request bodies or tokens.
 final class LiveAPIClient: APIClient {
@@ -90,14 +161,7 @@ final class LiveAPIClient: APIClient {
         self.baseURL = url
         self.demoKey = demoKey
         self.session = session
-        if let saved = UserDefaults.standard.string(forKey: "arm:profileKey") {
-            self.profileKey = saved
-        } else {
-            let key = UUID().uuidString.replacingOccurrences(of: "-", with: "")
-                + UUID().uuidString.replacingOccurrences(of: "-", with: "")
-            UserDefaults.standard.set(key, forKey: "arm:profileKey")
-            self.profileKey = key
-        }
+        self.profileKey = ProfileCredential.loadOrCreate()
     }
 
     func health() async throws -> API.Health {
@@ -126,6 +190,15 @@ final class LiveAPIClient: APIClient {
 
     func saveProfile(_ input: API.ManualProfileInput) async throws -> API.ProfileBuild {
         try await send(path: "v1/profiles/me", method: "PUT", body: try encoded(input), timeout: Self.requestTimeout)
+    }
+
+    func loadProfile() async throws -> API.StoredProfile {
+        try await send(path: "v1/profiles/me", method: "GET", body: nil, timeout: Self.requestTimeout)
+    }
+
+    func deleteProfile() async throws {
+        let _: EmptyResponse = try await send(path: "v1/profiles/me", method: "DELETE",
+                                               body: nil, timeout: Self.requestTimeout)
     }
 
     func fundCatalog() async throws -> API.Funds.CatalogSummary {
@@ -216,6 +289,9 @@ final class LiveAPIClient: APIClient {
             throw APIError.unexpectedStatus(http.statusCode)
         }
         do {
+            if data.isEmpty, Response.self == EmptyResponse.self {
+                return EmptyResponse() as! Response
+            }
             return try JSONDecoder().decode(Response.self, from: data)
         } catch {
             debugLogUndecodable(status: http.statusCode, data: data)

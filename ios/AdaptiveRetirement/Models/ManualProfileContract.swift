@@ -1,8 +1,8 @@
 import Foundation
 
 extension API {
-    struct ManualProfileInput: Encodable, Sendable {
-        struct Match: Encodable, Sendable {
+    struct ManualProfileInput: Codable, Sendable {
+        struct Match: Codable, Sendable {
             var kind: String
             var upToRate: Double?
             var matchPerDollar: Double?
@@ -10,7 +10,7 @@ extension API {
                 case kind, upToRate = "up_to_rate", matchPerDollar = "match_per_dollar"
             }
         }
-        struct Debt: Encodable, Sendable {
+        struct Debt: Codable, Sendable {
             var type: String
             var balanceCents: Int64
             var apr: Double
@@ -56,5 +56,12 @@ extension API {
         enum CodingKeys: String, CodingKey {
             case profile, preview, blockingIssue = "blocking_issue"
         }
+    }
+
+    /// Server-saved personal entry returned by GET /v1/profiles/me. `form` retains the
+    /// fields the person entered; `profile` is the normalized engine input.
+    struct StoredProfile: Decodable, Sendable {
+        var form: ManualProfileInput
+        var profile: FinancialProfile
     }
 }
