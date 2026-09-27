@@ -34,7 +34,7 @@ If the backend sets `DEMO_KEY`, set the same value in the desktop env so the Vit
 | Learn | **Learn** | Six short lessons; **Try** applies each one to your numbers (a scenario in Explore or a plan style) |
 | Learn | **Getting started** | Five-page guide: welcome, how ARM decides, three key ideas, choose a plan style, where to find things. Opens on first visit per profile |
 
-- **Your numbers** (sidebar → *Add your numbers*): a five-part form (about you, income and spending, savings, employer match, debts) in dollars and percents. The engine previews what it sees as you type (monthly budget after essentials, emergency months, rate for the full match, high-interest debt), and server errors highlight the exact field. Saving stores the numbers in Tiger Data under an anonymous key kept in this browser; the "You" profile then works like the demo profiles, including private saved plans. *Start from Morgan's numbers* pre-fills the form for demos, and *Erase my numbers* removes everything.
+- **Your people** (sidebar → *Add a person*, up to 10): a five-part form (about you, income and spending, savings, employer match, debts) in dollars and percents. The engine previews what it sees as you type (monthly budget after essentials, emergency months, rate for the full match, high-interest debt), and server errors highlight the exact field. Saving stores the numbers in Tiger Data under an anonymous key kept in this browser; each person then works like a demo profile, including private saved plans. The sidebar lists them under *Your people · n/10* with an edit button each, and the list scrolls. *Start from Morgan's numbers* pre-fills the form for demos, and *Erase* removes that person and only their plans.
 - **Ask** (bottom right) opens the education chat ([EDUCATION_CHAT.md](EDUCATION_CHAT.md)).
 - **Key terms** carry a **?** popover. Definitions that quote numbers read them from the engine's `assumptions`.
 
@@ -54,7 +54,7 @@ Balanced, Cash security first and Debt payoff first are compared with `POST /v1/
 
 - **Saved results** show immediately: the offline bundle in `ios/AdaptiveRetirement/Resources/Demo/` when it exists, otherwise the real engine responses in `contracts/examples/`. Each saved result is its own chunk, loaded the first time it's needed.
 - **Live results** replace them when "Live calculation" is on and the backend answers. Failures keep the previous result, labelled "Last live" or "Saved".
-- **Code splitting:** Explore, Funds, Learn and Chat load on demand. The first download is 255 KB (77 KB gzipped), down from 1,126 KB.
+- **Code splitting:** Explore, Funds, Learn and Chat load on demand. The first download is 264 KB (80 KB gzipped), down from 1,126 KB.
 
 ## Tests (`npm test`)
 

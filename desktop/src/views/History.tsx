@@ -6,7 +6,7 @@ import { Disclosure } from "../components/Tabs";
 import { LineChart, type Series } from "../components/LineChart";
 import { money, monthLabel } from "../data/format";
 import { peekProfileKey } from "../data/profileKey";
-import { MY_ID, useStore } from "../store";
+import { isPersonal, useStore } from "../store";
 
 /** The result currently on screen: the plan as is, or a compared scenario. */
 export interface Shown {
@@ -300,6 +300,6 @@ function RunRow({ run, onDeleted, onError }: {
 
 /** The user's own plans are scoped to their anonymous key; demo plans are shared. */
 function keyFor(profileID: string): string | null {
-  return profileID === MY_ID ? peekProfileKey() : null;
+  return isPersonal(profileID) ? peekProfileKey() : null;
 }
 

@@ -9,6 +9,8 @@ history only accepts demo profiles, so personal numbers never reach the cloud da
 """
 from __future__ import annotations
 
+import re
+import secrets
 from datetime import date
 from typing import Literal
 
@@ -94,7 +96,7 @@ _DEFAULTED = ("schema_version", "id", "as_of_date", "currency", "source", "annua
 _FORM_PATH = {"employer_match": "match"}
 
 
-def build_profile(body: ProfileInput, today: date | None = None) -> FinancialProfile:
+def build_profile(body: ProfileInput, today: date | None = None, profile_id: str = MANUAL_PROFILE_ID) -> FinancialProfile:
     today = today or date.today()
     if body.match.kind == "match":
         match = {"status": "confirmed", "fully_vested": True, "tiers": [{
@@ -106,7 +108,7 @@ def build_profile(body: ProfileInput, today: date | None = None) -> FinancialPro
     stamp = today.isoformat()
     raw = {
         "schema_version": "1",
-        "id": MANUAL_PROFILE_ID,
+        "id": profile_id,
         "name": body.name,
         "as_of_date": stamp,
         "currency": "USD",
@@ -156,7 +158,10 @@ def build(body: ProfileInput, request: Request) -> ProfileBuild:
     return ProfileBuild(profile=profile, preview=preview, blocking_issue=blocking)
 
 
-# ---- the user's own numbers, stored in Tiger Data under a hash of their anonymous key ----
+# ---- people's own numbers, stored in Tiger Data under a hash of their anonymous key ----
+
+MAX_PROFILES = 10
+_ID = re.compile(r"^(me|u-[0-9a-f]{8})$")
 
 
 def _limit(request: Request) -> None:
@@ -164,43 +169,87 @@ def _limit(request: Request) -> None:
         raise ApiError(429, "RATE_LIMITED", "Too many requests. Try again in a minute.", retryable=True)
 
 
-@router.put("/me", response_model=ProfileBuild, responses=_ERRORS)
-def save_mine(body: ProfileInput, request: Request) -> ProfileBuild:
-    """Validates, builds and stores the user's numbers; returns the engine preview."""
+def _profile_id(value: str) -> str:
+    if not _ID.match(value):
+        raise ApiError(422, "INVALID_REQUEST", "Profile ID is not valid.", ["profile_id"])
+    return value
+
+
+class StoredProfiles(Strict):
+    profiles: list[StoredProfile]
+
+
+@router.get("", response_model=StoredProfiles, responses=_ERRORS)
+def list_mine(request: Request) -> StoredProfiles:
+    """Every person saved under this key, oldest first."""
+    owner = owner_from(request, required=True)
+    store = _store(request)
+    try:
+        rows = store.list_profiles(owner)
+    except HistoryUnavailable:
+        raise _unavailable() from None
+    return StoredProfiles(profiles=[StoredProfile(form=ProfileInput.model_validate(f), profile=FinancialProfile.model_validate(p))
+                                    for f, p in rows])
+
+
+@router.post("", response_model=ProfileBuild, status_code=201, responses=_ERRORS)
+def create_mine(body: ProfileInput, request: Request) -> ProfileBuild:
+    """Adds a person under this key (up to 10) with a new server-made ID."""
     _limit(request)
     owner = owner_from(request, required=True)
     store = _store(request)
-    profile = build_profile(body)
-    preview, blocking = preview_state(profile)  # invalid inputs never get stored
     try:
-        store.save_profile(owner, body.model_dump(mode="json"), profile.model_dump(mode="json"))
+        if len(store.list_profiles(owner)) >= MAX_PROFILES:
+            raise ApiError(409, "PROFILE_LIMIT", f"You can save up to {MAX_PROFILES} people. Erase one to add another.")
+        return _save(store, owner, f"u-{secrets.token_hex(4)}", body)
     except HistoryUnavailable:
         raise _unavailable() from None
-    return ProfileBuild(profile=profile, preview=preview, blocking_issue=blocking)
 
 
-@router.get("/me", response_model=StoredProfile, responses=_ERRORS)
-def load_mine(request: Request) -> StoredProfile:
+@router.put("/{profile_id}", response_model=ProfileBuild, responses=_ERRORS)
+def update_mine(profile_id: str, body: ProfileInput, request: Request) -> ProfileBuild:
+    _limit(request)
     owner = owner_from(request, required=True)
+    profile_id = _profile_id(profile_id)
     store = _store(request)
     try:
-        stored = store.get_profile(owner)
+        if store.get_profile(owner, profile_id) is None:
+            raise ApiError(404, "PROFILE_NOT_FOUND", "No saved numbers with that ID for this key.")
+        return _save(store, owner, profile_id, body)
+    except HistoryUnavailable:
+        raise _unavailable() from None
+
+
+@router.get("/{profile_id}", response_model=StoredProfile, responses=_ERRORS)
+def load_mine(profile_id: str, request: Request) -> StoredProfile:
+    owner = owner_from(request, required=True)
+    profile_id = _profile_id(profile_id)
+    store = _store(request)
+    try:
+        stored = store.get_profile(owner, profile_id)
     except HistoryUnavailable:
         raise _unavailable() from None
     if stored is None:
-        raise ApiError(404, "PROFILE_NOT_FOUND", "No saved numbers for this key.")
+        raise ApiError(404, "PROFILE_NOT_FOUND", "No saved numbers with that ID for this key.")
     return StoredProfile(form=ProfileInput.model_validate(stored[0]), profile=FinancialProfile.model_validate(stored[1]))
 
 
-@router.delete("/me", status_code=204, responses=_ERRORS)
-def erase_mine(request: Request) -> Response:
-    """Erases the user's numbers and every plan they saved."""
+@router.delete("/{profile_id}", status_code=204, responses=_ERRORS)
+def erase_mine(profile_id: str, request: Request) -> Response:
+    """Erases one person's numbers and every plan saved from them."""
     owner = owner_from(request, required=True)
+    profile_id = _profile_id(profile_id)
     store = _store(request)
     try:
-        if not store.delete_profile(owner):
-            raise ApiError(404, "PROFILE_NOT_FOUND", "No saved numbers for this key.")
+        if not store.delete_profile(owner, profile_id):
+            raise ApiError(404, "PROFILE_NOT_FOUND", "No saved numbers with that ID for this key.")
     except HistoryUnavailable:
         raise _unavailable() from None
     return Response(status_code=204)
 
+
+def _save(store, owner: str, profile_id: str, body: ProfileInput) -> ProfileBuild:
+    profile = build_profile(body, profile_id=profile_id)
+    preview, blocking = preview_state(profile)  # invalid inputs never get stored
+    store.save_profile(owner, profile_id, body.model_dump(mode="json"), profile.model_dump(mode="json"))
+    return ProfileBuild(profile=profile, preview=preview, blocking_issue=blocking)

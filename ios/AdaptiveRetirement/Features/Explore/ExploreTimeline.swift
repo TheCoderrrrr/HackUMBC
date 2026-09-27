@@ -48,6 +48,9 @@ struct ExploreTimeline {
     let tracks: TimelineTracks
     /// Title of the third river column ("Extra debt" or "Remaining").
     let thirdColumnTitle: String
+    /// Plan goals the engine reports as met from the opening month ("Starter reserve"), shown
+    /// beside the dated milestones so a finished goal doesn't read as a missing one.
+    var alreadyMet: [String] = []
     private let destinationsByPhase: [(from: Int, values: [RiverDestination])]
     private let contextByPhase: [(from: Int, text: String)]
     private let exactMonthContext: [Int: String]
@@ -111,7 +114,47 @@ struct ExploreTimeline {
 
 extension ExploreTimeline {
     static func illustrative(for profile: Profile) -> ExploreTimeline {
-        profile.id == Profile.morgan.id ? morgan(profile) : steady(profile)
+        var timeline = profile.id == Profile.morgan.id ? morgan(profile) : steady(profile)
+        timeline.alreadyMet = planEvents(for: profile).alreadyMet
+        return timeline
+    }
+
+    /// The shortest window that still reads as a plan.
+    static let minimumWindow = 48
+
+    /// Plan events from the engine's adaptive projection: dated milestones, the goals already
+    /// met today, and the window that holds them. Nothing here is estimated; with no
+    /// calculation (the illustrative preview) there are no dated milestones at all.
+    static func planEvents(for profile: Profile) -> (milestones: [Milestone], alreadyMet: [String], lastMonth: Int) {
+        guard let evaluation = profile.evaluation, evaluation.projections.adaptive.feasible else {
+            return ([], [], minimumWindow)
+        }
+        let adaptive = evaluation.projections.adaptive
+        let retirement = evaluation.financialState.monthsUntilRetirement
+        var dated: [Milestone] = []
+        var met: [String] = []
+        // nil means the goal isn't reached before retirement: neither dated nor met.
+        for (month, title, metTitle) in [(adaptive.debtFreeMonth, "Debt cleared", "Debt-free"),
+                                         (adaptive.starterReserveMonth, "Starter reserve reached", "Starter reserve"),
+                                         (adaptive.fullReserveMonth, "Reserve target reached", "Full reserve")] {
+            guard let month else { continue }
+            if month == 0 { met.append(metTitle) } else { dated.append(Milestone(month: month, title: title)) }
+        }
+        // Run to the last plan event, rounded up to a whole year; otherwise a short plan
+        // shows through retirement (Casey) and a long one shows its first four years.
+        var window = minimumWindow
+        if let last = dated.map(\.month).max() {
+            window = max(window, (last + 11) / 12 * 12)
+        } else if retirement <= 120 {
+            window = max(window, retirement)
+        }
+        window = min(window, retirement)
+        if retirement <= window { dated.append(Milestone(month: retirement, title: "Retirement")) }
+        // Two events in the same month share one marker.
+        let unique = Dictionary(dated.map { ($0.month, $0) }, uniquingKeysWith: { a, b in
+            Milestone(month: a.month, title: "\(a.title) · \(b.title.lowercased())")
+        })
+        return (unique.values.sorted { $0.month < $1.month }, met, window)
     }
 
     /// Opening-month destinations from the saved plan's cash priorities.
@@ -210,14 +253,28 @@ extension ExploreTimeline {
         )
     }
 
-    /// Jordan and Casey: the saved plan maintains its opening allocation.
+    /// Every profile but Morgan: the plan keeps its opening allocation, and the timeline marks
+    /// the engine's own events (e.g. Jordan's loan paid off, Casey's retirement).
     private static func steady(_ profile: Profile) -> ExploreTimeline {
         let open = opening(profile)
+        let events = planEvents(for: profile)
+        let debtCleared = events.milestones.first { $0.title.hasPrefix("Debt cleared") }?.month
+        let retirementMonth = profile.evaluation?.financialState.monthsUntilRetirement
+        let retirement = retirementMonth.flatMap { $0 <= events.lastMonth ? $0 : nil }
+        var contextByPhase: [(from: Int, text: String)] = [(0, "Opening month"), (1, "Plan maintained")]
+        var exactMonthContext: [Int: String] = [0: "Opening month"]
+        if let debtCleared {
+            contextByPhase.append((debtCleared, "Debt-free · plan maintained"))
+        }
+        if let retirement {
+            contextByPhase.append((retirement, "Retirement"))
+        }
+        for milestone in events.milestones { exactMonthContext[milestone.month] = milestone.title }
         return ExploreTimeline(
-            lastMonth: 48,
+            lastMonth: events.lastMonth,
             keyframes: [RiverKeyframe(month: 0, counts: open.counts)],
-            milestones: [],
-            tracks: TimelineTracks(),
+            milestones: events.milestones,
+            tracks: TimelineTracks(debtPayoff: debtCleared.map { 0...$0 }),
             thirdColumnTitle: open.third,
             destinationsByPhase: [
                 (0, open.destinations),
@@ -226,8 +283,8 @@ extension ExploreTimeline {
                      RiverDestination(title: open.third, value: open.destinations[2].value,
                                       caption: open.destinations[2].caption)])
             ],
-            contextByPhase: [(0, "Opening month"), (1, "Plan maintained")],
-            exactMonthContext: [0: "Opening month"]
+            contextByPhase: contextByPhase.sorted { $0.from < $1.from },
+            exactMonthContext: exactMonthContext
         )
     }
 }

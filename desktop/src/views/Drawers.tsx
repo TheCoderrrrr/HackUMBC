@@ -263,10 +263,10 @@ function SectionWhy({ section, display, onClose }: { section: PlanSection; displ
       title: "Why paying down debt matters",
       what: <>Your debts and what the plan pays on them each month. <Term id="high-interest-debt">High-interest debt</Term> gets
         extra payments first.</>,
-      effect: <>Interest is money that can't grow for retirement. With this plan, high-interest debt is cleared
+      effect: <>Interest is money that can't grow for retirement. With this plan you're debt-free
         by <b>{when(adaptive.debt_free_month, asOf, "now")}</b> and you pay <b>{cents(adaptive.cumulative_debt_interest_cents)}</b> in
         interest. On current habits: <b>{when(current.debt_free_month, asOf, "now")}</b> and <b>{cents(current.cumulative_debt_interest_cents)}</b>.
-        Once it's gone, that payment can go to savings.</>,
+        Once the debt is gone, those payments can go to savings.</>,
       change: <>New borrowing, a missed payment or a rate increase pushes the payoff date later. The model assumes
         your <Term id="apr">APR</Term> and minimums stay fixed.</>,
     },

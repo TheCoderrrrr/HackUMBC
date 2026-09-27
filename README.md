@@ -10,7 +10,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=FFD43B) ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?style=flat-square&logo=fastapi&logoColor=white) ![Gemini](https://img.shields.io/badge/Gemini-3.5_Flash--Lite-8E75B2?style=flat-square&logo=googlegemini&logoColor=white) ![Tiger Data](https://img.shields.io/badge/Tiger_Data-TimescaleDB-F5A623?style=flat-square&logo=postgresql&logoColor=white) ![React](https://img.shields.io/badge/React-desktop-61DAFB?style=flat-square&logo=react&logoColor=black) ![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS_17+-F05138?style=flat-square&logo=swift&logoColor=white)
 <br/>
-![Backend tests](https://img.shields.io/badge/backend_tests-558_passing-22C55E?style=flat-square) ![Desktop tests](https://img.shields.io/badge/desktop_tests-116_passing-22C55E?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-2563EB?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-EC4899?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_only-0EA5E9?style=flat-square)
+![Backend tests](https://img.shields.io/badge/backend_tests-563_passing-22C55E?style=flat-square) ![Desktop tests](https://img.shields.io/badge/desktop_tests-154_passing-22C55E?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-2563EB?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-EC4899?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_only-0EA5E9?style=flat-square)
 
 <sub><b>HackUMBC 2026</b> · University of Maryland, Baltimore County</sub>
 
@@ -236,7 +236,7 @@ flowchart LR
 | **Hypertable** | `projection_point`: every monthly balance, cash and debt value, partitioned on the month | 5,887 points across 8 saved runs |
 | **Continuous aggregate** | `projection_yearly`: `time_bucket(12, month)` + `first()`, real-time mode, refreshed on save | Matches the desktop chart's yearly points **row for row** (tested) |
 | **Compression** | Segmented by `(run_id, strategy)`, ordered by `month`, with a policy | **1.38 MB → 262 KB (81% smaller)** |
-| **Relational + time series** | `scenario_run` (provenance, JSON assumptions) and `user_profile` (the user's own numbers, keyed by a hashed anonymous key) join the points in one Postgres | `ON DELETE CASCADE` removes a run cleanly; erasing a profile removes its plans |
+| **Relational + time series** | `scenario_run` (provenance, JSON assumptions) and `user_profiles` (people's own numbers, up to 10 per hashed anonymous key) join the points in one Postgres | `ON DELETE CASCADE` removes a run cleanly; erasing a person removes only their plans |
 | **Connection pool** | 0–4 connections, health-checked, opened lazily | First call about 336 ms, then about **20 ms** |
 
 > [!TIP]
@@ -299,7 +299,7 @@ ORDER BY y.month, r.created_at;
 | **Overview** | See your next step, three at-a-glance tiles, where you're heading, and a first-steps checklist |
 | **Your plan** | An always-visible projection (plan vs. current habits, shaded difference, pin any age, goal line), then one topic per tab, each with **Why this matters** |
 | **Explore** | Try another retirement age or contribution; Compare, Timeline and **Saved runs** (Tiger Data: save, compare, delete) |
-| **Your numbers** | Enter your own finances; the engine previews what it sees as you type, then builds your plan. Stored in Tiger Data under an anonymous key |
+| **Your people** | Add up to 10 people with their own finances; the engine previews what it sees as you type, then builds each plan. Stored in Tiger Data under an anonymous key, each with private saved plans |
 | **Fund shortlist** | Explainable target-date fund ranking for a 401(k) or IRA |
 | **Learn** · **Ask** | Six lessons, each with **Try** to apply it to your numbers, and the Gemini education chat |
 
@@ -309,12 +309,12 @@ The iPhone app uses the same API and ships an offline bundle of saved results, s
 
 ## ✅ Engineering quality
 
-- **558 backend tests** (`pytest`): engine, policy, simulation, AI pipeline, history, plan styles, funds, education chat, contracts.
+- **563 backend tests** (`pytest`): engine, policy, simulation, AI pipeline, history, plan styles, funds, education chat, contracts.
 - **6/6 real Tiger Data tests**: hypertable, continuous aggregate = chart values, compression, delete, pool reuse, user profiles with private runs (opt-in with `TIGER_DATABASE_URL`).
-- **116 desktop tests** (`vitest`): chart math, sync tests on real engine output, the API↔UI contract test (19 schemas), form conversion, the API client.
-- **8/8 live tests** against a running server, including save/delete and the full *Your numbers* flow through Tiger Data.
+- **154 desktop tests** (`vitest`): chart math, sync tests on real engine output, the monthly budget adding up to the cent on 12 engine results, the API↔UI contract test (20 schemas), form conversion, the API client.
+- **8/8 live tests** against a running server, including save/delete and adding, planning, updating and erasing several people through Tiger Data.
 - **Mutation-checked:** deliberate bugs (off-by-one dates, reversed differences, sampling drift, a skipped hash check) each make the suites fail.
-- **Performance:** first download 255 KB instead of 1,126 KB; plan-style comparisons cached (about 340 ms → 2.5 ms); rate-limiter memory bounded against spoofed client keys.
+- **Performance:** first download 264 KB instead of 1,126 KB; plan-style comparisons cached (about 340 ms → 2.5 ms); rate-limiter memory bounded against spoofed client keys.
 
 ---
 
@@ -356,6 +356,7 @@ python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\
 pip install -r requirements-test.txt
 cp .env.example .env     # optional: GEMINI_API_KEY for live AI, TIGER_DATABASE_URL for saved plans
 uvicorn app.main:app --port 8000
+ngrok http --url=unsheathe-chemicals-truth.ngrok-free.dev 8000
 
 # Desktop (second terminal)
 cd desktop && npm install && npm run dev                # http://localhost:5173

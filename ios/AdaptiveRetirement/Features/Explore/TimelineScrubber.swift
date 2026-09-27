@@ -14,6 +14,10 @@ struct TimelineScrubber: View {
     @State private var isDragging = false
     /// Whole month under the finger while dragging; drives the per-month haptic tick.
     @State private var dragMonth: Int?
+    /// When the last drag tick fired. iOS drops haptics above 32 Hz (and logs "Message send
+    /// exceeds rate-limit threshold"), and a fast drag crosses several months per frame.
+    @State private var lastTick = Date.distantPast
+    private static let minTickInterval: TimeInterval = 1.0 / 25
 
     private static let trackLabels: [(title: String, symbol: String, tint: Color)] = [
         ("Retirement", "building.columns.fill", Palette.accent),
@@ -64,7 +68,10 @@ struct TimelineScrubber: View {
         return ZStack(alignment: .topLeading) {
             // Year labels.
             yearLabel(ExploreTimeline.label(forMonth: 0), at: 0, width: width, anchor: .leading)
-            yearLabel("\(ExploreTimeline.startYear + 2)", at: x(24, width), width: width, anchor: .center)
+            // Middle label: the whole year nearest the window's midpoint (2028 on the
+            // four-year window; later for plans that run longer).
+            let middle = (timeline.lastMonth / 2 + 6) / 12 * 12
+            yearLabel("\(ExploreTimeline.startYear + middle / 12)", at: x(Double(middle), width), width: width, anchor: .center)
             yearLabel(ExploreTimeline.label(forMonth: timeline.lastMonth), at: width, width: width, anchor: .trailing)
 
             // Month ruler: a tick every quarter, taller each year.
@@ -155,7 +162,14 @@ struct TimelineScrubber: View {
                     onInteract()
                 }
                 month = clampedMonth(value.location.x, width)
-                dragMonth = Int(month.rounded())
+                // Tick every month on a slow drag; on a fast one stay under the haptic rate
+                // limit, but never skip a milestone.
+                let whole = Int(month.rounded())
+                if whole != dragMonth,
+                   timeline.milestone(at: whole) != nil || Date.now.timeIntervalSince(lastTick) >= Self.minTickInterval {
+                    dragMonth = whole
+                    lastTick = .now
+                }
             }
             .onEnded { value in
                 if isDragging {

@@ -246,3 +246,47 @@ export function explanationSteps(display: Display): { title: string; detail: str
   }
   return steps;
 }
+
+export interface BudgetLine {
+  key: string;
+  label: string;
+  note: string;
+  cents: number;
+}
+
+/**
+ * This month's money, laid out so it visibly adds up. Take-home pay is measured after the
+ * current 401(k) contribution, so the engine plans with take-home + that contribution's
+ * after-tax cost (`monthly_resources_before_retirement_cents`). Every line comes from the
+ * engine's plan; `total` must equal `toPlan` (tested on real engine output).
+ */
+export function monthBudget(display: Display): {
+  takeHomeCents: number;
+  currentContributionCents: number;
+  toPlanCents: number;
+  lines: BudgetLine[];
+  totalCents: number;
+} {
+  const { profile, evaluation } = display;
+  const state = evaluation.financial_state;
+  const cash = Object.fromEntries(display.cash.map((c) => [c.kind, c.amountCents])) as Record<CashKind, number>;
+  const minimums = display.debts.reduce((s, d) => s + d.minimumCents, 0);
+  const lines: BudgetLine[] = [
+    { key: "living", label: "Living costs", note: "Rent, food and bills", cents: profile.monthly_living_expenses_cents },
+    { key: "minimums", label: "Minimum debt payments", note: "Required on every debt", cents: minimums },
+    { key: "retirement", label: "Retirement contribution", cents: cash.retirement,
+      note: profile.contribution_tax_treatment === "roth"
+        ? `${percent(display.rate)} of pay (Roth: no upfront tax saving)`
+        : `${percent(display.rate)} of pay, net of the income tax it saves` },
+    { key: "debt", label: "Extra toward debt", note: "On top of the minimums", cents: cash.debt },
+    { key: "emergency", label: "Emergency savings", note: "Into your cash cushion", cents: cash.emergency },
+    { key: "remaining", label: "Left over", note: "Yours to spend or save", cents: cash.remaining },
+  ].filter((l) => l.cents > 0 || l.key === "living" || l.key === "retirement");
+  return {
+    takeHomeCents: profile.monthly_take_home_cents,
+    currentContributionCents: state.current_employee_cash_cost_cents,
+    toPlanCents: state.monthly_resources_before_retirement_cents,
+    lines,
+    totalCents: lines.reduce((s, l) => s + l.cents, 0),
+  };
+}

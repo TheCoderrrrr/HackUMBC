@@ -243,7 +243,7 @@ function when(month: number | null, asOf: string, done: string, never: string): 
 function Facts({ outcome, asOf }: { outcome: StyleOutcome; asOf: string }) {
   return (
     <dl className="style-facts">
-      <div><dt>High-interest debt paid off</dt><dd>{when(outcome.debt_free_month, asOf, "No debt", "After retirement")}</dd></div>
+      <div><dt>Debt-free</dt><dd>{when(outcome.debt_free_month, asOf, "No debt", "After retirement")}</dd></div>
       <div><dt>Emergency fund full</dt><dd>{when(outcome.full_reserve_month, asOf, "Already", "Not reached")}</dd></div>
     </dl>
   );

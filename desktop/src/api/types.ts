@@ -303,3 +303,7 @@ export interface StoredProfile {
   profile: FinancialProfile;
 }
 
+export interface StoredProfiles {
+  profiles: StoredProfile[];
+}
+

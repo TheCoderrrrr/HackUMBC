@@ -32,7 +32,7 @@ class FakeHistoryStore:
     def __init__(self):
         self.records: dict[str, RunRecord] = {}
         self.created: dict[str, datetime] = {}
-        self.profiles: dict[str, tuple[dict, dict]] = {}  # owner hash -> (form, profile)
+        self.profiles: dict[tuple[str, str], tuple[dict, dict]] = {}  # (owner hash, profile id) -> (form, profile)
         self.down = False
         self._clock = datetime(2026, 9, 27, tzinfo=timezone.utc)
 
@@ -85,19 +85,23 @@ class FakeHistoryStore:
         self.created.pop(run_id, None)
         return self.records.pop(run_id) is not None
 
-    def save_profile(self, owner, form, profile):
+    def save_profile(self, owner, profile_id, form, profile):
         self._check()
-        self.profiles[owner] = (form, profile)
+        self.profiles[(owner, profile_id)] = (form, profile)
 
-    def get_profile(self, owner):
+    def get_profile(self, owner, profile_id):
         self._check()
-        return self.profiles.get(owner)
+        return self.profiles.get((owner, profile_id))
 
-    def delete_profile(self, owner):
+    def list_profiles(self, owner):
         self._check()
-        for run_id in [i for i, r in self.records.items() if r.owner == owner]:
+        return [v for (o, _), v in self.profiles.items() if o == owner]
+
+    def delete_profile(self, owner, profile_id):
+        self._check()
+        for run_id in [i for i, r in self.records.items() if r.owner == owner and r.profile_id == profile_id]:
             del self.records[run_id]
-        return self.profiles.pop(owner, None) is not None
+        return self.profiles.pop((owner, profile_id), None) is not None
 
 
 # --- helpers ---------------------------------------------------------------------

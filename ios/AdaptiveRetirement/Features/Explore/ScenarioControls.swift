@@ -38,6 +38,11 @@ struct ScenarioDraft: Equatable {
         let rate: Double
     }
 
+    /// The `/v1/evaluate` scenario this draft asks for.
+    var apiScenario: API.Scenario {
+        API.Scenario(retirementAge: retirementAge, employeeContributionRate: policy == .fixed ? fixedRate / 100 : nil)
+    }
+
     static func original(for profile: Profile) -> ScenarioDraft {
         ScenarioDraft(retirementAge: profile.retirementAge, fixedRate: profile.currentEmployeeRate * 100)
     }
@@ -45,9 +50,36 @@ struct ScenarioDraft: Equatable {
 
 // MARK: - Retirement comparison
 
-/// "Retirement accounts": legend, schematic Current vs Adaptive chart, shared calendar axis.
+/// A compared scenario shown on the Explore chart with the plan's Current and Adaptive lines.
+struct ScenarioOverlay {
+    /// The calculated scenario; nil while the first one is on its way, or when it couldn't be
+    /// calculated (see `note`).
+    let evaluation: API.Evaluation?
+    /// The scenario sent (or the saved preset's, or the one on the controls).
+    let scenario: API.Scenario?
+    /// A newer scenario is being calculated; this one is drawn faintly until it arrives.
+    var isUpdating = false
+    /// Why there's no line for the controls' scenario, e.g. no live server. Shown at the chart
+    /// so a change never silently leaves the plan's lines on screen.
+    var note: String? = nil
+
+    /// Matches the server's history labels: "Retire at 69 · adaptive contribution".
+    var label: String {
+        let age = scenario?.retirementAge ?? evaluation?.projections.custom?.retirementAge
+        let contribution = scenario?.employeeContributionRate.map { rate -> String in
+            let percent = rate * 100
+            return (percent.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(percent))%" : String(format: "%.1f%%", percent))
+                + " fixed contribution"
+        } ?? "adaptive contribution"
+        return age.map { "Retire at \($0) · \(contribution)" } ?? contribution
+    }
+}
+
+/// "Retirement accounts": Current vs Adaptive from the plan's calculation, plus the compared
+/// scenario when there is one, on a shared calendar axis.
 struct RetirementComparisonSection: View {
     let profile: Profile
+    var scenario: ScenarioOverlay? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -64,9 +96,33 @@ struct RetirementComparisonSection: View {
             HStack(spacing: 20) {
                 LegendItem(title: "Current", color: Palette.blue, dashed: true, weight: .regular)
                 LegendItem(title: "Adaptive", color: Palette.accent, dashed: false, weight: .medium)
+                if scenario != nil {
+                    LegendItem(title: "Your scenario", color: Palette.textPrimary, dashed: false, weight: .medium)
+                        .opacity(scenarioLine == nil || scenario?.isUpdating == true ? 0.45 : 1)
+                        .transition(.opacity)
+                }
             }
             .frame(height: 28)
             .padding(.top, 15)
+
+            if let scenario {
+                HStack(spacing: 6) {
+                    if scenario.isUpdating {
+                        ProgressView().controlSize(.mini).tint(Palette.textCaption)
+                    }
+                    if scenario.note != nil {
+                        Image(systemName: "wifi.exclamationmark")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Palette.textSecondary)
+                    }
+                    Text(scenarioCaption(scenario))
+                        .font(.geist(12, .regular, relativeTo: .caption))
+                        .foregroundStyle(Palette.textSecondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .transition(.opacity)
+            }
 
             comparisonChart
                 .frame(height: 205)
@@ -74,16 +130,37 @@ struct RetirementComparisonSection: View {
             HStack {
                 axisLabel("\(ExploreTimeline.startYear)")
                 Spacer()
-                axisLabel("\(ExploreTimeline.startYear + profile.yearsToRetirement / 2)")
+                axisLabel("\(ExploreTimeline.startYear + span / 2)")
                 Spacer()
-                (Text(verbatim: String(ExploreTimeline.startYear + profile.yearsToRetirement)).font(.geist(12, .medium, relativeTo: .caption))
+                (Text(verbatim: String(ExploreTimeline.startYear + span)).font(.geist(12, .medium, relativeTo: .caption))
                  + Text(" · Age ").font(.geist(12, .regular, relativeTo: .caption))
-                 + Text("\(profile.retirementAge)").font(.geist(12, .medium, relativeTo: .caption)))
+                 + Text("\(profile.age + span)").font(.geist(12, .medium, relativeTo: .caption)))
                     .foregroundStyle(Palette.textSecondary)
             }
             .frame(minHeight: 26)
             .accessibilityElement(children: .combine)
         }
+        .animation(Motion.reveal, value: scenario?.evaluation?.inputHash)
+        .animation(Motion.reveal, value: scenario?.isUpdating)
+    }
+
+    /// The scenario's yearly balances, or nil when it has none to draw (not fundable).
+    private var scenarioLine: [Int64]? {
+        guard let custom = scenario?.evaluation?.projections.custom, custom.feasible else { return nil }
+        let values = custom.yearlyRetirementBalances(years: custom.retirementAge - profile.age)
+        return values.count > 1 ? values : nil
+    }
+
+    /// Years on the axis: the plan's horizon, extended when the scenario retires later.
+    private var span: Int {
+        max(profile.yearsToRetirement, (scenarioLine?.count ?? 0) - 1)
+    }
+
+    private func scenarioCaption(_ scenario: ScenarioOverlay) -> String {
+        if scenario.isUpdating { return "Calculating · \(scenario.label)" }
+        if let note = scenario.note { return "\(scenario.label) · \(note)" }
+        if scenarioLine == nil { return "\(scenario.label) · not fundable as entered" }
+        return scenario.label
     }
 
     private func axisLabel(_ text: String) -> some View {
@@ -92,17 +169,19 @@ struct RetirementComparisonSection: View {
             .foregroundStyle(Palette.textCaption)
     }
 
-    /// The engine's Current and Adaptive yearly balances on a shared scale, or the schematic preview.
+    /// The engine's yearly balances on a shared year axis, or the schematic preview.
     @ViewBuilder
     private var comparisonChart: some View {
         if let projections = profile.evaluation?.projections {
             let years = profile.yearsToRetirement
             let adaptive = projections.adaptive.yearlyRetirementBalances(years: years)
             let current = projections.current.yearlyRetirementBalances(years: years)
-            let top = Double(max(adaptive.max() ?? 1, current.max() ?? 1, 1))
             if adaptive.count > 1, current.count > 1 {
-                ComparisonChart(adaptive: adaptive.map { Double($0) / top },
-                                current: current.map { Double($0) / top })
+                YearlyComparisonChart(series: [
+                    YearlySeries(name: "Current", values: current.map(Double.init), style: .baseline),
+                    YearlySeries(name: "Adaptive", values: adaptive.map(Double.init), style: .primary)
+                ] + (scenarioLine.map { [YearlySeries(name: "Your scenario", values: $0.map(Double.init),
+                                                      style: .scenario, dimmed: scenario?.isUpdating == true)] } ?? []))
             } else {
                 ComparisonChart()
             }
@@ -146,9 +225,17 @@ struct ScenarioControls: View {
     /// The scenario behind `result` (the one sent, or the saved preset's), so Scenario history
     /// can save that result's inputs.
     var resultScenario: Binding<API.Scenario?> = .constant(nil)
+    /// True from the first edit until the recalculated result (or an error) arrives.
+    var isUpdating: Binding<Bool> = .constant(false)
+    /// Why the controls' scenario has no result (no live server, or the server failed), for the chart.
+    var unavailableNote: Binding<String?> = .constant(nil)
     @State private var comparedDraft: ScenarioDraft?
     @State private var status: String?
+    @State private var failed = false
     @State private var compareTask: Task<Void, Never>?
+
+    /// Wait for the steppers to settle before asking the server, so a run of taps sends one request.
+    private static let settleDelay: Duration = .milliseconds(600)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -213,21 +300,33 @@ struct ScenarioControls: View {
                 .transition(.opacity)
             }
 
-            Button(action: compare) {
-                HStack(spacing: Space.s) {
-                    if compareTask != nil {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Image(systemName: "square.split.2x1")
+            if isEdited || failed {
+                HStack(spacing: Space.m) {
+                    if failed {
+                        Button("Try again") { schedule(draft, after: .zero) }
+                            .font(.geist(15, .medium, relativeTo: .callout))
+                            .foregroundStyle(Palette.accent)
+                            .buttonStyle(PressableStyle())
+                            .frame(minHeight: 44)
                     }
-                    Text("Compare scenario")
+                    Spacer(minLength: 0)
+                    if isEdited {
+                        Button {
+                            apply(.original)
+                        } label: {
+                            Label("Reset to plan", systemImage: "arrow.uturn.backward")
+                                .font(.geist(15, .medium, relativeTo: .callout))
+                        }
+                        .foregroundStyle(Palette.accent)
+                        .buttonStyle(PressableStyle())
+                        .frame(minHeight: 44)
+                    }
                 }
+                .padding(.top, 14)
+                .transition(.opacity)
             }
-                .buttonStyle(PrimaryButtonStyle())
-                .disabled(compareTask != nil)
-                .padding(.top, 22)
 
-            if comparedDraft != nil, let status {
+            if let status {
                 Text(status)
                     .font(.geist(12, .regular, relativeTo: .caption))
                     .foregroundStyle(Palette.textCaption)
@@ -266,66 +365,96 @@ struct ScenarioControls: View {
         .animation(Motion.reveal, value: draft.policy)
         .animation(Motion.reveal, value: comparedDraft)
         .sensoryFeedback(.selection, trigger: draft)
-        .sensoryFeedback(trigger: comparedDraft) { _, new in new != nil ? .impact(weight: .medium) : nil }
+        .sensoryFeedback(trigger: result?.inputHash) { _, new in new != nil ? .impact(weight: .medium) : nil }
         .onChange(of: draft) { _, new in
-            if new.requestShape != comparedDraft?.requestShape {
-                compareTask?.cancel()
-                compareTask = nil
-                comparedDraft = nil
-                status = nil
-                result = nil
+            guard new.requestShape != comparedDraft?.requestShape else { return }
+            if new.requestShape == ScenarioDraft.original(for: profile).requestShape {
+                // Back to the plan: the chart's own lines already show it.
+                clear()
+                return
             }
+            // Presets resolve instantly (saved or live); stepper edits wait to settle.
+            schedule(new, after: new.preset == nil ? Self.settleDelay : .zero)
         }
-        .onDisappear { compareTask?.cancel() }
+        .animation(Motion.reveal, value: isEdited)
+        .animation(Motion.reveal, value: failed)
+        // No cancel on disappear: switching tabs mid-calculation used to leave nothing on
+        // return (REPORT A7). The request finishes and the result is there when you come back.
+    }
+
+    private var isEdited: Bool {
+        draft.requestShape != ScenarioDraft.original(for: profile).requestShape
+    }
+
+    /// Drops any scenario: the draft is the plan again.
+    private func clear() {
+        compareTask?.cancel()
+        compareTask = nil
+        comparedDraft = nil
+        status = nil
+        failed = false
+        result = nil
+        unavailableNote.wrappedValue = nil
+        isUpdating.wrappedValue = false
+    }
+
+    /// Recalculates `compared` after `delay`, replacing any pending or in-flight request. The
+    /// previous result stays on screen, marked as updating, until the new one arrives.
+    private func schedule(_ compared: ScenarioDraft, after delay: Duration) {
+        compareTask?.cancel()
+        comparedDraft = compared
+        failed = false
+        unavailableNote.wrappedValue = nil
+        isUpdating.wrappedValue = true
+        compareTask = Task {
+            if delay > .zero {
+                try? await Task.sleep(for: delay)
+                guard !Task.isCancelled else { return }
+            }
+            await compare(compared)
+            guard !Task.isCancelled, comparedDraft?.requestShape == compared.requestShape else { return }
+            compareTask = nil
+            isUpdating.wrappedValue = false
+        }
     }
 
     /// Exact saved preset when offline; otherwise a live `/v1/evaluate` with the draft as scenario.
-    private func compare() {
-        let compared = draft
-        comparedDraft = compared
-        result = nil
-        guard compared.requestShape != ScenarioDraft.original(for: profile).requestShape else {
-            status = "This is the saved plan. The chart already shows it."
-            return
+    private func compare(_ compared: ScenarioDraft) async {
+        func current() -> Bool { !Task.isCancelled && comparedDraft?.requestShape == compared.requestShape }
+        func show(saved preset: DemoPreset, _ message: String) -> Bool {
+            guard let saved = store.savedEvaluation(for: profile.id, preset: preset) else { return false }
+            result = saved.evaluation
+            resultScenario.wrappedValue = store.savedArtifact(for: profile.id, preset: preset)?.scenario
+            status = message
+            return true
         }
         if !store.isLiveEnabled {
-            if let preset = compared.preset?.demoPreset,
-               let saved = store.savedEvaluation(for: profile.id, preset: preset) {
-                result = saved.evaluation
-                resultScenario.wrappedValue = store.savedArtifact(for: profile.id, preset: preset)?.scenario
-                status = "Saved calculation for this preset."
-            } else {
-                status = "Reconnect for a custom scenario. Saved presets still work offline."
-            }
+            if let preset = compared.preset?.demoPreset, show(saved: preset, "Saved calculation for this preset.") { return }
+            result = nil
+            unavailableNote.wrappedValue = "needs the live server to calculate"
+            status = "No live server is set, so only the saved presets below can be shown. Add the server's address in Modeling assumptions to calculate your own scenario."
             return
         }
-        status = nil
-        let scenario = API.Scenario(retirementAge: compared.retirementAge,
-                                    employeeContributionRate: compared.policy == .fixed ? compared.fixedRate / 100 : nil)
-        compareTask = Task {
-            defer { if comparedDraft?.requestShape == compared.requestShape { compareTask = nil } }
-            do {
-                let loaded = try await store.evaluateScenario(scenario)
-                guard !Task.isCancelled, comparedDraft?.requestShape == compared.requestShape else { return }
-                result = loaded.evaluation
-                resultScenario.wrappedValue = scenario
-                status = loaded.evaluation.projections.custom?.feasible == false
-                    ? "This scenario can't be funded as entered. See the outcomes below."
-                    : "Live calculation for this scenario."
-            } catch {
-                guard !Task.isCancelled, comparedDraft?.requestShape == compared.requestShape else { return }
-                // A transport failure shouldn't hide a saved preset the draft matches:
-                // show it and say so, instead of an error that suggests retrying (A3).
-                if Self.isTransport(error),
-                   let preset = compared.preset?.demoPreset,
-                   let saved = store.savedEvaluation(for: profile.id, preset: preset) {
-                    result = saved.evaluation
-                    resultScenario.wrappedValue = store.savedArtifact(for: profile.id, preset: preset)?.scenario
-                    status = "Offline. Showing the saved calculation for this preset."
-                } else {
-                    status = Self.message(for: error)
-                }
-            }
+        let scenario = compared.apiScenario
+        do {
+            let loaded = try await store.evaluateScenario(scenario)
+            guard current() else { return }
+            result = loaded.evaluation
+            resultScenario.wrappedValue = scenario
+            status = loaded.evaluation.projections.custom?.feasible == false
+                ? "This scenario can't be funded as entered. See the outcomes below."
+                : "Live calculation · updates as you change the controls."
+        } catch {
+            guard current() else { return }
+            // A transport failure shouldn't hide a saved preset the draft matches:
+            // show it and say so, instead of an error that suggests retrying (A3).
+            if Self.isTransport(error), let preset = compared.preset?.demoPreset,
+               show(saved: preset, "Offline. Showing the saved calculation for this preset.") { return }
+            // The old line no longer matches the controls, so it goes.
+            result = nil
+            failed = true
+            unavailableNote.wrappedValue = Self.isTransport(error) ? "couldn't reach the server" : "couldn't be calculated"
+            status = Self.message(for: error)
         }
     }
 
@@ -493,11 +622,18 @@ struct OutcomeRows: View {
                 .padding(.top, 16)
         }
         .sensoryFeedback(.selection, trigger: expanded)
+        // The first scenario result opens the balance row, so the comparison is visible
+        // without hunting for it.
+        .onChange(of: custom?.inputHash) { old, new in
+            if old == nil, new != nil { withAnimation(Motion.reveal) { _ = expanded.insert("Retirement-account balance") } }
+        }
     }
 
     /// Current, Adaptive and (when compared) the custom scenario, straight from the response.
     private var strategies: [(String, API.Projection)] {
-        guard let evaluation else { return [] }
+        // The scenario response carries the plan's Current and Adaptive too, so rows still
+        // fill in if the base plan failed to load but the scenario succeeded (REPORT A7).
+        guard let evaluation = evaluation ?? custom else { return [] }
         var list = [("Current", evaluation.projections.current), ("Adaptive", evaluation.projections.adaptive)]
         if let scenario = custom?.projections.custom { list.append(("Your scenario", scenario)) }
         return list
