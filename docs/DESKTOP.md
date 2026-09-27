@@ -20,6 +20,8 @@ The Vite dev server forwards `/api/*` to the backend, so the backend needs no CO
 $env:BACKEND_URL="https://coral-sandbox-apron.ngrok-free.dev"; npm run dev
 ```
 
+If the backend sets `DEMO_KEY`, set the same value in the desktop env so the Vite proxy can add `X-Demo-Key`. The key stays on the proxy and is not bundled into the browser.
+
 ## Data
 
 - **Saved results** show immediately: Eric's bundle in `ios/AdaptiveRetirement/Resources/Demo/` when it exists, otherwise the real engine responses in `contracts/examples/`.

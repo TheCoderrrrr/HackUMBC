@@ -72,7 +72,9 @@ export function Chat({ open, onClose }: { open: boolean; onClose: () => void }) 
         setDraft(message);
         setError(failure instanceof APIError && failure.kind === "server"
           ? failure.body?.message ?? "The learning assistant could not answer right now."
-          : "Could not reach the learning assistant. Check the backend and try again.");
+          : failure instanceof APIError && failure.kind === "timedOut"
+            ? "The learning assistant took too long. Try again."
+            : "Could not reach the learning assistant. Check the backend and try again.");
       }
     } finally {
       if (active.current === controller) active.current = null;

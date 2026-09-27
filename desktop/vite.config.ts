@@ -17,7 +17,10 @@ export default defineConfig(({ mode }) => {
           target,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ""),
-          headers: { "ngrok-skip-browser-warning": "1" },
+          headers: {
+            "ngrok-skip-browser-warning": "1",
+            ...(env.DEMO_KEY ? { "X-Demo-Key": env.DEMO_KEY } : {}),
+          },
         },
       },
     },
@@ -27,7 +30,10 @@ export default defineConfig(({ mode }) => {
           target,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ""),
-          headers: { "ngrok-skip-browser-warning": "1" },
+          headers: {
+            "ngrok-skip-browser-warning": "1",
+            ...(env.DEMO_KEY ? { "X-Demo-Key": env.DEMO_KEY } : {}),
+          },
         },
       },
     },

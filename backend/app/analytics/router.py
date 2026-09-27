@@ -9,6 +9,7 @@ from app.analytics import service
 from app.analytics.models import Comparison, HistoryStatus, RunList, SaveRunRequest, SaveRunResponse
 from app.analytics.store import HistoryStore, HistoryUnavailable
 from app.errors import ApiError
+from app.limits import client_key
 from app.schemas import ErrorEnvelope
 
 router = APIRouter(prefix="/v1/history", tags=["history"])
@@ -45,7 +46,7 @@ def status(request: Request) -> HistoryStatus:
 @router.post("/runs", response_model=SaveRunResponse, status_code=201, responses=_ERRORS)
 def save_run(body: SaveRunRequest, request: Request, response: Response) -> SaveRunResponse:
     store = _store(request)
-    if not request.app.state.evaluate_limiter.allow():
+    if not request.app.state.evaluate_limiter.allow(client_key(request)):
         raise ApiError(429, "RATE_LIMITED", "Too many requests. Try again in a minute.", retryable=True)
     record = service.build_run(body.profile_id, body.scenario, body.decision_summary, body.input_hash)
     try:
