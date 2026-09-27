@@ -20,23 +20,40 @@ struct IntroFlow: View {
     private var slide: IntroSlide { store.introSlide }
     private var profile: Profile { store.displayProfile }
 
+    /// Progress bar plus the gap above slide content.
+    static let chromeHeight: CGFloat = 44 + Space.s + Space.xl
+
     var body: some View {
-        VStack(spacing: 0) {
-            progressBar
-
+        GeometryReader { proxy in
+            let topInset = proxy.safeAreaInsets.top
             ZStack(alignment: .top) {
-                slideContent
-                    .id(slide)
-                    .transition(transition)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .contentShape(Rectangle())
-            .gesture(swipe)
-            .padding(.top, Space.xl)
+                // The opening chart runs up behind the progress bar and fades into the page.
+                if slide == .autopilot {
+                    GlidePathBackdrop(plotTop: topInset + Self.chromeHeight)
+                        .frame(height: topInset + Self.chromeHeight + AutopilotSlide.chartHeight)
+                        .offset(y: -topInset)
+                        .allowsHitTesting(false)
+                        .transition(.opacity.animation(Motion.select))
+                }
 
-            actions
+                VStack(spacing: 0) {
+                    progressBar
+
+                    ZStack(alignment: .top) {
+                        slideContent
+                            .id(slide)
+                            .transition(transition)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .contentShape(Rectangle())
+                    .gesture(swipe)
+                    .padding(.top, Space.xl)
+
+                    actions
+                }
+                .padding(.horizontal, SetupStyle.gutter)
+            }
         }
-        .padding(.horizontal, SetupStyle.gutter)
         .sensoryFeedback(trigger: slide) { old, new in
             .impact(weight: new > old ? .medium : .light)
         }
@@ -206,10 +223,26 @@ struct IntroFacts {
 
 // MARK: - 1 · Autopilot
 
-/// The opening slide leads with the chart: no icon disc, no flame field behind it.
+/// The glide path is drawn by `IntroFlow` behind the progress bar; this slide reserves
+/// its space and sets the copy underneath.
 private struct AutopilotSlide: View {
+    static let chartHeight: CGFloat = 260
+
     var body: some View {
         VStack(spacing: 0) {
+            Color.clear.frame(height: Self.chartHeight)
+
+            HStack {
+                Text("Age 25 · 90% stocks")
+                Spacer(minLength: 0)
+                Text("Age 65 · 50%")
+            }
+            .font(.geist(12, .regular, relativeTo: .caption))
+            .foregroundStyle(Palette.textCaption)
+            .padding(.top, Space.s)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Illustrative glide path: 90% stocks at age 25, easing to 50% at 65.")
+
             VStack(spacing: Space.s) {
                 Text("Your 401(k) runs on one number.")
                     .font(SetupStyle.heading)
@@ -223,17 +256,26 @@ private struct AutopilotSlide: View {
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity)
+            .padding(.top, Space.xl)
 
-            GlidePathVisual()
-                .frame(maxHeight: .infinity)
-                .padding(.top, Space.xxl)
-                .padding(.bottom, Space.xl)
+            Text("As retirement nears, it shifts from stocks to bonds.\nNothing else about you changes the plan.")
+                .font(SetupStyle.rowDetail)
+                .foregroundStyle(SetupStyle.secondaryText)
+                .multilineTextAlignment(.center)
+                .lineSpacing(2)
+                .padding(.top, Space.l)
+
+            Spacer(minLength: 0)
         }
     }
 }
 
-/// Stocks vs bonds from age 25 to 65 along the illustrative glide path, swept in left to right.
-private struct GlidePathVisual: View {
+/// Full-bleed stocks vs bonds from age 25 to 65 along the illustrative glide path.
+/// 100% sits at `plotTop`; the bonds band continues above it and fades into the page,
+/// so the chart dissolves into the status bar and progress indicator. Sweeps in left to right.
+private struct GlidePathBackdrop: View {
+    let plotTop: CGFloat
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var revealed = false
 
@@ -243,68 +285,46 @@ private struct GlidePathVisual: View {
     private let glide = ModelAssumptions.illustrative.glidePath
 
     var body: some View {
-        let equity = samples()
-        VStack(spacing: Space.l) {
-            HStack(alignment: .bottom) {
-                endpoint(equity.first ?? 0.9, caption: "stocks at \(Self.startAge)", alignment: .leading)
-                Spacer(minLength: Space.m)
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 17, weight: .regular))
-                    .foregroundStyle(Palette.textCaption)
-                    .padding(.bottom, 24)
-                Spacer(minLength: Space.m)
-                endpoint(equity.last ?? 0.5, caption: "stocks at \(Self.endAge)", alignment: .trailing)
-            }
-
-            GeometryReader { geo in
-                let size = geo.size
-                ZStack(alignment: .topLeading) {
-                    area(equity, in: size, top: true)
-                        .fill(LinearGradient(colors: [Palette.blue.opacity(0.42), Palette.blue.opacity(0.16)],
-                                             startPoint: .top, endPoint: .bottom))
-                    area(equity, in: size, top: false)
-                        .fill(LinearGradient(colors: [Self.green.opacity(0.62), Self.green.opacity(0.22)],
-                                             startPoint: .top, endPoint: .bottom))
-                        .fillGrain()
-                    ForEach([0.25, 0.5, 0.75], id: \.self) { level in
-                        Rectangle()
-                            .fill(Color.white.opacity(0.07))
-                            .frame(height: 1)
-                            .offset(y: size.height * (1 - level))
-                    }
-                    line(equity, in: size)
-                        .stroke(Palette.accent, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
-
-                    bandLabel("Bonds")
-                        .padding(.horizontal, SetupStyle.gutter)
-                        .padding(.vertical, Space.l)
-                        .frame(width: size.width, alignment: .topTrailing)
-                    bandLabel("Stocks")
-                        .padding(.horizontal, SetupStyle.gutter)
-                        .padding(.vertical, Space.l)
-                        .frame(width: size.width, height: size.height, alignment: .bottomLeading)
+        GeometryReader { geo in
+            let size = geo.size
+            let equity = samples()
+            let fadeEnd = min(max(plotTop / max(size.height, 1), 0.05), 0.95)
+            ZStack(alignment: .topLeading) {
+                area(equity, in: size, top: true)
+                    .fill(Palette.blue.opacity(0.34))
+                area(equity, in: size, top: false)
+                    .fill(LinearGradient(colors: [Self.green.opacity(0.55), Self.green.opacity(0.18)],
+                                         startPoint: .top, endPoint: .bottom))
+                    .fillGrain()
+                ForEach([0.25, 0.5, 0.75], id: \.self) { level in
+                    Rectangle()
+                        .fill(Color.white.opacity(0.07))
+                        .frame(height: 1)
+                        .offset(y: y(level, size))
                 }
-                .mask(alignment: .leading) {
-                    Rectangle().frame(width: revealed ? size.width : 0)
-                }
-            }
-            .frame(minHeight: 220)
-            // Full bleed: the chart runs past the setup gutter to the screen edges.
-            .padding(.horizontal, -SetupStyle.gutter)
+                line(equity, in: size)
+                    .stroke(Palette.accent, style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
 
-            // The axis spans the same full width as the chart so ages sit under their years.
-            HStack {
-                ForEach(Array(stride(from: Self.startAge, through: Self.endAge, by: 10).enumerated()), id: \.offset) { index, age in
-                    if index > 0 { Spacer(minLength: 0) }
-                    Text(index == 0 ? "Age \(age)" : "\(age)")
-                }
+                label("Bonds", color: Palette.blue)
+                    .padding(.horizontal, SetupStyle.gutter)
+                    .frame(width: size.width, alignment: .trailing)
+                    .offset(y: plotTop + Space.m)
+                label("Stocks", color: Palette.accent)
+                    .padding(.horizontal, SetupStyle.gutter)
+                    .padding(.bottom, Space.l)
+                    .frame(width: size.width, height: size.height, alignment: .bottomLeading)
             }
-            .font(.numeral(12, .regular, relativeTo: .caption))
-            .foregroundStyle(Palette.textCaption)
-            .padding(.horizontal, Space.s - SetupStyle.gutter)
+            .mask(alignment: .leading) {
+                Rectangle().frame(width: revealed ? size.width : 0)
+            }
+            .mask {
+                LinearGradient(stops: [.init(color: .clear, location: 0),
+                                       .init(color: .black.opacity(0.35), location: fadeEnd * 0.6),
+                                       .init(color: .black, location: fadeEnd)],
+                               startPoint: .top, endPoint: .bottom)
+            }
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Illustrative glide path: 90% stocks at age 25, easing to 50% at 65.")
+        .accessibilityHidden(true)
         .onAppear {
             withAnimation(reduceMotion ? nil : .timingCurve(0.65, 0, 0.35, 1, duration: 1.4).delay(0.2)) {
                 revealed = true
@@ -312,22 +332,17 @@ private struct GlidePathVisual: View {
         }
     }
 
-    private func endpoint(_ weight: Double, caption: String, alignment: HorizontalAlignment) -> some View {
-        VStack(alignment: alignment, spacing: 2) {
-            Text(weight.formatted(.percent.precision(.fractionLength(0))))
-                .font(.numeral(48, .light, relativeTo: .largeTitle))
-                .tracking(-1.2)
-                .foregroundStyle(Palette.accent)
-            Text(caption)
+    private func label(_ text: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Circle().fill(color).frame(width: 6, height: 6)
+            Text(text)
                 .font(.geist(13, .medium, relativeTo: .footnote))
-                .foregroundStyle(SetupStyle.secondaryText)
+                .foregroundStyle(Palette.textPrimary.opacity(0.9))
         }
     }
 
-    private func bandLabel(_ text: String) -> some View {
-        Text(text)
-            .font(.geist(15, .medium, relativeTo: .subheadline))
-            .foregroundStyle(Palette.textPrimary)
+    private func y(_ value: Double, _ size: CGSize) -> CGFloat {
+        plotTop + (size.height - plotTop) * CGFloat(1 - value)
     }
 
     /// Equity weight at each age, interpolated between glide-path anchors.
@@ -345,20 +360,16 @@ private struct GlidePathVisual: View {
         }
     }
 
-    private func point(_ i: Int, _ values: [Double], _ size: CGSize) -> CGPoint {
-        CGPoint(x: size.width * CGFloat(i) / CGFloat(max(values.count - 1, 1)),
-                y: size.height * CGFloat(1 - values[i]))
-    }
-
     private func line(_ values: [Double], in size: CGSize) -> Path {
         Path { p in
             for i in values.indices {
-                if i == 0 { p.move(to: point(i, values, size)) } else { p.addLine(to: point(i, values, size)) }
+                let point = CGPoint(x: size.width * CGFloat(i) / CGFloat(max(values.count - 1, 1)), y: y(values[i], size))
+                if i == 0 { p.move(to: point) } else { p.addLine(to: point) }
             }
         }
     }
 
-    /// The band above (bonds) or below (stocks) the equity line.
+    /// The band above (bonds, up to the top edge) or below (stocks) the equity line.
     private func area(_ values: [Double], in size: CGSize, top: Bool) -> Path {
         var p = line(values, in: size)
         let edge: CGFloat = top ? 0 : size.height
