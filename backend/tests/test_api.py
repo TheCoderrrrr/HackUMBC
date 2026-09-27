@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from app.schemas import Evaluation
 
 from .conftest import FakeModel, make_client
@@ -31,6 +33,24 @@ def test_demo_profiles_are_the_three_fixtures():
     morgan = body["profiles"][1]
     assert morgan["annual_gross_salary_cents"] == 8400000
     assert morgan["debts"][0]["apr"] == 0.25
+
+
+def test_chunked_body_over_the_limit_is_rejected(morgan):
+    # REPORT C8: a chunked request has no Content-Length to check, so the read is capped.
+    def stream():
+        yield b"x" * (129 * 1024)
+
+    res = make_client().post("/v1/evaluate", content=stream(),
+                             headers={"content-type": "application/json"})
+    assert res.status_code == 413
+    assert res.json()["error"]["code"] == "PAYLOAD_TOO_LARGE"
+
+
+def test_chunked_body_under_the_limit_passes(morgan):
+    payload = json.dumps({"profile": morgan}).encode()
+    res = make_client().post("/v1/evaluate", content=iter([payload]),
+                             headers={"content-type": "application/json"})
+    assert res.status_code == 200
 
 
 def test_evaluate_returns_full_contract(morgan):

@@ -48,6 +48,15 @@ def create_app(settings: Settings | None = None, model: StructuredModel | None =
         length = request.headers.get("content-length")
         if length and length.isdigit() and int(length) > settings.max_body_bytes:
             return envelope(413, "PAYLOAD_TOO_LARGE", "Request body is larger than 128 KiB.")
+        if request.method in ("POST", "PUT", "PATCH") and not (length and length.isdigit()):
+            # A chunked request carries no Content-Length and would skip the limit, so
+            # cap the read (REPORT C8). Starlette hands the buffered body to the route.
+            body = bytearray()
+            async for chunk in request.stream():
+                body.extend(chunk)
+                if len(body) > settings.max_body_bytes:
+                    return envelope(413, "PAYLOAD_TOO_LARGE", "Request body is larger than 128 KiB.")
+            request._body = bytes(body)
         started = time.perf_counter()
         try:
             response = await call_next(request)
