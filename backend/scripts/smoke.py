@@ -47,6 +47,9 @@ def main() -> int:
         print(f"  FAIL  server unreachable: {exc}")
         return 1
     check(status == 200 and health.get("status") == "ok", "GET /health", f"{ms}ms {health}")
+    if health.get("ai_available") is not True:
+        print("  WARN  /health says ai_available is not true: live AI is off, every decision "
+              "will be rules_fallback (check AI_PROVIDER and the provider key in backend/.env)")
 
     status, body, ms = call(base, "/v1/demo-profiles")
     profiles = {p["id"]: p for p in body.get("profiles", [])}

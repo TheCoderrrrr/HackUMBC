@@ -18,7 +18,9 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 THINKING_LEVELS = {"minimal", "low", "medium", "high"}
 REASONING_EFFORTS = {"none", "minimal", "low", "medium", "high"}
 PROVIDERS = {"openai", "gemini"}
-DEFAULT_MODELS = {"openai": "gpt-6-luna", "gemini": "gemini-3.5-flash-lite"}  # team decision: OpenAI
+# Team decision (REPORT C1): Gemini is the default provider — both AI calls fit the
+# 4-second budget. OpenAI/GPT-6 Luna only fits with AI_REASONING_EFFORT=none.
+DEFAULT_MODELS = {"openai": "gpt-6-luna", "gemini": "gemini-3.5-flash-lite"}
 IOS_TIMEOUT_SECONDS = 8.0
 
 
@@ -33,8 +35,8 @@ class ConfigError(SystemExit):
 class Settings:
     app_env: str = "hackathon"
     ai_enabled: bool = True
-    ai_provider: str = "openai"
-    ai_model: str = "gpt-6-luna"
+    ai_provider: str = "gemini"
+    ai_model: str = "gemini-3.5-flash-lite"
     openai_api_key: str | None = None
     ai_reasoning_effort: str | None = "low"      # OpenAI reasoning models
     gemini_api_key: str | None = None
@@ -91,7 +93,7 @@ def load_settings() -> Settings:
     thinking = _str("AI_THINKING_LEVEL", "minimal").lower()  # empty -> default; "none" disables
     if thinking not in THINKING_LEVELS | {"none"}:
         raise ConfigError(f"AI_THINKING_LEVEL={thinking!r} must be one of {sorted(THINKING_LEVELS)} or none")
-    provider = _str("AI_PROVIDER", "openai").lower()
+    provider = _str("AI_PROVIDER", "gemini").lower()
     if provider not in PROVIDERS:
         raise ConfigError(f"AI_PROVIDER={provider!r} must be one of {sorted(PROVIDERS)}")
     model = _str("AI_MODEL", DEFAULT_MODELS[provider])

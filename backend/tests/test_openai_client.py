@@ -124,14 +124,15 @@ def settings_env(monkeypatch, **env):
     return load_settings()
 
 
-def test_default_provider_is_openai_gpt_6_luna(monkeypatch):
+def test_default_provider_is_gemini_flash_lite(monkeypatch):
+    # Team decision (REPORT C1): Gemini by default — both AI calls fit the 4 s budget.
     s = settings_env(monkeypatch)
-    assert (s.ai_provider, s.ai_model, s.ai_reasoning_effort) == ("openai", "gpt-6-luna", "low")
+    assert (s.ai_provider, s.ai_model, s.ai_thinking_level) == ("gemini", "gemini-3.5-flash-lite", "minimal")
 
 
-def test_gemini_provider_defaults_to_gemini_model(monkeypatch):
-    s = settings_env(monkeypatch, AI_PROVIDER="gemini")
-    assert s.ai_model == "gemini-3.5-flash-lite"
+def test_openai_provider_defaults_to_gpt_6_luna(monkeypatch):
+    s = settings_env(monkeypatch, AI_PROVIDER="openai")
+    assert (s.ai_model, s.ai_reasoning_effort) == ("gpt-6-luna", "low")
 
 
 def test_ai_available_checks_the_selected_providers_key(monkeypatch):

@@ -333,6 +333,7 @@ class Health(Strict):
     model_version: str
     policy_version: str
     plaid_enabled: bool
+    ai_available: bool
 
 
 class DemoProfiles(Strict):

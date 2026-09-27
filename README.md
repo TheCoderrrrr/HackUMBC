@@ -189,7 +189,7 @@ cd backend
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements-test.txt
-cp .env.example .env               # optional: add OPENAI_API_KEY (or GEMINI_API_KEY) for live AI
+cp .env.example .env               # optional: add GEMINI_API_KEY (or OPENAI_API_KEY) for live AI
 uvicorn app.main:app --port 8000
 ```
 
@@ -209,10 +209,10 @@ The app only talks to an HTTPS server, so the laptop's API is published through 
 
 ```bash
 cd backend && source .venv/bin/activate
-uvicorn app.main:app --host 127.0.0.1 --port 8000   # log: "AI enabled (provider=openai, model=gpt-6-luna)"
+uvicorn app.main:app --host 127.0.0.1 --port 8000   # log: "AI enabled (provider=gemini, model=gemini-3.5-flash-lite)"
 ```
 
-For live AI, put `OPENAI_API_KEY=...` in `backend/.env` (git-ignored; never in `.env.example`, which is committed).
+For live AI, put `GEMINI_API_KEY=...` in `backend/.env` (git-ignored; never in `.env.example`, which is committed).
 
 **2. Tunnel (terminal 2, once per machine: `brew install ngrok`)**
 
@@ -315,14 +315,11 @@ BACKEND.md · FRONTEND.md             full specifications
 
 What's still to build between Developer A (Neil) and Developer C (Eric). Everything else each side asked for is on `main` (see `what_we_needed/`).
 
-**Team decision:** the reasoning model is OpenAI **GPT-6 Luna** (`gpt-6-luna`), with Structured Outputs. Tier 1 allows 500 requests per minute, so the Gemini free-tier rate limits go away. Neil's PR #12 made it the default provider (`AI_PROVIDER=openai`); Gemini remains available with `AI_PROVIDER=gemini`.
+**Team decision (resolved):** the default provider is **Gemini 3.5 Flash-Lite** (`AI_PROVIDER=gemini`, `AI_THINKING_LEVEL=minimal`) — per the [⚡ Speed](#-speed) measurements, it is the option where **both** AI calls fit the 4-second budget. OpenAI GPT-6 Luna remains available (`AI_PROVIDER=openai`); with its default effort `low` every recommendation times out, so it only fits with `AI_REASONING_EFFORT=none`, and most explanations then fall back to templates. The budget stays at 4 s: raising it toward 7 s would push tunnel requests past the app's 8-second timeout (REPORT A6). `/health` now reports `ai_available`, and `smoke.py` warns when live AI is off.
 
 ### Neil (Developer A)
 
-1. **Team decision needed: GPT-6 Luna doesn't fit the 4-second budget** (see [⚡ Speed](#-speed)). With the default effort `low`, every recommendation times out and the demo runs on the rules fallback. Options:
-   - Set `AI_REASONING_EFFORT=none`. The AI decision fits, but most explanations fall back to the template.
-   - Switch the live demo to Gemini (`AI_PROVIDER=gemini`). Both calls fit, but the free tier rate-limits bursts.
-   - Raise the budget toward the config maximum of 7 s. iOS allows 8 s per request (`scripts/smoke.py`).
+1. **Put `GEMINI_API_KEY` on the one demo host** (the laptop from the A2 domain decision). The Gemini free tier rate-limits bursts (about 17 calls in 30 s), so avoid hammering it during rehearsal; the rules fallback is labeled and demo-safe.
 
 ### Eric (Developer C)
 

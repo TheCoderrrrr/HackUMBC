@@ -521,6 +521,9 @@ enum API {
         var modelVersion: String
         var policyVersion: String
         var plaidEnabled: Bool
+        /// Whether the server has credentials for its selected AI provider. Optional so
+        /// older servers without the field still decode.
+        var aiAvailable: Bool?
 
         enum CodingKeys: String, CodingKey {
             case status
@@ -528,6 +531,7 @@ enum API {
             case modelVersion = "model_version"
             case policyVersion = "policy_version"
             case plaidEnabled = "plaid_enabled"
+            case aiAvailable = "ai_available"
         }
     }
 

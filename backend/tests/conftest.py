@@ -75,7 +75,7 @@ def _preference_from(prompt: str) -> str:
 
 
 def make_client(model=None, **overrides) -> TestClient:
-    settings = Settings(ai_enabled=True, gemini_api_key=None, **overrides)
+    settings = Settings(**({"ai_enabled": True, "gemini_api_key": None} | overrides))
     return TestClient(create_app(settings, model=model))
 
 

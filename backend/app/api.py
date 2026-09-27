@@ -20,6 +20,7 @@ def health(request: Request) -> Health:
         model_version=engine.MODEL_VERSION,
         policy_version=engine.POLICY_VERSION,
         plaid_enabled=request.app.state.settings.plaid_enabled,
+        ai_available=request.app.state.settings.ai_available,
     )
 
 

@@ -8,7 +8,12 @@ from .conftest import FakeModel, make_client
 def test_health_reports_versions():
     body = make_client().get("/health").json()
     assert body == {"status": "ok", "schema_version": "1", "model_version": "1.0.0",
-                    "policy_version": "1.0.0", "plaid_enabled": False}
+                    "policy_version": "1.0.0", "plaid_enabled": False, "ai_available": False}
+
+
+def test_health_reports_ai_available_when_the_selected_provider_has_a_key():
+    body = make_client(gemini_api_key="g").get("/health").json()
+    assert body["ai_available"] is True
 
 
 def test_demo_profiles_are_the_three_fixtures():
