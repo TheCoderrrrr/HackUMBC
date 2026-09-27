@@ -4,6 +4,26 @@ import Foundation
 /// series in Tiger Data. The app sends a shown result's inputs, never its numbers: the
 /// server re-runs the engine and saves only if its `input_hash` matches.
 extension API {
+    /// A decision as the server accepts it back: every key written, nulls included. The server
+    /// requires `model_id` and `fallback_reason` even when null, and the synthesized
+    /// `DecisionSummary` encoding would omit them. Used by history saves and scenario reuse.
+    struct DecisionPayload: Encodable {
+        let summary: DecisionSummary
+        init(_ summary: DecisionSummary) { self.summary = summary }
+
+        func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: DecisionSummary.CodingKeys.self)
+            try c.encode(summary.decisionID, forKey: .decisionID)
+            try c.encode(summary.source, forKey: .source)
+            try c.encode(summary.modelID, forKey: .modelID)
+            try c.encode(summary.promptVersion, forKey: .promptVersion)
+            try c.encode(summary.orderedPriorities, forKey: .orderedPriorities)
+            try c.encode(summary.rationale, forKey: .rationale)
+            try c.encode(summary.constraintChecks, forKey: .constraintChecks)
+            try c.encode(summary.fallbackReason, forKey: .fallbackReason)
+        }
+    }
+
     enum History {
         struct Status: Decodable, Sendable {
             /// A database is configured on this server.
@@ -30,29 +50,10 @@ extension API {
                 var c = encoder.container(keyedBy: CodingKeys.self)
                 try c.encode(profileID, forKey: .profileID)
                 try c.encode(scenario, forKey: .scenario)
-                try c.encode(Decision(decisionSummary), forKey: .decisionSummary)
+                try c.encode(DecisionPayload(decisionSummary), forKey: .decisionSummary)
                 try c.encode(inputHash, forKey: .inputHash)
             }
 
-            /// The decision with every key written, nulls included. The server requires
-            /// `model_id` and `fallback_reason` to be present even when null, and the synthesized
-            /// `DecisionSummary` encoding would omit them.
-            private struct Decision: Encodable {
-                let summary: DecisionSummary
-                init(_ summary: DecisionSummary) { self.summary = summary }
-
-                func encode(to encoder: Encoder) throws {
-                    var c = encoder.container(keyedBy: DecisionSummary.CodingKeys.self)
-                    try c.encode(summary.decisionID, forKey: .decisionID)
-                    try c.encode(summary.source, forKey: .source)
-                    try c.encode(summary.modelID, forKey: .modelID)
-                    try c.encode(summary.promptVersion, forKey: .promptVersion)
-                    try c.encode(summary.orderedPriorities, forKey: .orderedPriorities)
-                    try c.encode(summary.rationale, forKey: .rationale)
-                    try c.encode(summary.constraintChecks, forKey: .constraintChecks)
-                    try c.encode(summary.fallbackReason, forKey: .fallbackReason)
-                }
-            }
         }
 
         struct RunSummary: Decodable, Hashable, Identifiable, Sendable {

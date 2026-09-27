@@ -55,7 +55,14 @@ struct ProjectionChart: View {
                 .chartOverlay { proxy in markerOverlay(proxy) }
             }
             .overlay { if selection != nil { scrubSurface } }
-            .sensoryFeedback(.selection, trigger: step)
+            // Throttled: a fast scrub crosses several years per frame, and iOS drops haptics
+            // above 32 Hz with a "rate-limit threshold" console warning.
+            .sensoryFeedback(.selection, trigger: tickedStep)
+            .onChange(of: step) { _, new in
+                guard Date.now.timeIntervalSince(lastTick) >= Self.minTickInterval else { return }
+                tickedStep = new
+                lastTick = .now
+            }
             .task(id: HoldKey(value: selection?.wrappedValue, touching: touching)) {
                 guard let selection, selection.wrappedValue != nil, !touching else { return }
                 try? await Task.sleep(for: selectionHold)
@@ -85,6 +92,10 @@ struct ProjectionChart: View {
         let value: Double?
         let touching: Bool
     }
+
+    @State private var tickedStep = -1
+    @State private var lastTick = Date.distantPast
+    private static let minTickInterval: TimeInterval = 1.0 / 25
 
     private var step: Int {
         guard selectionSteps > 0, let value = selection?.wrappedValue else { return -1 }

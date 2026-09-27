@@ -356,6 +356,7 @@ python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\
 pip install -r requirements-test.txt
 cp .env.example .env     # optional: GEMINI_API_KEY for live AI, TIGER_DATABASE_URL for saved plans
 uvicorn app.main:app --port 8000
+ngrok http --url=unsheathe-chemicals-truth.ngrok-free.dev 8000
 
 # Desktop (second terminal)
 cd desktop && npm install && npm run dev                # http://localhost:5173

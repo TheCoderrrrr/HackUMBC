@@ -1,0 +1,187 @@
+diff --git a/backend/app/ai/pipeline.py b/backend/app/ai/pipeline.py
+index 17cb16c..4fbd6d8 100644
+--- a/backend/app/ai/pipeline.py
++++ b/backend/app/ai/pipeline.py
+@@ -143,12 +143,14 @@ class EvaluationPipeline:
+             deadline=self.clock() + self.settings.ai_total_timeout_seconds,
+             warnings=[],
+         )
+-        decision = self._decide(req)
++        reused = self._reuse(req, request.reuse_decision)
++        decision = reused or self._decide(req)
+         core = engine.evaluate(req.profile, request.scenario, decision)  # C's evaluator; 422 if infeasible
+         previous = self._previous(req, request.previous_decision_id)
+         current_fields = snapshot_fields(req.profile, core, decision)
+         changes = diff(previous.fields, current_fields) if previous else []
+-        explanation = self._explanation(req, core, decision, changes, initial=previous is None)
++        explanation = (engine.template_explanation(req.profile, req.state, core, decision, changes) if reused
++                       else self._explanation(req, core, decision, changes, initial=previous is None))
+         self.store.put(decision.decision_id, DecisionSnapshot(req.profile.id, profile_hash(req.profile), current_fields))
+         return Evaluation(
+             **core.model_dump(exclude={"warnings"}), warnings=core.warnings + req.warnings,
+@@ -157,6 +159,24 @@ class EvaluationPipeline:
+ 
+     # --- steps -----------------------------------------------------------------------
+ 
++    def _reuse(self, req: _Request, decision: DecisionSummary | None) -> DecisionSummary | None:
++        """The plan's decision re-checked by the engine's validator, with no AI call; None when
++        absent or it no longer validates for this profile (the normal path then runs)."""
++        if decision is None:
++            return None
++        proposal = None
++        if decision.source == "ai":
++            proposal = RecommendationProposal(model_id=decision.model_id or "",
++                                              ordered_priorities=list(decision.ordered_priorities),
++                                              rationale=decision.rationale)
++        checked = engine.validate_decision(req.profile, req.state, proposal,
++                                           prompt_version=decision.prompt_version,
++                                           fallback_reason=decision.fallback_reason)
++        if checked.source != decision.source or checked.ordered_priorities != decision.ordered_priorities:
++            log.info("reuse_decision rejected: it no longer validates for this profile")
++            return None
++        return checked
++
+     def _decide(self, req: _Request) -> DecisionSummary:
+         proposal, reason = None, None
+         if engine.blocking_issue(req.profile, req.state):
+diff --git a/backend/app/schemas.py b/backend/app/schemas.py
+index 54a4c4d..fd78f98 100644
+--- a/backend/app/schemas.py
++++ b/backend/app/schemas.py
+@@ -140,6 +140,9 @@ class EvaluateRequest(Strict):
+     profile: FinancialProfile
+     scenario: Scenario | None = None
+     previous_decision_id: str | None = Field(default=None, max_length=128)
++    # Scenario fast path: the plan's already-validated decision. When it re-validates for this
++    # profile, the AI steps are skipped and the scenario reuses the plan's priority order.
++    reuse_decision: DecisionSummary | None = None
+     # scenario.retirement_age > profile.age is checked in api.evaluate so the error
+     # can point at "scenario.retirement_age".
+ 
+diff --git a/backend/tests/test_scenario_fast_path.py b/backend/tests/test_scenario_fast_path.py
+new file mode 100644
+index 0000000..97f858f
+--- /dev/null
++++ b/backend/tests/test_scenario_fast_path.py
+@@ -0,0 +1,55 @@
++"""Scenario fast path: `reuse_decision` skips the AI steps and reproduces a full evaluation."""
++from __future__ import annotations
++
++import copy
++
++from .conftest import FakeModel, make_client
++
++
++def _plan_and_model(morgan):
++    model = FakeModel()
++    client = make_client(model, openai_api_key="x", evaluations_per_minute=1000)
++    plan = client.post("/v1/evaluate", json={"profile": morgan}).json()
++    assert plan["decision_summary"]["source"] == "ai"
++    return client, model, plan
++
++
++def test_reused_decision_skips_the_ai_and_matches_a_full_evaluation(morgan):
++    client, model, plan = _plan_and_model(morgan)
++    scenario = {"retirement_age": 69, "employee_contribution_rate": None}
++    calls_before = len(model.calls)
++
++    fast = client.post("/v1/evaluate", json={"profile": morgan, "scenario": scenario,
++                                             "reuse_decision": plan["decision_summary"]})
++    assert fast.status_code == 200
++    assert len(model.calls) == calls_before, "no recommendation or explanation call"
++    fast = fast.json()
++    assert fast["explanation"]["source"] == "template"
++    assert fast["decision_summary"]["source"] == "ai"
++    assert fast["decision_summary"]["ordered_priorities"] == plan["decision_summary"]["ordered_priorities"]
++
++    full = client.post("/v1/evaluate", json={"profile": morgan, "scenario": scenario}).json()
++    assert fast["input_hash"] == full["input_hash"]
++    assert fast["projections"] == full["projections"]
++
++
++def test_rules_fallback_decision_is_reusable(morgan):
++    client = make_client(None, evaluations_per_minute=1000)
++    plan = client.post("/v1/evaluate", json={"profile": morgan}).json()
++    assert plan["decision_summary"]["source"] == "rules_fallback"
++    fast = client.post("/v1/evaluate", json={"profile": morgan, "scenario": {"retirement_age": 69},
++                                             "reuse_decision": plan["decision_summary"]})
++    assert fast.status_code == 200
++    assert fast.json()["decision_summary"]["fallback_reason"] == plan["decision_summary"]["fallback_reason"]
++
++
++def test_a_decision_that_no_longer_validates_takes_the_normal_path(morgan):
++    client, model, plan = _plan_and_model(morgan)
++    tampered = copy.deepcopy(plan["decision_summary"])
++    tampered["ordered_priorities"] = ["full_reserve", "starter_reserve", "high_apr_debt"]  # not a documented order
++    calls_before = len(model.calls)
++    r = client.post("/v1/evaluate", json={"profile": morgan, "scenario": {"retirement_age": 69},
++                                          "reuse_decision": tampered})
++    assert r.status_code == 200
++    assert len(model.calls) > calls_before, "fell back to asking the model"
++    assert r.json()["decision_summary"]["ordered_priorities"] != tampered["ordered_priorities"]
+diff --git a/contracts/openapi.json b/contracts/openapi.json
+index ec74499..a652780 100644
+--- a/contracts/openapi.json
++++ b/contracts/openapi.json
+@@ -1377,6 +1377,16 @@
+               }
+             ],
+             "title": "Previous Decision Id"
++          },
++          "reuse_decision": {
++            "anyOf": [
++              {
++                "$ref": "#/components/schemas/DecisionSummary"
++              },
++              {
++                "type": "null"
++              }
++            ]
+           }
+         },
+         "additionalProperties": false,
+diff --git a/ios/AdaptiveRetirement/App/AppStore.swift b/ios/AdaptiveRetirement/App/AppStore.swift
+index 5548d8a..0559362 100644
+--- a/ios/AdaptiveRetirement/App/AppStore.swift
++++ b/ios/AdaptiveRetirement/App/AppStore.swift
+@@ -269,8 +269,12 @@ final class AppStore: ObservableObject {
+         let profileID = profile.id
+         let apiProfile = try await apiProfile(for: profileID, client: client)
+         let previousID = lastLiveDecision?.profileID == profileID ? lastLiveDecision?.decisionID : nil
++        // Reuse the plan's decision so each what-if is engine-only (no AI call, same priority
++        // order as the plan on screen). The server re-validates it and falls back if it fails.
++        let plan = evaluationLoad.current?.evaluation
+         let evaluation = try await client.evaluate(
+-            API.EvaluateRequest(profile: apiProfile, scenario: scenario, previousDecisionID: previousID)
++            API.EvaluateRequest(profile: apiProfile, scenario: scenario, previousDecisionID: previousID,
++                                reuseDecision: plan?.profileID == profileID ? plan?.decisionSummary : nil)
+         )
+         // Scenario decisions deliberately stay out of lastLiveDecision: the next base
+         // refresh must diff against the base plan's decision, not a scenario's (REPORT E1).
+diff --git a/ios/AdaptiveRetirement/Models/APIContract.swift b/ios/AdaptiveRetirement/Models/APIContract.swift
+index e905bc2..274351d 100644
+--- a/ios/AdaptiveRetirement/Models/APIContract.swift
++++ b/ios/AdaptiveRetirement/Models/APIContract.swift
+@@ -205,10 +205,14 @@ enum API {
+         var profile: FinancialProfile
+         var scenario: Scenario?
+         var previousDecisionID: String?
++        /// Scenario fast path: the plan's decision, so the server skips the AI steps. Sent only
++        /// when set, so servers without the field still accept every other request.
++        var reuseDecision: DecisionSummary? = nil
+ 
+         enum CodingKeys: String, CodingKey {
+             case profile, scenario
+             case previousDecisionID = "previous_decision_id"
++            case reuseDecision = "reuse_decision"
+         }
+ 
+         func encode(to encoder: Encoder) throws {
+@@ -216,6 +220,7 @@ enum API {
+             try c.encode(profile, forKey: .profile)
+             try c.encode(scenario, forKey: .scenario)
+             try c.encode(previousDecisionID, forKey: .previousDecisionID)
++            if let reuseDecision { try c.encode(DecisionPayload(reuseDecision), forKey: .reuseDecision) }
+         }
+     }
+ 
