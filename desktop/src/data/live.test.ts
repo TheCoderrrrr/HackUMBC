@@ -58,5 +58,35 @@ describe.skipIf(!API)("live backend", async () => {
     expect((await fetch(`${API}/v1/history/runs/${run.run_id}`, { method: "DELETE" })).status).toBe(204);
     expect((await fetch(`${API}/v1/history/runs/${run.run_id}`, { method: "DELETE" })).status).toBe(404);
   }, 30_000);
+
+  it("your numbers: preview, store under a key, reload, plan, private runs, erase", async () => {
+    const status = (await (await fetch(`${API}/v1/history/status`)).json()) as { enabled: boolean; available: boolean };
+    if (!status.enabled || !status.available) return;
+    const { formToInput, profileToForm } = await import("./numbers");
+    const { newProfileKey } = await import("./profileKey");
+    const input = formToInput({ ...profileToForm(profiles.find((p) => p.id === "morgan")!), name: "Live test" }).input!;
+    const key = newProfileKey(), stranger = newProfileKey();
+    const h = (k: string) => ({ "content-type": "application/json", "x-profile-key": k });
+
+    const preview = await post<{ preview: { emergency_months: number } }>("/v1/profiles/build", input);
+    expect(preview.preview.emergency_months).toBe(1);
+
+    expect((await fetch(`${API}/v1/profiles/me`, { method: "PUT", headers: h(key), body: JSON.stringify(input) })).status).toBe(200);
+    const stored = (await (await fetch(`${API}/v1/profiles/me`, { headers: h(key) })).json()) as { profile: FinancialProfile };
+    expect(stored.profile.source).toBe("manual");
+    expect((await fetch(`${API}/v1/profiles/me`, { headers: h(stranger) })).status).toBe(404);
+
+    const evaluation = await post<Evaluation>("/v1/evaluate", { profile: stored.profile });
+    const saved = await fetch(`${API}/v1/history/runs`, { method: "POST", headers: h(key), body: JSON.stringify({
+      profile_id: "me", scenario: null, decision_summary: evaluation.decision_summary, input_hash: evaluation.input_hash }) });
+    expect(saved.status).toBe(201);
+    const list = async (k: string) => ((await (await fetch(`${API}/v1/history/runs?profile_id=me`, { headers: h(k) })).json()) as { runs: unknown[] }).runs;
+    expect(await list(key)).toHaveLength(1);
+    expect(await list(stranger)).toHaveLength(0);
+
+    expect((await fetch(`${API}/v1/profiles/me`, { method: "DELETE", headers: h(key) })).status).toBe(204);
+    expect((await fetch(`${API}/v1/profiles/me`, { headers: h(key) })).status).toBe(404);
+    expect(await list(key)).toHaveLength(0);
+  }, 60_000);
 });
 

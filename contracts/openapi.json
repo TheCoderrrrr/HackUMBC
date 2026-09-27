@@ -600,6 +600,16 @@
               }
             }
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -682,6 +692,16 @@
               }
             }
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -756,6 +776,16 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
           },
           "404": {
             "content": {
@@ -847,6 +877,16 @@
                 }
               }
             }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
           },
           "404": {
             "content": {
@@ -941,6 +981,301 @@
           },
           "429": {
             "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/profiles/build": {
+      "post": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Build",
+        "operationId": "build_v1_profiles_build_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileBuild"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/profiles/me": {
+      "get": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Load Mine",
+        "operationId": "load_mine_v1_profiles_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoredProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Save Mine",
+        "description": "Validates, builds and stores the user's numbers; returns the engine preview.",
+        "operationId": "save_mine_v1_profiles_me_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileBuild"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Erase Mine",
+        "description": "Erases the user's numbers and every plan they saved.",
+        "operationId": "erase_mine_v1_profiles_me_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1356,6 +1691,46 @@
           "minimum_payment_cents"
         ],
         "title": "Debt"
+      },
+      "DebtInput": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "credit_card",
+              "student_loan",
+              "other"
+            ],
+            "title": "Type"
+          },
+          "balance_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Balance Cents"
+          },
+          "apr": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Apr"
+          },
+          "minimum_payment_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Minimum Payment Cents"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "balance_cents",
+          "apr",
+          "minimum_payment_cents"
+        ],
+        "title": "DebtInput"
       },
       "DecisionSummary": {
         "properties": {
@@ -1882,7 +2257,8 @@
             "type": "string",
             "enum": [
               "demo",
-              "plaid_sandbox"
+              "plaid_sandbox",
+              "manual"
             ],
             "title": "Source"
           },
@@ -2828,6 +3204,52 @@
         ],
         "title": "HypotheticalScenario"
       },
+      "MatchInput": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "match",
+              "none",
+              "unknown"
+            ],
+            "title": "Kind"
+          },
+          "up_to_rate": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Up To Rate"
+          },
+          "match_per_dollar": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 2.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Per Dollar"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "MatchInput",
+        "description": "How the employer matches: \"match\" = `match_per_dollar` for each dollar up to `up_to_rate` of pay."
+      },
       "MatchTier": {
         "properties": {
           "employee_rate_from": {
@@ -3039,6 +3461,146 @@
           "profile"
         ],
         "title": "PlanStylesRequest"
+      },
+      "ProfileBuild": {
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/FinancialProfile"
+          },
+          "preview": {
+            "$ref": "#/components/schemas/FinancialState"
+          },
+          "blocking_issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocking Issue"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profile",
+          "preview",
+          "blocking_issue"
+        ],
+        "title": "ProfileBuild"
+      },
+      "ProfileInput": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "default": "You"
+          },
+          "age": {
+            "type": "integer",
+            "maximum": 75.0,
+            "minimum": 18.0,
+            "title": "Age"
+          },
+          "retirement_age": {
+            "type": "integer",
+            "maximum": 80.0,
+            "title": "Retirement Age"
+          },
+          "annual_gross_salary_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Annual Gross Salary Cents"
+          },
+          "monthly_take_home_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Monthly Take Home Cents"
+          },
+          "monthly_living_expenses_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Monthly Living Expenses Cents"
+          },
+          "employee_contribution_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Employee Contribution Rate"
+          },
+          "retirement_balance_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Retirement Balance Cents"
+          },
+          "emergency_cash_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Emergency Cash Cents"
+          },
+          "match": {
+            "$ref": "#/components/schemas/MatchInput"
+          },
+          "debts": {
+            "items": {
+              "$ref": "#/components/schemas/DebtInput"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Debts"
+          },
+          "contribution_tax_treatment": {
+            "type": "string",
+            "enum": [
+              "traditional",
+              "roth"
+            ],
+            "title": "Contribution Tax Treatment",
+            "default": "traditional"
+          },
+          "estimated_marginal_income_tax_rate": {
+            "type": "number",
+            "maximum": 0.5,
+            "minimum": 0.0,
+            "title": "Estimated Marginal Income Tax Rate",
+            "default": 0.22
+          },
+          "planning_preference": {
+            "type": "string",
+            "enum": [
+              "balanced",
+              "cash_security",
+              "debt_reduction"
+            ],
+            "title": "Planning Preference",
+            "default": "balanced"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "age",
+          "retirement_age",
+          "annual_gross_salary_cents",
+          "monthly_take_home_cents",
+          "monthly_living_expenses_cents",
+          "employee_contribution_rate",
+          "retirement_balance_cents",
+          "emergency_cash_cents",
+          "match"
+        ],
+        "title": "ProfileInput"
       },
       "Projection": {
         "properties": {
@@ -3777,6 +4339,24 @@
           "data_completeness"
         ],
         "title": "ScoreComponents"
+      },
+      "StoredProfile": {
+        "properties": {
+          "form": {
+            "$ref": "#/components/schemas/ProfileInput"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/FinancialProfile"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "form",
+          "profile"
+        ],
+        "title": "StoredProfile",
+        "description": "The user's saved numbers: the form as entered, and the profile built from it."
       },
       "StyleOutcome": {
         "properties": {

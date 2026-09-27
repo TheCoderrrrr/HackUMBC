@@ -72,7 +72,7 @@ def validate_profile(profile: Mapping[str, object]) -> None:
     _date(p.get("as_of_date"), "as_of_date")
     if p.get("currency") != "USD":
         _fail("currency", "only USD is supported")
-    if p.get("source") not in {"demo", "plaid_sandbox"}:
+    if p.get("source") not in {"demo", "plaid_sandbox", "manual"}:
         _fail("source", "unsupported source")
     age = _integer(p.get("age"), "age", 18, 75)
     retirement_age = _integer(p.get("retirement_age"), "retirement_age", 19, 80)

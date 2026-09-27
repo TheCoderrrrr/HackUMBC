@@ -23,7 +23,7 @@ export interface FinancialProfile {
   name: string;
   as_of_date: string;
   currency: "USD";
-  source: "demo" | "plaid_sandbox";
+  source: "demo" | "plaid_sandbox" | "manual";
   age: number;
   retirement_age: number;
   annual_gross_salary_cents: number;
@@ -259,3 +259,47 @@ export interface PlanStyles {
   styles: StyleOutcome[];
   method: string;
 }
+
+// The user's own numbers (/v1/profiles). The form sends ProfileInput; the server builds a full
+// FinancialProfile, previews the engine's financial state, and can store it under an anonymous key.
+export interface MatchInput {
+  kind: "match" | "none" | "unknown";
+  up_to_rate?: number | null;
+  match_per_dollar?: number | null;
+}
+
+export interface DebtInput {
+  type: "credit_card" | "student_loan" | "other";
+  balance_cents: number;
+  apr: number;
+  minimum_payment_cents: number;
+}
+
+export interface ProfileInput {
+  name?: string;
+  age: number;
+  retirement_age: number;
+  annual_gross_salary_cents: number;
+  monthly_take_home_cents: number;
+  monthly_living_expenses_cents: number;
+  employee_contribution_rate: number;
+  retirement_balance_cents: number;
+  emergency_cash_cents: number;
+  match: MatchInput;
+  debts?: DebtInput[];
+  contribution_tax_treatment?: "traditional" | "roth";
+  estimated_marginal_income_tax_rate?: number;
+  planning_preference?: PlanningPreference;
+}
+
+export interface ProfileBuild {
+  profile: FinancialProfile;
+  preview: FinancialState;
+  blocking_issue: string | null;
+}
+
+export interface StoredProfile {
+  form: ProfileInput;
+  profile: FinancialProfile;
+}
+
