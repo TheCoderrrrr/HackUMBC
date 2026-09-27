@@ -487,7 +487,7 @@ h1, h2, h3, p { margin: 0; }
   border-radius: 28px; padding: 0 0 28px; background: var(--sheet);
   box-shadow: inset 0 0 0 0.75px var(--hairline-strong), 0 40px 120px -20px rgba(0, 0, 0, 0.9);
 }
-.guide-progress { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; padding: 18px 20px 0; }
+.guide-progress { display: grid; gap: 6px; padding: 18px 20px 0; }
 .guide-progress i { height: 4px; border-radius: 2px; background: var(--hairline-strong); transition: background 0.3s var(--reveal); }
 .guide-progress i.on { background: var(--accent); }
 .guide-body { padding: 26px 36px 0; }
@@ -703,3 +703,63 @@ p.lesson-apply { padding-top: 16px; }
   .future-compare { justify-items: start; text-align: left; }
 }
 @media (prefers-reduced-motion: reduce) { .disclosure-chevron { transition: none; } }
+
+/* ---------- Navigation groups and page headers ---------- */
+.nav { gap: 14px; }
+.nav-group { display: flex; flex-direction: column; gap: 2px; }
+.nav-group-title { margin: 0 0 4px; }
+.page-desc { font-size: 14px; color: var(--caption); margin-top: 4px; font-weight: 400; }
+
+/* Explore: tabbed results; nested cards drop their own frame inside the tab panel */
+.explore-tabs { padding: 8px 8px 24px; }
+.explore-tabs .tab-panel > .stack > .section,
+.explore-tabs .tab-panel > .section,
+.explore-tabs .tab-panel > .glass { padding: 4px 0 0; background: none; border: 0; box-shadow: none; backdrop-filter: none; }
+.explore-tabs .tab-panel > .glass::before { display: none; }
+
+/* Getting started pages */
+.guide-agenda { list-style: none; display: grid; gap: 10px; margin-top: 20px; }
+.guide-agenda li { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--text); }
+.guide-agenda svg { color: var(--accent); flex: none; }
+.guide-order { list-style: none; counter-reset: order; display: grid; gap: 8px; margin-top: 18px; }
+.guide-order li {
+  counter-increment: order; display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 14px;
+  background: rgba(255, 255, 255, 0.025); box-shadow: inset 0 0 0 0.75px var(--hairline);
+}
+.guide-order li::before { content: counter(order); flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-size: 12px; font-weight: 600; color: var(--text-2); box-shadow: inset 0 0 0 1px var(--hairline-strong); }
+.guide-order li.yours { background: rgba(168, 230, 161, 0.07); box-shadow: inset 0 0 0 1px rgba(168, 230, 161, 0.45); }
+.guide-order li.yours::before { color: #101114; background: var(--accent); box-shadow: none; }
+.guide-order li .chip { margin-left: auto; }
+.guide-order-text { display: grid; gap: 2px; }
+.guide-order-text b { font-size: 15px; font-weight: 500; }
+.guide-ideas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 20px; }
+.guide-idea { padding: 18px; border-radius: 18px; background: rgba(255, 255, 255, 0.025); box-shadow: inset 0 0 0 0.75px var(--hairline); }
+.guide-tour { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+.guide-place { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.025); }
+.guide-place > span:last-child { display: grid; gap: 1px; }
+.guide-place b { font-size: 14.5px; font-weight: 500; }
+.term-demo { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; font-size: 10px; font-weight: 600; color: var(--caption); box-shadow: inset 0 0 0 1px var(--hairline-strong); vertical-align: 1px; }
+@media (max-width: 760px) { .guide-ideas, .guide-tour { grid-template-columns: 1fr; } }
+
+/* ---------- Interactive projection chart ---------- */
+.chart.pickable { cursor: crosshair; }
+.chart.with-axis { margin-left: 52px; width: calc(100% - 52px); }
+.chart-ytick { position: absolute; left: -52px; width: 46px; transform: translateY(-50%); text-align: right; font-size: 11px; color: var(--quiet); font-variant-numeric: tabular-nums; pointer-events: none; }
+.chart-goal-label { position: absolute; right: 0; transform: translateY(-130%); font-size: 11.5px; font-weight: 500; color: #f2c46d; background: rgba(16, 17, 20, 0.7); padding: 1px 6px; border-radius: 6px; pointer-events: none; }
+.chart-reach { position: absolute; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%; box-shadow: 0 0 0 2px #f2c46d, 0 0 0 5px rgba(16, 17, 20, 0.85); pointer-events: none; }
+.chart-marker-label { position: absolute; bottom: 4px; transform: translateX(-50%); font-size: 10.5px; color: var(--accent); opacity: 0.8; white-space: nowrap; pointer-events: none; }
+.gap-chip { padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.gap-chip.up { color: var(--accent); background: rgba(168, 230, 161, 0.12); }
+.gap-chip.down { color: #f0a58f; background: rgba(240, 165, 143, 0.12); }
+.goal-bar { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--hairline); display: grid; gap: 10px; }
+.goal-title { font-size: 13px; font-weight: 500; color: var(--text-2); }
+.goal-options { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.goal-options .pill { height: 32px; font-size: 13px; }
+.goal-custom { display: inline-flex; gap: 6px; }
+.goal-custom input { height: 32px; width: 170px; padding: 0 12px; border-radius: 10px; font: inherit; font-size: 13px; color: var(--text); background: var(--raised); border: 1px solid var(--hairline-strong); }
+.goal-custom input[aria-invalid="true"] { border-color: #f0a58f; }
+.goal-custom input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.goal-error { color: #f0a58f; }
+.goal-result { font-size: 14px; color: var(--text-2); line-height: 1.5; }
+.goal-result b { color: var(--text); font-weight: 500; }
+

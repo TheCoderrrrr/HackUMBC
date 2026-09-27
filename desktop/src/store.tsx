@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { APIError, api } from "./api/client";
 import type { Evaluation, FinancialProfile, Health, PlanningPreference, PlanStyles, Scenario } from "./api/types";
 import { buildDisplay, type DataMode, type Display } from "./data/display";
-import { savedEvaluation, savedProfiles, type Preset } from "./data/saved";
+import { loadSavedEvaluation, peekSavedEvaluation, savedProfiles, type Preset } from "./data/saved";
 
 export interface Loaded {
   evaluation: Evaluation;
@@ -43,7 +43,7 @@ interface Store {
   refresh: () => void;
   checkConnection: () => void;
   evaluateScenario: (scenario: Scenario) => Promise<Evaluation>;
-  savedPreset: (preset: Preset) => Evaluation | undefined;
+  savedPreset: (preset: Preset) => Promise<Evaluation | undefined>;
   /** The plan style applied to every evaluation of this profile. */
   style: PlanningPreference;
   /** True once the user picked (or skipped to) a style for this profile. */
@@ -198,16 +198,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     inflight.current?.abort();
     const id = profile.id;
 
-    const savedEval = savedEvaluation(id);
-    const saved: Loaded | undefined = savedEval ? { evaluation: savedEval, mode: "saved" } : undefined;
+    const asSaved = (evaluation?: Evaluation): Loaded | undefined => (evaluation ? { evaluation, mode: "saved" } : undefined);
     const live = lastLive.current.get(id);
-    const previous: Loaded | undefined = live ? { ...live, mode: "lastLive" } : saved;
+    const savedNow = asSaved(peekSavedEvaluation(id));
+    const previous: Loaded | undefined = live ? { ...live, mode: "lastLive" } : savedNow;
 
     if (!liveEnabled) {
-      setLoad(saved ? { status: "loaded", loaded: saved } : { status: "idle" });
+      if (savedNow) {
+        setLoad({ status: "loaded", loaded: savedNow });
+        return;
+      }
+      setLoad({ status: "loading" });
+      void loadSavedEvaluation(id).then((evaluation) => {
+        if (token !== generation.current) return;
+        const saved = asSaved(evaluation);
+        setLoad(saved ? { status: "loaded", loaded: saved } : { status: "idle" });
+      });
       return;
     }
     setLoad({ status: "loading", previous });
+    // The saved result (a separate chunk) fills in behind the live request the first time.
+    if (!previous) {
+      void loadSavedEvaluation(id).then((evaluation) => {
+        const saved = asSaved(evaluation);
+        if (token !== generation.current || !saved) return;
+        setLoad((cur) => (cur.status === "loading" || cur.status === "failed") && !cur.previous ? { ...cur, previous: saved } : cur);
+      });
+    }
 
     const controller = new AbortController();
     inflight.current = controller;
@@ -228,7 +245,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (error instanceof APIError && (error.kind === "unreachable" || error.kind === "timedOut")) {
           setConnection("offline");
         }
-        setLoad({ status: "failed", previous, error });
+        setLoad((cur) => ({ status: "failed", previous: cur.status === "loading" ? cur.previous ?? previous : previous, error }));
       });
   }, [profile, liveEnabled]);
 
@@ -277,7 +294,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     refresh,
     checkConnection,
     evaluateScenario,
-    savedPreset: (preset) => savedEvaluation(profile.id, preset),
+    savedPreset: (preset) => loadSavedEvaluation(profile.id, preset),
     style,
     styleChosen,
     setStyle,
