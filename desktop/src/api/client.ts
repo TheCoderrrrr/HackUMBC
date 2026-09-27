@@ -1,3 +1,4 @@
+import type { CatalogSummary, FundShortlistEnvelope, FundShortlistQuery } from "./funds";
 import type { ErrorBody, EvaluateRequest, Evaluation, FinancialProfile, Health } from "./types";
 
 /** Relative to the page; the Vite dev server forwards `/api/*` to the backend. */
@@ -84,6 +85,10 @@ export const api = {
     ),
   evaluate: (request: EvaluateRequest, signal?: AbortSignal) =>
     send<Evaluation>("/v1/evaluate", { method: "POST", body: JSON.stringify(request) }, EVALUATION_TIMEOUT_MS, signal),
+  fundCatalog: (signal?: AbortSignal) =>
+    send<CatalogSummary>("/v1/funds/catalog", { method: "GET" }, REQUEST_TIMEOUT_MS, signal),
+  fundShortlist: (query: FundShortlistQuery, signal?: AbortSignal) =>
+    send<FundShortlistEnvelope>("/v1/funds/shortlist", { method: "POST", body: JSON.stringify(query) }, REQUEST_TIMEOUT_MS, signal),
 };
 
 export function errorMessage(error: unknown): string {

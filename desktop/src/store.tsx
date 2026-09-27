@@ -15,7 +15,7 @@ export type Load =
   | { status: "loaded"; loaded: Loaded }
   | { status: "failed"; previous?: Loaded; error: unknown };
 
-export type Tab = "overview" | "plan" | "explore";
+export type Tab = "overview" | "plan" | "explore" | "funds";
 export type Drawer = "explanation" | "snapshot" | "assumptions" | null;
 export type Connection = "checking" | "online" | "offline" | "disabled";
 

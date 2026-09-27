@@ -157,11 +157,27 @@ h1, h2, h3, p { margin: 0; }
 .grid.overview { grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr); align-items: start; }
 .grid.plan { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .grid.explore { grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr); align-items: start; }
+.grid.funds { grid-template-columns: minmax(300px, 1fr) minmax(0, 1.7fr); align-items: start; }
 .stack { display: flex; flex-direction: column; gap: 28px; }
 @container (max-width: 860px) {
-  .grid.overview, .grid.plan, .grid.explore { grid-template-columns: 1fr; }
-  .grid.explore > .stack { position: static !important; }
+  .grid.overview, .grid.plan, .grid.explore, .grid.funds { grid-template-columns: 1fr; }
+  .grid.explore > .stack, .grid.funds > .stack { position: static !important; }
+  .fund-split { grid-template-columns: 1fr; }
 }
+
+.fund-menu { display: flex; flex-direction: column; gap: 2px; margin-top: 10px; padding: 6px; border-radius: 12px; background: var(--raised); }
+.check-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px; font-size: 13px; color: var(--text-2); cursor: pointer; }
+.check-row:hover { background: rgba(255, 255, 255, 0.04); color: var(--text); }
+.check-row input { accent-color: var(--accent-strong); width: 15px; height: 15px; }
+.fund-figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.fund-figures .caption { margin-top: 4px; }
+.fit-row { display: grid; grid-template-columns: minmax(0, 1fr) 120px auto; align-items: center; gap: 12px; min-height: 28px; }
+.fit-track { height: 5px; border-radius: 3px; background: var(--raised); overflow: hidden; }
+.fit-track i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+.fund-split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--hairline); }
+.fund-sources { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--hairline); }
+.fund-sources a { display: inline-flex; align-items: center; gap: 5px; }
+.fund-caveats { margin: 12px 0 0 16px; display: flex; flex-direction: column; gap: 3px; }
 
 /* ---------- Surfaces ---------- */
 

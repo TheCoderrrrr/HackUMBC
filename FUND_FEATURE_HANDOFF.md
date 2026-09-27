@@ -12,6 +12,18 @@ Read this alongside [FUND_SHORTLIST_PLAN.md](FUND_SHORTLIST_PLAN.md), [BACKEND.m
 
 All files named above, their tests, and `FUND_SHORTLIST_PLAN.md` are currently **untracked**. They exist in this workspace but will not appear in a fresh clone until committed and pushed. Check `git status --short` first. Never commit `backend/.env`, `.tools/`, the SEC ZIP, or generated SQLite/JSON data.
 
+## Progress on 2026-09-26
+
+Tasks 1–4 below have a first working pass; task 5 is covered in the desktop app.
+
+- **Verified catalog:** `backend/app/data/fund_catalog.json` (version `2026-09-26.1`) holds six Class K records from two issuers: BlackRock LifePath Index 2030/2035/2055/2060 and State Street Target Retirement 2030/2055. Each fee, allocation, glide-path, and return value cites its SEC filing, location, and date, and was checked against the rendered filing, not only the staging rows. It is a small reviewed file, not generated staging data.
+- **Adapter:** `backend/app/fund_catalog.py` validates records (the fee table must add up, allocation must be mostly classifiable, every citation must resolve), converts them to `FundFacts`, applies the gross fee once a waiver lapses, publishes atomically, and keeps serving the last valid snapshot if a refresh is bad.
+- **API:** `GET /v1/funds/catalog` and `POST /v1/funds/shortlist` in `backend/app/fund_api.py`. `/v1/evaluate` is unchanged; `contracts/openapi.json` only gained the new paths.
+- **UI:** the desktop app has a "Fund shortlist" tab. iOS has not been wired.
+- **Tests:** `backend/tests/test_fund_catalog.py`.
+
+**Holdings freshness:** allocations are as of 2026-06-30 and `MAX_HOLDINGS_AGE_DAYS` is 90, so every fund is excluded as `STALE_FACTS` from **2026-09-29**. Refresh from the next N-PORT or shareholder report, or deliberately change the policy, before then.
+
 ## Your next tasks, in order
 
 1. **Validate a small issuer/share-class set.** Start with a few target-date years and more than one issuer. For every candidate, confirm the exact SEC series/class ID, marketed class name, target year, fee meaning (gross versus net, waivers, acquired-fund fees), filing/effective date, and source URL against its original prospectus. The raw SEC `class` columns are blank in this archive; class IDs often appear in `otherdims` as `Class=C#########;`. Duplicate NUM composite keys can have different values. Do not pick a fee merely by tag name or first row.

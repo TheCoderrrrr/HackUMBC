@@ -1,6 +1,7 @@
 import { Avatar, Icon, LiveStatus, PROFILE_SUBTITLE } from "./components/ui";
 import { Drawers } from "./views/Drawers";
 import { Explore } from "./views/Explore";
+import { Funds } from "./views/Funds";
 import { Overview } from "./views/Overview";
 import { Plan } from "./views/Plan";
 import { errorMessage } from "./api/client";
@@ -10,6 +11,7 @@ const TABS: { id: Tab; title: string; icon: string }[] = [
   { id: "overview", title: "Overview", icon: "overview" },
   { id: "plan", title: "Your plan", icon: "plan" },
   { id: "explore", title: "Explore", icon: "explore" },
+  { id: "funds", title: "Fund shortlist", icon: "funds" },
 ];
 
 export function App() {
@@ -24,7 +26,7 @@ export function App() {
             <h1>{tab === "overview" ? profile.name : TABS.find((t) => t.id === tab)?.title}</h1>
             <div className="topbar-actions">
               <LiveStatus />
-              {display && (
+              {display && tab !== "funds" && (
                 <button className="pill neutral" onClick={() => setDrawer("explanation")}>
                   <Icon name="why" /> Why this plan?
                 </button>
@@ -32,13 +34,14 @@ export function App() {
             </div>
           </header>
 
-          {load.status === "failed" && display && (
+          {load.status === "failed" && display && tab !== "funds" && (
             <div className="banner fade-in">
               <span>{errorMessage(load.error)} Showing the {load.previous?.mode === "lastLive" ? "last live" : "saved"} result.</span>
             </div>
           )}
 
-          {!display && <EmptyState />}
+          {tab === "funds" && <Funds />}
+          {!display && tab !== "funds" && <EmptyState />}
           {display && tab === "overview" && <Overview display={display} />}
           {display && tab === "plan" && <Plan display={display} />}
           {display && tab === "explore" && <Explore display={display} />}
