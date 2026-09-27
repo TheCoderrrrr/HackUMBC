@@ -1,4 +1,4 @@
-# Adaptive Retirement — Frontend Implementation Handoff
+# Adaptive Retirement Management (ARM) — Frontend Implementation Handoff
 
 **Audience:** Developers 1 and 2.  
 **Build window:** 24 hours.  

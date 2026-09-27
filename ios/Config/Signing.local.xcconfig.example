@@ -1,0 +1,9 @@
+// Copy to Signing.local.xcconfig (git-ignored) to sign with your own Apple ID.
+//
+// DEVELOPMENT_TEAM: Xcode > Settings > Accounts > your Apple ID > Team ID column,
+//   or the 10-character ID shown in developer.apple.com > Membership.
+// BUNDLE_ID_SUFFIX: anything unique to you, starting with a dot. Apple lets each
+//   bundle ID belong to one team, so the shared one can't be registered to yours.
+
+DEVELOPMENT_TEAM = YOURTEAMID
+BUNDLE_ID_SUFFIX = .yourname

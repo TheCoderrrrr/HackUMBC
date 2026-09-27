@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Adaptive Retirement API",
+    "title": "Adaptive Retirement Management (ARM) API",
     "version": "1.0.0"
   },
   "paths": {
@@ -482,6 +482,281 @@
           }
         }
       }
+    },
+    "/v1/history/status": {
+      "get": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Status",
+        "operationId": "status_v1_history_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/history/runs": {
+      "post": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Save Run",
+        "operationId": "save_run_v1_history_runs_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveRunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveRunResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "history"
+        ],
+        "summary": "List Runs",
+        "operationId": "list_runs_v1_history_runs_get",
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunList"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/history/compare": {
+      "get": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Compare",
+        "operationId": "compare_v1_history_compare_get",
+        "parameters": [
+          {
+            "name": "base",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Base"
+            }
+          },
+          {
+            "name": "other",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Other"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comparison"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -694,6 +969,108 @@
           "after"
         ],
         "title": "Change"
+      },
+      "Comparison": {
+        "properties": {
+          "profile_id": {
+            "type": "string",
+            "title": "Profile Id"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "base": {
+            "$ref": "#/components/schemas/RunSummary"
+          },
+          "other": {
+            "$ref": "#/components/schemas/RunSummary"
+          },
+          "years": {
+            "items": {
+              "$ref": "#/components/schemas/ComparisonYear"
+            },
+            "type": "array",
+            "title": "Years"
+          },
+          "horizons": {
+            "items": {
+              "$ref": "#/components/schemas/Horizon"
+            },
+            "type": "array",
+            "title": "Horizons"
+          },
+          "source": {
+            "type": "string",
+            "const": "tiger_data",
+            "title": "Source"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profile_id",
+          "as_of_date",
+          "base",
+          "other",
+          "years",
+          "horizons",
+          "source",
+          "method"
+        ],
+        "title": "Comparison"
+      },
+      "ComparisonYear": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "month": {
+            "type": "integer",
+            "title": "Month"
+          },
+          "projected_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Projected On"
+          },
+          "base": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YearValues"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "other": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YearValues"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "year",
+          "month",
+          "projected_on",
+          "base",
+          "other"
+        ],
+        "title": "ComparisonYear"
       },
       "ConstraintCheck": {
         "properties": {
@@ -2023,6 +2400,72 @@
         ],
         "title": "HistoricalReturn"
       },
+      "HistoryStatus": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "enabled",
+          "available"
+        ],
+        "title": "HistoryStatus"
+      },
+      "Horizon": {
+        "properties": {
+          "years": {
+            "type": "integer",
+            "title": "Years"
+          },
+          "month": {
+            "type": "integer",
+            "title": "Month"
+          },
+          "projected_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Projected On"
+          },
+          "base": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YearValues"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "other": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YearValues"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "years",
+          "month",
+          "projected_on",
+          "base",
+          "other"
+        ],
+        "title": "Horizon"
+      },
       "HypotheticalScenario": {
         "properties": {
           "label": {
@@ -2703,6 +3146,196 @@
         ],
         "title": "ReportedCategory"
       },
+      "RunList": {
+        "properties": {
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/RunSummary"
+            },
+            "type": "array",
+            "title": "Runs"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "runs"
+        ],
+        "title": "RunList"
+      },
+      "RunSummary": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "profile_id": {
+            "type": "string",
+            "title": "Profile Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Scenario"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "primary_strategy": {
+            "type": "string",
+            "enum": [
+              "current",
+              "adaptive",
+              "custom"
+            ],
+            "title": "Primary Strategy"
+          },
+          "retirement_age": {
+            "type": "integer",
+            "title": "Retirement Age"
+          },
+          "final_retirement_balance_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": -10000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Retirement Balance Cents"
+          },
+          "decision_source": {
+            "type": "string",
+            "enum": [
+              "ai",
+              "rules_fallback"
+            ],
+            "title": "Decision Source"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "prompt_version": {
+            "type": "string",
+            "title": "Prompt Version"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "policy_version": {
+            "type": "string",
+            "title": "Policy Version"
+          },
+          "input_hash": {
+            "type": "string",
+            "title": "Input Hash"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run_id",
+          "profile_id",
+          "label",
+          "created_at",
+          "as_of_date",
+          "scenario",
+          "primary_strategy",
+          "retirement_age",
+          "final_retirement_balance_cents",
+          "decision_source",
+          "model_id",
+          "prompt_version",
+          "model_version",
+          "policy_version",
+          "input_hash"
+        ],
+        "title": "RunSummary"
+      },
+      "SaveRunRequest": {
+        "properties": {
+          "profile_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Profile Id"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Scenario"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "decision_summary": {
+            "$ref": "#/components/schemas/DecisionSummary"
+          },
+          "input_hash": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Input Hash"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profile_id",
+          "decision_summary",
+          "input_hash"
+        ],
+        "title": "SaveRunRequest",
+        "description": "What the app saves: the inputs of a result it is showing, never its numbers.\n\nThe server re-runs the engine from these inputs and stores only its own output.\n`input_hash` must match the recomputed hash, which proves the stored run is the\nresult the user saw."
+      },
+      "SaveRunResponse": {
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/RunSummary"
+          },
+          "created": {
+            "type": "boolean",
+            "title": "Created"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run",
+          "created"
+        ],
+        "title": "SaveRunResponse"
+      },
       "Scenario": {
         "properties": {
           "retirement_age": {
@@ -2758,6 +3391,36 @@
           "data_completeness"
         ],
         "title": "ScoreComponents"
+      },
+      "YearValues": {
+        "properties": {
+          "retirement_balance_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Retirement Balance Cents"
+          },
+          "cash_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Cash Cents"
+          },
+          "debt_cents": {
+            "type": "integer",
+            "maximum": 10000000000000.0,
+            "minimum": -10000000000000.0,
+            "title": "Debt Cents"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "retirement_balance_cents",
+          "cash_cents",
+          "debt_cents"
+        ],
+        "title": "YearValues"
       }
     }
   }
