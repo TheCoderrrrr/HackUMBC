@@ -897,19 +897,25 @@ pip install -r requirements.txt
 uvicorn app.main:app --host 127.0.0.1 --port 8000
 ~~~
 
-Separate terminal sessions:
+One command (API + tunnel + keep-awake), from `backend/`:
 
 ~~~bash
-cloudflared tunnel --url http://localhost:8000
+scripts/serve_demo.sh your-team.ngrok-free.dev
+~~~
+
+Or separate terminal sessions:
+
+~~~bash
+ngrok http --url=your-team.ngrok-free.dev 8000
 ~~~
 
 ~~~bash
 caffeinate -i
 ~~~
 
-Install cloudflared from its official instructions before rehearsal. Enter the printed HTTPS URL in iOS settings. A tunnel restart can change it; no app rebuild should be needed.
+Install ngrok (`brew install ngrok`) and claim one fixed free domain per event before rehearsal; see `backend/RUNBOOK.md`. The domain goes in the host's git-ignored `ios/Config/Signing.local.xcconfig` as `SERVER_BASE_URL`, and is never committed. A fixed domain survives restarts, so no app rebuild is needed.
 
-Quick Tunnels expose the Mac's local service without moving FastAPI to a cloud instance. There is no uptime guarantee. [Cloudflare Quick Tunnels](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/)
+An ngrok tunnel exposes the Mac's local service without moving FastAPI to a cloud instance. There is no uptime guarantee on the free tier. [ngrok docs](https://ngrok.com/docs)
 
 Judging: Mac powered, lid open, server/tunnel running without reload, phone health check completed, cellular tested, hotspot available. A second Mac may keep the same checkout/dependencies as a manual backup; do not build failover infrastructure.
 

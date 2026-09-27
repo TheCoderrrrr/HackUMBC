@@ -30,6 +30,8 @@ Recommended `.env` for the demo:
 AI_MODEL=gemini-3.5-flash-lite
 AI_THINKING_LEVEL=minimal
 AI_TOTAL_TIMEOUT_SECONDS=4
+DEMO_KEY=<pick a shared string>   # /v1/* then requires X-Demo-Key; put the same
+                                  # value in the host's Signing.local.xcconfig
 ```
 
 A bad value stops startup with one line, for example

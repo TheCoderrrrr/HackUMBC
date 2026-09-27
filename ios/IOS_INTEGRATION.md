@@ -99,16 +99,15 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --host 127.0.0.1 --port 8000
 
-# second terminal (brew install cloudflared)
-cloudflared tunnel --url http://localhost:8000
-# prints https://<name>.trycloudflare.com
-python scripts/smoke.py https://<name>.trycloudflare.com
+# second terminal (brew install ngrok; one fixed free domain per event)
+ngrok http --url=your-team.ngrok-free.dev 8000
+python scripts/smoke.py https://your-team.ngrok-free.dev
 ```
 
 Then give the app the tunnel URL in either of these ways:
 
-- In Xcode, open Scheme > Run > Arguments and add `-serverBaseURL https://<name>.trycloudflare.com`.
-- Use the settings field from step 2.
+- At build time: `SERVER_BASE_URL = https:/$()/your-team.ngrok-free.dev` in `ios/Config/Signing.local.xcconfig` (git-ignored).
+- At run time: the settings field from step 2, or Scheme > Run > Arguments `-serverBaseURL https://your-team.ngrok-free.dev`.
 
 `http://localhost` is deliberately rejected, so always use the tunnel.
 
@@ -116,8 +115,9 @@ To check it worked, select Morgan and confirm `store.dataMode == .live` and that
 
 ## 7. Still waiting on others
 
-- **Eric (Developer C):** the offline bundle for `Resources/Demo/`. Until it's added, `DemoRepository` reports `bundleMissing` and the app falls back to `DemoData`.
+- ~~**Eric (Developer C):** the offline bundle~~ — done: `Resources/Demo/` is committed and kept in sync by `test_ios_bundle_matches_the_generated_export`.
 - **Gemini key:** goes only in the git-ignored `backend/.env`. No iOS changes are needed; decisions just switch from `rules` to `ai`.
+- **Demo key (optional):** if the server sets `DEMO_KEY`, put the same value in `Signing.local.xcconfig` as `DEMO_KEY`; the app sends it as `X-Demo-Key`.
 
 Questions about the contract or engine: ask Kevin. Questions about the bundle: ask Eric.
 
