@@ -294,6 +294,7 @@ function RunRow({ run, open, onOpen, onDeleted, onError }: {
           <span className="caption">
             {run.final_retirement_balance_cents !== null && <><span className="num strong">{money(run.final_retirement_balance_cents)}</span> at {run.retirement_age} · </>}
             saved {savedAt(run)} · {sourceLabel(run)}
+            {run.fund_name && <> · {run.fund_name} (catalog {run.catalog_version})</>}
           </span>
         </span>
         <span className="run-open-cta">{open ? "Open" : <>Open <Icon name="chevron" size={12} /></>}</span>
@@ -316,4 +317,3 @@ function RunRow({ run, open, onOpen, onDeleted, onError }: {
 function keyFor(profileID: string): string | null {
   return isPersonal(profileID) ? peekProfileKey() : null;
 }
-

@@ -1,8 +1,8 @@
 {
   "status": "ok",
   "schema_version": "1",
-  "model_version": "1.0.0",
-  "policy_version": "1.0.0",
+  "model_version": "2.0.0",
+  "policy_version": "2.0.0",
   "plaid_enabled": false,
   "ai_available": false
 }

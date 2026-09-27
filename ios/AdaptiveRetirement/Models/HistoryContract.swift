@@ -38,12 +38,14 @@ extension API {
             var scenario: Scenario?
             var decisionSummary: DecisionSummary
             var inputHash: String
+            var planningPreference: PlanningPreference? = nil
 
             enum CodingKeys: String, CodingKey {
                 case scenario
                 case profileID = "profile_id"
                 case decisionSummary = "decision_summary"
                 case inputHash = "input_hash"
+                case planningPreference = "planning_preference"
             }
 
             func encode(to encoder: Encoder) throws {
@@ -52,6 +54,7 @@ extension API {
                 try c.encode(scenario, forKey: .scenario)
                 try c.encode(DecisionPayload(decisionSummary), forKey: .decisionSummary)
                 try c.encode(inputHash, forKey: .inputHash)
+                try c.encode(planningPreference, forKey: .planningPreference)
             }
 
         }
@@ -71,6 +74,10 @@ extension API {
             var decisionSource: String
             var modelVersion: String
             var policyVersion: String
+            var fundID: String?
+            var fundName: String?
+            var catalogVersion: String?
+            var glidePathMode: String?
 
             var isAIDecision: Bool { decisionSource == "ai" }
 
@@ -85,6 +92,8 @@ extension API {
                 case decisionSource = "decision_source"
                 case modelVersion = "model_version"
                 case policyVersion = "policy_version"
+                case fundID = "fund_id", fundName = "fund_name", catalogVersion = "catalog_version"
+                case glidePathMode = "glide_path_mode"
             }
         }
 

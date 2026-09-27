@@ -13,6 +13,24 @@ struct PlanView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                Button {
+                    store.openStyleGuide()
+                } label: {
+                    HStack {
+                        Label("Plan style: \(store.planStyle.label)", systemImage: "slider.horizontal.3")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                    }
+                    .font(TypeScale.labelMedium)
+                    .foregroundStyle(Palette.accent)
+                    .frame(minHeight: 48)
+                }
+                if store.planStyle != store.savedPlanStyle && (store.dataMode == .saved || store.dataMode == .preview) {
+                    Text("Showing the saved \(store.savedPlanStyle.label) calculation. Connect for a \(store.planStyle.label) result.")
+                        .font(TypeScale.caption)
+                        .foregroundStyle(Palette.textSecondary)
+                        .padding(.bottom, Space.l)
+                }
                 contributions
                 divider
                 cashPriorities
@@ -24,6 +42,8 @@ struct PlanView: View {
                 emergency
                 divider
                 allocation
+                divider
+                fundAndRules
             }
             .padding(.horizontal, Space.xl)
             .padding(.top, Space.l)
@@ -49,6 +69,10 @@ struct PlanView: View {
     private var divider: some View {
         Hairline(color: Palette.hairlineStrong)
             .padding(.vertical, Space.xl)
+    }
+
+    private var fundAndRules: some View {
+        FundAndRulesSection(evaluation: store.evaluationLoad.current?.evaluation)
     }
 
     // MARK: Retirement contributions

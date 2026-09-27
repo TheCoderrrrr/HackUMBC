@@ -18,6 +18,7 @@ class DecisionSnapshot:
     profile_id: str
     profile_hash: str
     fields: dict[str, Scalar]
+    decision: DecisionSummary | None = None
     stored_at: float = field(default=0.0)
 
 
@@ -56,7 +57,7 @@ class DecisionStore:
     def put(self, decision_id: str, snapshot: DecisionSnapshot) -> None:
         with self._lock:
             self._items[decision_id] = DecisionSnapshot(
-                snapshot.profile_id, snapshot.profile_hash, snapshot.fields, stored_at=self.clock()
+                snapshot.profile_id, snapshot.profile_hash, snapshot.fields, snapshot.decision, stored_at=self.clock()
             )
             while len(self._items) > self.max_entries:
                 self._items.popitem(last=False)

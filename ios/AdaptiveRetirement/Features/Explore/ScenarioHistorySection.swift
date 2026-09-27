@@ -75,7 +75,8 @@ struct ScenarioHistorySection: View {
             Spacer(minLength: Space.s)
             Button {
                 guard let toSave else { return }
-                Task { await model.save(evaluation: toSave.evaluation, scenario: toSave.scenario, client: store.apiClient) }
+                Task { await model.save(evaluation: toSave.evaluation, scenario: toSave.scenario,
+                                        planningPreference: store.planStyle, client: store.apiClient) }
             } label: {
                 HStack(spacing: 6) {
                     if model.isSaving {
@@ -123,7 +124,8 @@ struct ScenarioHistorySection: View {
                 .frame(width: 70, alignment: .leading)
             Picker(title, selection: selection) {
                 ForEach(model.runs.filter { $0.runID != excluding }) { run in
-                    Text("\(run.label) · saved \(FundCopy.savedAt(run.createdAt))").tag(Optional(run.runID))
+                    Text("\(run.label) · \(run.fundName ?? "generic fund model") · saved \(FundCopy.savedAt(run.createdAt))")
+                        .tag(Optional(run.runID))
                 }
             }
             .pickerStyle(.menu)

@@ -113,6 +113,16 @@ class AllocationFacts(_Strict):
 class GlidePath(_Strict):
     summary: str = Field(min_length=1)
     evidence: Evidence
+    anchors: list[tuple[float, float]] | None = None
+
+    @model_validator(mode="after")
+    def valid_anchors(self) -> "GlidePath":
+        if self.anchors is not None:
+            if len(self.anchors) < 2 or any(y < 0 or not 0 <= w <= 1 for y, w in self.anchors):
+                raise ValueError("glide-path anchors must be nonnegative years and equity fractions")
+            if len({y for y, _ in self.anchors}) != len(self.anchors):
+                raise ValueError("glide-path years must be unique")
+        return self
 
 
 class HistoricalReturnFacts(_Strict):

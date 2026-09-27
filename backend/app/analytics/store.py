@@ -143,12 +143,18 @@ def migrations(schema: str) -> list[str]:
 
 _SUMMARY_COLUMNS = ("run_id::text, profile_id, label, created_at, as_of_date, scenario, primary_strategy, "
                     "retirement_age, final_retirement_balance_cents, decision_source, model_id, prompt_version, "
-                    "model_version, policy_version, input_hash, planning_preference")
+                    "model_version, policy_version, input_hash, planning_preference, assumptions")
 
 
 def _summary(row) -> RunSummary:
     keys = [c.strip().removesuffix("::text") for c in _SUMMARY_COLUMNS.split(",")]
-    return RunSummary.model_validate(dict(zip(keys, row)))
+    values = dict(zip(keys, row))
+    assumptions = values.pop("assumptions") or {}
+    fund = assumptions.get("fund_model") or {}
+    values.update(fund_id=fund.get("fund_id"), fund_name=fund.get("fund_name"),
+                  catalog_version=fund.get("catalog_version"),
+                  glide_path_mode=fund.get("glide_path_mode"))
+    return RunSummary.model_validate(values)
 
 
 class TigerHistoryStore:
@@ -167,7 +173,10 @@ class TigerHistoryStore:
         if self._pool is None:
             with self._lock:
                 if self._pool is None:
-                    from psycopg_pool import ConnectionPool
+                    try:
+                        from psycopg_pool import ConnectionPool
+                    except ImportError as exc:
+                        raise HistoryUnavailable() from exc
 
                     self._pool = ConnectionPool(
                         self.url, min_size=0, max_size=4, max_idle=300, timeout=self.connect_timeout,
@@ -183,8 +192,12 @@ class TigerHistoryStore:
             self._pool = None
 
     def _with_connection(self, fn):
-        import psycopg
-        from psycopg_pool import PoolTimeout
+        try:
+            import psycopg
+            from psycopg_pool import PoolTimeout
+        except ImportError as exc:
+            log.warning("history database driver unavailable")
+            raise HistoryUnavailable() from exc
 
         try:
             with self._get_pool().connection() as conn:

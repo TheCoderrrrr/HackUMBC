@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 SCHEMA_VERSION = "1"
-MODEL_VERSION = "1.0.0"
-POLICY_VERSION = "1.0.0"
+MODEL_VERSION = "2.0.0"
+POLICY_VERSION = "2.0.0"
 
 MODEL_ASSUMPTIONS = {
     "annual_equity_return": 0.06,
@@ -20,6 +20,7 @@ MODEL_ASSUMPTIONS = {
     "starter_reserve_months": 1,
     "full_reserve_months": 3,
     "returns_net_of_fees": True,
+    "fund_model": None,
     "glide_path": [
         {"years_to_retirement": 30, "equity_weight": 0.90},
         {"years_to_retirement": 20, "equity_weight": 0.80},

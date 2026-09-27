@@ -4,7 +4,7 @@
       "decision_id": "dec_saved_casey",
       "expected_source": "ai",
       "model_id": "gpt-6-luna",
-      "profile_hash": "731e9915f7212ff6fccaeff90118d5f3bc9b3acd932c7ec9ec2de2981ed24ec0",
+      "profile_hash": "1427ed6a784aad58cf324bb94058c1caf8b0a5853925a9453ef179b6416280c0",
       "prompt_version": "2",
       "proposal": {
         "ordered_priorities": [
@@ -49,7 +49,7 @@
       "decision_id": "dec_saved_jordan",
       "expected_source": "ai",
       "model_id": "gpt-6-luna",
-      "profile_hash": "c49fb0f59dc7bf063a9107b52c8279a260fd39ef02bb73589d171e32e36702f2",
+      "profile_hash": "eb646ce3878f00bfbf7978bddf18937c5c3c242798a20ff1885f9bdc982ea271",
       "prompt_version": "2",
       "proposal": {
         "ordered_priorities": [
@@ -92,7 +92,7 @@
       "decision_id": "dec_saved_morgan",
       "expected_source": "ai",
       "model_id": "gpt-6-luna",
-      "profile_hash": "19ba5df435437d97f5888c25c01ca19ee2ca6b42b919e060b99eef3f498d7ffd",
+      "profile_hash": "755e977898dd61ae4464727a24f9b1b607c1935f8d22fe9c0d9c3d3b25d4ccf8",
       "prompt_version": "2",
       "proposal": {
         "ordered_priorities": [
@@ -138,7 +138,7 @@
       "decision_id": "dec_saved_morgan-cash-security",
       "expected_source": "ai",
       "model_id": "gpt-6-luna",
-      "profile_hash": "e40bc3ae0ea2fc1dd10e6fac20b3d3548dbcb0f8c5c1e2b8c1b4140b8bd888ca",
+      "profile_hash": "3eab5c204501f0da1d537e009329a49feccb075c35b701b3d2e85c23a3257caf",
       "prompt_version": "2",
       "proposal": {
         "ordered_priorities": [
@@ -182,7 +182,7 @@
     }
   },
   "explanations": {
-    "16364a58fa10802cfd03b5a45a10d9d96b25b173b7c4527d124c78cc06cd3efc": {
+    "1170244757b34bb40e618dbd98686b293214490924e2cb06a570d323c0332684": {
       "artifact": "jordan/original",
       "explanation": {
         "changes": [],
@@ -191,43 +191,7 @@
         "state_summary": "Your situation supports maintaining your contribution and debt minimum while keeping the balanced cash-priority order. Your starter and full reserves are funded, and you have no high-interest debt."
       }
     },
-    "1df4e5f5fdfd40c73b5da7980b4566c5ccb058b4416939dac47f3b5b6d01bf44": {
-      "artifact": "morgan/original",
-      "explanation": {
-        "changes": [],
-        "narrative": "With the starter cushion already in place, extra payments toward costly debt take priority, while building the larger cash reserve comes afterward; this means delaying that larger cushion while the debt remains a competing priority. The plan also includes a contribution action to capture the full employer match, using a simplified tax estimate. The investment allocation is an illustrative target-date curve and was not changed.",
-        "source": "ai",
-        "state_summary": "Your situation includes a starter cash cushion that has reached its target, costly debt, and an unfunded larger reserve. Your initial plan places the starter cushion as the anchor, then prioritizes costly debt before building the larger reserve."
-      }
-    },
-    "2a5e4ab786d4e07aa494b74e7fc09c47d01f30c43e0fc72787adabc6bd68f4e5": {
-      "artifact": "casey/original",
-      "explanation": {
-        "changes": [],
-        "narrative": "This is your initial plan. The balanced preference keeps the starter reserve ahead of high-interest debt and further reserve building, although both reserves are already funded and no high-interest debt is reported; your contribution is maintained to preserve the employer match, while surplus remains unassigned. The investment allocation is an illustrative target-date curve and was not changed.",
-        "source": "ai",
-        "state_summary": "Your situation includes a funded starter reserve and full emergency reserve, no reported debt, and contributions that capture the full employer match."
-      }
-    },
-    "394edfe817197c916a6cefdccd394345608fe17ad4092f7ea912b72e3d7baaf3": {
-      "artifact": "casey/contribution-plus-one",
-      "explanation": {
-        "changes": [],
-        "narrative": "This is your initial plan. The balanced preference keeps the starter reserve ahead of high-interest debt and further reserve building, though your situation already includes enough cash for both reserve targets and no high-interest debt to pay down. Maintaining your contribution supports capturing the employer match, and the investment allocation remains an illustrative target-date curve that was not changed.",
-        "source": "ai",
-        "state_summary": "Your situation supports maintaining your contribution while keeping cash priorities in the stated order. You already capture the full employer match, have both reserve targets funded, and report no debt."
-      }
-    },
-    "4903fcd4a80c333b544c76ef97466595de0a2b18d55387fbfab211156f3c4439": {
-      "artifact": "morgan-cash-security/original",
-      "explanation": {
-        "changes": [],
-        "narrative": "This is your initial plan. The starter reserve is already in place, so high-interest debt comes next because it is substantial; building the broader reserve follows, balancing your cash-security preference against costly debt. Contributions are prioritized to capture the full employer match, with a simplified tax estimate. The investment allocation is an illustrative target-date curve and was not changed.",
-        "source": "ai",
-        "state_summary": "Your situation includes a funded starter reserve, high-interest debt, and an employer match you are already positioned to capture. The broader cash reserve is not yet funded, and your preference is cash security."
-      }
-    },
-    "7c7dc9b3d5b9137f12c420004a02204e06cff124d847763b3e3631271b53fbb3": {
+    "36b462668e5c42aa556aadc034778c26aefbdae855f9e838e56b2649aac7425c": {
       "artifact": "jordan/retire-plus-two",
       "explanation": {
         "changes": [],
@@ -236,7 +200,7 @@
         "state_summary": "Your situation includes a funded starter and full reserve, no high-interest debt, and contributions that capture the full employer match."
       }
     },
-    "90cc67a59ca0609558365d157989907c45ae5c83157ff99bc2fc0ad376261848": {
+    "3d27e0d34a76773844beefb9b3a902fa94f246afe1b7c034a9f6dff66f8c8452": {
       "artifact": "jordan/contribution-plus-one",
       "explanation": {
         "changes": [],
@@ -245,7 +209,16 @@
         "state_summary": "Your situation includes cash reserves above both reserve targets, no high-interest debt, and contributions that capture the full employer match. The plan keeps your contribution and debt minimum in place."
       }
     },
-    "ac2be1b08ff64d0e2904bb4fb2d83fc0ac934c383492edae36d130f1d28b13a8": {
+    "93e7c4952244918d36418c74647adee811bf4fdc26bc57401a74df6ecae0e30d": {
+      "artifact": "morgan/original",
+      "explanation": {
+        "changes": [],
+        "narrative": "With the starter cushion already in place, extra payments toward costly debt take priority, while building the larger cash reserve comes afterward; this means delaying that larger cushion while the debt remains a competing priority. The plan also includes a contribution action to capture the full employer match, using a simplified tax estimate. The investment allocation is an illustrative target-date curve and was not changed.",
+        "source": "ai",
+        "state_summary": "Your situation includes a starter cash cushion that has reached its target, costly debt, and an unfunded larger reserve. Your initial plan places the starter cushion as the anchor, then prioritizes costly debt before building the larger reserve."
+      }
+    },
+    "a59511ccf720d6857b4cb209e860d94d144b1a66c8fb22b1544ae78e64b880ad": {
       "artifact": "morgan/retire-plus-two",
       "explanation": {
         "changes": [],
@@ -254,7 +227,25 @@
         "state_summary": "Your situation includes a funded starter cushion, costly debt, and an employer match you are capturing, while the larger emergency reserve is not yet funded. The plan treats extra payments toward costly debt as the main action before building that larger reserve."
       }
     },
-    "e06610a2c9f4db5895cb35906f6162451dea5b8ac8ff174cbaf30745918a0df8": {
+    "563df0a1affe300db839c0b9645b4f0681f7c70165d844a1a5a697b8ca6f479d": {
+      "artifact": "morgan/contribution-plus-one",
+      "explanation": {
+        "changes": [],
+        "narrative": "This is your initial plan: the starter cushion anchors the sequence because it is already in place, then extra payments toward costly debt take priority, followed by building a larger emergency cushion. This order recognizes the debt's cost while delaying the larger reserve, despite your balanced preference. The investment allocation is an illustrative target-date curve and was not changed.",
+        "source": "ai",
+        "state_summary": "Your situation includes a starter cash cushion that has reached its target, costly debt, and a larger emergency reserve that is not yet funded. The plan places costly debt ahead of expanding cash savings."
+      }
+    },
+    "3be8a7ce32a70a189ab8dfa33b009436fd6edf50eb577f71c342c61d01402e30": {
+      "artifact": "casey/original",
+      "explanation": {
+        "changes": [],
+        "narrative": "This is your initial plan. The balanced preference keeps the starter reserve ahead of high-interest debt and further reserve building, although both reserves are already funded and no high-interest debt is reported; your contribution is maintained to preserve the employer match, while surplus remains unassigned. The investment allocation is an illustrative target-date curve and was not changed.",
+        "source": "ai",
+        "state_summary": "Your situation includes a funded starter reserve and full emergency reserve, no reported debt, and contributions that capture the full employer match."
+      }
+    },
+    "a1d0a30db14570625e6c73d7694114375027c989fdfdaf459bf652c27e5ef663": {
       "artifact": "casey/retire-plus-two",
       "explanation": {
         "changes": [],
@@ -263,13 +254,22 @@
         "state_summary": "Your situation includes a maintained contribution that captures the full employer match, no reported debt, and cash that already meets both reserve targets."
       }
     },
-    "e42e02b30664e9089d3f94a2c1e619a93c901cb07426e3458abb885425f851c6": {
-      "artifact": "morgan/contribution-plus-one",
+    "1cc878a0bd97b74b778975db9aacf7654ed0bb256ee5c209caa34a5c4ba6c6a9": {
+      "artifact": "casey/contribution-plus-one",
       "explanation": {
         "changes": [],
-        "narrative": "This is your initial plan: the starter cushion anchors the sequence because it is already in place, then extra payments toward costly debt take priority, followed by building a larger emergency cushion. This order recognizes the debt's cost while delaying the larger reserve, despite your balanced preference. The investment allocation is an illustrative target-date curve and was not changed.",
+        "narrative": "This is your initial plan. The balanced preference keeps the starter reserve ahead of high-interest debt and further reserve building, though your situation already includes enough cash for both reserve targets and no high-interest debt to pay down. Maintaining your contribution supports capturing the employer match, and the investment allocation remains an illustrative target-date curve that was not changed.",
         "source": "ai",
-        "state_summary": "Your situation includes a starter cash cushion that has reached its target, costly debt, and a larger emergency reserve that is not yet funded. The plan places costly debt ahead of expanding cash savings."
+        "state_summary": "Your situation supports maintaining your contribution while keeping cash priorities in the stated order. You already capture the full employer match, have both reserve targets funded, and report no debt."
+      }
+    },
+    "0789b5abe9cfb2867b017c32d38baac6a5b5c31a7689284bd082ce8c22aa3676": {
+      "artifact": "morgan-cash-security/original",
+      "explanation": {
+        "changes": [],
+        "narrative": "This is your initial plan. The starter reserve is already in place, so high-interest debt comes next because it is substantial; building the broader reserve follows, balancing your cash-security preference against costly debt. Contributions are prioritized to capture the full employer match, with a simplified tax estimate. The investment allocation is an illustrative target-date curve and was not changed.",
+        "source": "ai",
+        "state_summary": "Your situation includes a funded starter reserve, high-interest debt, and an employer match you are already positioned to capture. The broader cash reserve is not yet funded, and your preference is cash security."
       }
     }
   },
@@ -278,7 +278,7 @@
       "decision_id": "dec_fallback_jordan",
       "expected_source": "rules_fallback",
       "model_id": null,
-      "profile_hash": "c49fb0f59dc7bf063a9107b52c8279a260fd39ef02bb73589d171e32e36702f2",
+      "profile_hash": "eb646ce3878f00bfbf7978bddf18937c5c3c242798a20ff1885f9bdc982ea271",
       "profile_id": "jordan",
       "prompt_version": "2",
       "proposal": null
@@ -287,7 +287,7 @@
       "decision_id": "dec_fallback_morgan",
       "expected_source": "rules_fallback",
       "model_id": null,
-      "profile_hash": "19ba5df435437d97f5888c25c01ca19ee2ca6b42b919e060b99eef3f498d7ffd",
+      "profile_hash": "755e977898dd61ae4464727a24f9b1b607c1935f8d22fe9c0d9c3d3b25d4ccf8",
       "profile_id": "morgan",
       "prompt_version": "2",
       "proposal": null
@@ -296,7 +296,7 @@
       "decision_id": "dec_fallback_casey",
       "expected_source": "rules_fallback",
       "model_id": null,
-      "profile_hash": "731e9915f7212ff6fccaeff90118d5f3bc9b3acd932c7ec9ec2de2981ed24ec0",
+      "profile_hash": "1427ed6a784aad58cf324bb94058c1caf8b0a5853925a9453ef179b6416280c0",
       "profile_id": "casey",
       "prompt_version": "2",
       "proposal": null
@@ -305,7 +305,7 @@
       "decision_id": "dec_fallback_morgan-cash-security",
       "expected_source": "rules_fallback",
       "model_id": null,
-      "profile_hash": "e40bc3ae0ea2fc1dd10e6fac20b3d3548dbcb0f8c5c1e2b8c1b4140b8bd888ca",
+      "profile_hash": "3eab5c204501f0da1d537e009329a49feccb075c35b701b3d2e85c23a3257caf",
       "profile_id": "morgan-cash-security",
       "prompt_version": "2",
       "proposal": null

@@ -1,9 +1,9 @@
 {
   "schema_version": "1",
-  "model_version": "1.0.0",
-  "policy_version": "1.0.0",
+  "model_version": "2.0.0",
+  "policy_version": "2.0.0",
   "profile_id": "casey",
-  "input_hash": "a673caf27f8f32f978e128feea9d46dff03e437ff189ae383682cdf1df041b26",
+  "input_hash": "8fea9b65e366809a82317f7cb333aab79be038a2b486a5f397402d0658b02d7a",
   "financial_state": {
     "months_until_retirement": 84,
     "gross_monthly_salary_cents": 916667,
@@ -23,7 +23,7 @@
     "match_capture_fraction": 1.0,
     "high_interest_debt_cents": 0,
     "highest_debt_apr": null,
-    "baseline_equity_weight": 0.605,
+    "baseline_equity_weight": 0.6099999999999982,
     "warnings": [
       "SIMPLIFIED_TAX_ESTIMATE"
     ]
@@ -159,7 +159,7 @@
     "critical_reserve_cap_cents": 100000,
     "starter_reserve_months": 1.0,
     "full_reserve_months": 3.0,
-    "returns_net_of_fees": true,
+    "returns_net_of_fees": false,
     "glide_path": [
       {
         "years_to_retirement": 30.0,
@@ -179,7 +179,7 @@
       }
     ],
     "limitations": [
-      "Illustrative nominal assumptions, not sponsor forecasts or a specific fund.",
+      "Illustrative asset-class returns are not fund forecasts; annual fund expense is deducted separately.",
       "No volatility, retirement spending, withdrawals, or withdrawal taxation.",
       "Traditional contribution cash cost uses a simplified fixed marginal tax adjustment.",
       "Annualized employee cap excludes catch-up contributions and does not measure remaining legal current-year room.",
@@ -187,7 +187,38 @@
       "Debt APR and minimums remain fixed; real card conventions can differ.",
       "No new borrowing, variable-rate debts, vesting schedules, or employer true-ups.",
       "Reserve targets and 15% combined saving target are heuristics, not retirement adequacy estimates."
-    ]
+    ],
+    "fund_model": {
+      "fund_id": "blackrock-lifepath-index-2035-k",
+      "fund_name": "BlackRock LifePath Index 2035 Fund, Class K",
+      "catalog_version": "2026-09-26.1",
+      "share_class_id": "C000101148",
+      "target_year": 2035,
+      "applied_expense_ratio": 0.0009,
+      "fee_as_of_date": "2026-04-30",
+      "fee_source_url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R169.htm",
+      "glide_path_source_url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/d20560d485bpos.htm",
+      "glide_path_mode": "documented",
+      "glide_path": [
+        {
+          "years_to_retirement": 0.0,
+          "equity_weight": 0.4
+        },
+        {
+          "years_to_retirement": 5.0,
+          "equity_weight": 0.53
+        },
+        {
+          "years_to_retirement": 10.0,
+          "equity_weight": 0.65
+        },
+        {
+          "years_to_retirement": 30.0,
+          "equity_weight": 0.99
+        }
+      ],
+      "limitation": null
+    }
   },
   "projections": {
     "current": {
@@ -195,8 +226,8 @@
       "retirement_age": 65,
       "feasible": true,
       "shortfall_cents": null,
-      "retirement_balance_nominal_cents": 133401287,
-      "retirement_balance_today_cents": 112225865,
+      "retirement_balance_nominal_cents": 131930574,
+      "retirement_balance_today_cents": 110988605,
       "cash_nominal_cents": 16279644,
       "debt_nominal_cents": 0,
       "cumulative_debt_interest_cents": 0,
@@ -212,505 +243,505 @@
         },
         {
           "month": 1,
-          "retirement_balance_cents": 85489592,
+          "retirement_balance_cents": 85484502,
           "cash_cents": 3740000,
           "debt_cents": 0
         },
         {
           "month": 2,
-          "retirement_balance_cents": 85980851,
+          "retirement_balance_cents": 85970468,
           "cash_cents": 3880000,
           "debt_cents": 0
         },
         {
           "month": 3,
-          "retirement_balance_cents": 86473780,
+          "retirement_balance_cents": 86457899,
           "cash_cents": 4020000,
           "debt_cents": 0
         },
         {
           "month": 4,
-          "retirement_balance_cents": 86968383,
+          "retirement_balance_cents": 86946796,
           "cash_cents": 4160000,
           "debt_cents": 0
         },
         {
           "month": 5,
-          "retirement_balance_cents": 87464663,
+          "retirement_balance_cents": 87437159,
           "cash_cents": 4300000,
           "debt_cents": 0
         },
         {
           "month": 6,
-          "retirement_balance_cents": 87962624,
+          "retirement_balance_cents": 87928990,
           "cash_cents": 4440000,
           "debt_cents": 0
         },
         {
           "month": 7,
-          "retirement_balance_cents": 88462270,
+          "retirement_balance_cents": 88422289,
           "cash_cents": 4580000,
           "debt_cents": 0
         },
         {
           "month": 8,
-          "retirement_balance_cents": 88963604,
+          "retirement_balance_cents": 88917058,
           "cash_cents": 4720000,
           "debt_cents": 0
         },
         {
           "month": 9,
-          "retirement_balance_cents": 89466629,
+          "retirement_balance_cents": 89413297,
           "cash_cents": 4860000,
           "debt_cents": 0
         },
         {
           "month": 10,
-          "retirement_balance_cents": 89971350,
+          "retirement_balance_cents": 89911007,
           "cash_cents": 5000000,
           "debt_cents": 0
         },
         {
           "month": 11,
-          "retirement_balance_cents": 90477769,
+          "retirement_balance_cents": 90410189,
           "cash_cents": 5140000,
           "debt_cents": 0
         },
         {
           "month": 12,
-          "retirement_balance_cents": 90985891,
+          "retirement_balance_cents": 90910844,
           "cash_cents": 5280000,
           "debt_cents": 0
         },
         {
           "month": 13,
-          "retirement_balance_cents": 91499615,
+          "retirement_balance_cents": 91416868,
           "cash_cents": 5423500,
           "debt_cents": 0
         },
         {
           "month": 14,
-          "retirement_balance_cents": 92015064,
+          "retirement_balance_cents": 91924381,
           "cash_cents": 5567000,
           "debt_cents": 0
         },
         {
           "month": 15,
-          "retirement_balance_cents": 92532241,
+          "retirement_balance_cents": 92433384,
           "cash_cents": 5710500,
           "debt_cents": 0
         },
         {
           "month": 16,
-          "retirement_balance_cents": 93051150,
+          "retirement_balance_cents": 92943878,
           "cash_cents": 5854000,
           "debt_cents": 0
         },
         {
           "month": 17,
-          "retirement_balance_cents": 93571794,
+          "retirement_balance_cents": 93455863,
           "cash_cents": 5997500,
           "debt_cents": 0
         },
         {
           "month": 18,
-          "retirement_balance_cents": 94094178,
+          "retirement_balance_cents": 93969341,
           "cash_cents": 6141000,
           "debt_cents": 0
         },
         {
           "month": 19,
-          "retirement_balance_cents": 94618304,
+          "retirement_balance_cents": 94484312,
           "cash_cents": 6284500,
           "debt_cents": 0
         },
         {
           "month": 20,
-          "retirement_balance_cents": 95144177,
+          "retirement_balance_cents": 95000776,
           "cash_cents": 6428000,
           "debt_cents": 0
         },
         {
           "month": 21,
-          "retirement_balance_cents": 95671800,
+          "retirement_balance_cents": 95518734,
           "cash_cents": 6571500,
           "debt_cents": 0
         },
         {
           "month": 22,
-          "retirement_balance_cents": 96201176,
+          "retirement_balance_cents": 96038187,
           "cash_cents": 6715000,
           "debt_cents": 0
         },
         {
           "month": 23,
-          "retirement_balance_cents": 96732310,
+          "retirement_balance_cents": 96559136,
           "cash_cents": 6858500,
           "debt_cents": 0
         },
         {
           "month": 24,
-          "retirement_balance_cents": 97265204,
+          "retirement_balance_cents": 97081581,
           "cash_cents": 7002000,
           "debt_cents": 0
         },
         {
           "month": 25,
-          "retirement_balance_cents": 97803857,
+          "retirement_balance_cents": 97609517,
           "cash_cents": 7149087,
           "debt_cents": 0
         },
         {
           "month": 26,
-          "retirement_balance_cents": 98344293,
+          "retirement_balance_cents": 98138965,
           "cash_cents": 7296174,
           "debt_cents": 0
         },
         {
           "month": 27,
-          "retirement_balance_cents": 98886516,
+          "retirement_balance_cents": 98669926,
           "cash_cents": 7443261,
           "debt_cents": 0
         },
         {
           "month": 28,
-          "retirement_balance_cents": 99430530,
+          "retirement_balance_cents": 99202400,
           "cash_cents": 7590348,
           "debt_cents": 0
         },
         {
           "month": 29,
-          "retirement_balance_cents": 99976338,
+          "retirement_balance_cents": 99736388,
           "cash_cents": 7737435,
           "debt_cents": 0
         },
         {
           "month": 30,
-          "retirement_balance_cents": 100523944,
+          "retirement_balance_cents": 100271890,
           "cash_cents": 7884522,
           "debt_cents": 0
         },
         {
           "month": 31,
-          "retirement_balance_cents": 101073351,
+          "retirement_balance_cents": 100808907,
           "cash_cents": 8031609,
           "debt_cents": 0
         },
         {
           "month": 32,
-          "retirement_balance_cents": 101624564,
+          "retirement_balance_cents": 101347439,
           "cash_cents": 8178696,
           "debt_cents": 0
         },
         {
           "month": 33,
-          "retirement_balance_cents": 102177585,
+          "retirement_balance_cents": 101887487,
           "cash_cents": 8325783,
           "debt_cents": 0
         },
         {
           "month": 34,
-          "retirement_balance_cents": 102732419,
+          "retirement_balance_cents": 102429052,
           "cash_cents": 8472870,
           "debt_cents": 0
         },
         {
           "month": 35,
-          "retirement_balance_cents": 103289069,
+          "retirement_balance_cents": 102972133,
           "cash_cents": 8619957,
           "debt_cents": 0
         },
         {
           "month": 36,
-          "retirement_balance_cents": 103847538,
+          "retirement_balance_cents": 103516731,
           "cash_cents": 8767044,
           "debt_cents": 0
         },
         {
           "month": 37,
-          "retirement_balance_cents": 104411922,
+          "retirement_balance_cents": 104066939,
           "cash_cents": 8917808,
           "debt_cents": 0
         },
         {
           "month": 38,
-          "retirement_balance_cents": 104978149,
+          "retirement_balance_cents": 104618679,
           "cash_cents": 9068572,
           "debt_cents": 0
         },
         {
           "month": 39,
-          "retirement_balance_cents": 105546222,
+          "retirement_balance_cents": 105171952,
           "cash_cents": 9219336,
           "debt_cents": 0
         },
         {
           "month": 40,
-          "retirement_balance_cents": 106116144,
+          "retirement_balance_cents": 105726759,
           "cash_cents": 9370100,
           "debt_cents": 0
         },
         {
           "month": 41,
-          "retirement_balance_cents": 106687919,
+          "retirement_balance_cents": 106283100,
           "cash_cents": 9520864,
           "debt_cents": 0
         },
         {
           "month": 42,
-          "retirement_balance_cents": 107261551,
+          "retirement_balance_cents": 106840932,
           "cash_cents": 9671628,
           "debt_cents": 0
         },
         {
           "month": 43,
-          "retirement_balance_cents": 107837044,
+          "retirement_balance_cents": 107400255,
           "cash_cents": 9822392,
           "debt_cents": 0
         },
         {
           "month": 44,
-          "retirement_balance_cents": 108414401,
+          "retirement_balance_cents": 107961069,
           "cash_cents": 9973156,
           "debt_cents": 0
         },
         {
           "month": 45,
-          "retirement_balance_cents": 108993626,
+          "retirement_balance_cents": 108523373,
           "cash_cents": 10123920,
           "debt_cents": 0
         },
         {
           "month": 46,
-          "retirement_balance_cents": 109574722,
+          "retirement_balance_cents": 109087167,
           "cash_cents": 10274684,
           "debt_cents": 0
         },
         {
           "month": 47,
-          "retirement_balance_cents": 110157693,
+          "retirement_balance_cents": 109652451,
           "cash_cents": 10425448,
           "debt_cents": 0
         },
         {
           "month": 48,
-          "retirement_balance_cents": 110742542,
+          "retirement_balance_cents": 110219224,
           "cash_cents": 10576212,
           "debt_cents": 0
         },
         {
           "month": 49,
-          "retirement_balance_cents": 111333469,
+          "retirement_balance_cents": 110791680,
           "cash_cents": 10730745,
           "debt_cents": 0
         },
         {
           "month": 50,
-          "retirement_balance_cents": 111926297,
+          "retirement_balance_cents": 111365639,
           "cash_cents": 10885278,
           "debt_cents": 0
         },
         {
           "month": 51,
-          "retirement_balance_cents": 112521030,
+          "retirement_balance_cents": 111941101,
           "cash_cents": 11039811,
           "debt_cents": 0
         },
         {
           "month": 52,
-          "retirement_balance_cents": 113117672,
+          "retirement_balance_cents": 112518065,
           "cash_cents": 11194344,
           "debt_cents": 0
         },
         {
           "month": 53,
-          "retirement_balance_cents": 113716227,
+          "retirement_balance_cents": 113096531,
           "cash_cents": 11348877,
           "debt_cents": 0
         },
         {
           "month": 54,
-          "retirement_balance_cents": 114316698,
+          "retirement_balance_cents": 113676497,
           "cash_cents": 11503410,
           "debt_cents": 0
         },
         {
           "month": 55,
-          "retirement_balance_cents": 114919088,
+          "retirement_balance_cents": 114257964,
           "cash_cents": 11657943,
           "debt_cents": 0
         },
         {
           "month": 56,
-          "retirement_balance_cents": 115523402,
+          "retirement_balance_cents": 114840930,
           "cash_cents": 11812476,
           "debt_cents": 0
         },
         {
           "month": 57,
-          "retirement_balance_cents": 116129643,
+          "retirement_balance_cents": 115425395,
           "cash_cents": 11967009,
           "debt_cents": 0
         },
         {
           "month": 58,
-          "retirement_balance_cents": 116737814,
+          "retirement_balance_cents": 116011358,
           "cash_cents": 12121542,
           "debt_cents": 0
         },
         {
           "month": 59,
-          "retirement_balance_cents": 117347919,
+          "retirement_balance_cents": 116598818,
           "cash_cents": 12276075,
           "debt_cents": 0
         },
         {
           "month": 60,
-          "retirement_balance_cents": 117959962,
+          "retirement_balance_cents": 117187775,
           "cash_cents": 12430608,
           "debt_cents": 0
         },
         {
           "month": 61,
-          "retirement_balance_cents": 118578247,
+          "retirement_balance_cents": 117782528,
           "cash_cents": 12589004,
           "debt_cents": 0
         },
         {
           "month": 62,
-          "retirement_balance_cents": 119198493,
+          "retirement_balance_cents": 118378792,
           "cash_cents": 12747400,
           "debt_cents": 0
         },
         {
           "month": 63,
-          "retirement_balance_cents": 119820704,
+          "retirement_balance_cents": 118976565,
           "cash_cents": 12905796,
           "debt_cents": 0
         },
         {
           "month": 64,
-          "retirement_balance_cents": 120444883,
+          "retirement_balance_cents": 119575847,
           "cash_cents": 13064192,
           "debt_cents": 0
         },
         {
           "month": 65,
-          "retirement_balance_cents": 121071034,
+          "retirement_balance_cents": 120176636,
           "cash_cents": 13222588,
           "debt_cents": 0
         },
         {
           "month": 66,
-          "retirement_balance_cents": 121699160,
+          "retirement_balance_cents": 120778932,
           "cash_cents": 13380984,
           "debt_cents": 0
         },
         {
           "month": 67,
-          "retirement_balance_cents": 122329265,
+          "retirement_balance_cents": 121382733,
           "cash_cents": 13539380,
           "debt_cents": 0
         },
         {
           "month": 68,
-          "retirement_balance_cents": 122961353,
+          "retirement_balance_cents": 121988039,
           "cash_cents": 13697776,
           "debt_cents": 0
         },
         {
           "month": 69,
-          "retirement_balance_cents": 123595427,
+          "retirement_balance_cents": 122594849,
           "cash_cents": 13856172,
           "debt_cents": 0
         },
         {
           "month": 70,
-          "retirement_balance_cents": 124231491,
+          "retirement_balance_cents": 123203161,
           "cash_cents": 14014568,
           "debt_cents": 0
         },
         {
           "month": 71,
-          "retirement_balance_cents": 124869548,
+          "retirement_balance_cents": 123812975,
           "cash_cents": 14172964,
           "debt_cents": 0
         },
         {
           "month": 72,
-          "retirement_balance_cents": 125509602,
+          "retirement_balance_cents": 124424289,
           "cash_cents": 14331360,
           "debt_cents": 0
         },
         {
           "month": 73,
-          "retirement_balance_cents": 126156064,
+          "retirement_balance_cents": 125041511,
           "cash_cents": 14493717,
           "debt_cents": 0
         },
         {
           "month": 74,
-          "retirement_balance_cents": 126804547,
+          "retirement_balance_cents": 125660246,
           "cash_cents": 14656074,
           "debt_cents": 0
         },
         {
           "month": 75,
-          "retirement_balance_cents": 127455054,
+          "retirement_balance_cents": 126280494,
           "cash_cents": 14818431,
           "debt_cents": 0
         },
         {
           "month": 76,
-          "retirement_balance_cents": 128107588,
+          "retirement_balance_cents": 126902253,
           "cash_cents": 14980788,
           "debt_cents": 0
         },
         {
           "month": 77,
-          "retirement_balance_cents": 128762154,
+          "retirement_balance_cents": 127525522,
           "cash_cents": 15143145,
           "debt_cents": 0
         },
         {
           "month": 78,
-          "retirement_balance_cents": 129418754,
+          "retirement_balance_cents": 128150300,
           "cash_cents": 15305502,
           "debt_cents": 0
         },
         {
           "month": 79,
-          "retirement_balance_cents": 130077393,
+          "retirement_balance_cents": 128776585,
           "cash_cents": 15467859,
           "debt_cents": 0
         },
         {
           "month": 80,
-          "retirement_balance_cents": 130738074,
+          "retirement_balance_cents": 129404376,
           "cash_cents": 15630216,
           "debt_cents": 0
         },
         {
           "month": 81,
-          "retirement_balance_cents": 131400800,
+          "retirement_balance_cents": 130033672,
           "cash_cents": 15792573,
           "debt_cents": 0
         },
         {
           "month": 82,
-          "retirement_balance_cents": 132065575,
+          "retirement_balance_cents": 130664471,
           "cash_cents": 15954930,
           "debt_cents": 0
         },
         {
           "month": 83,
-          "retirement_balance_cents": 132732403,
+          "retirement_balance_cents": 131296772,
           "cash_cents": 16117287,
           "debt_cents": 0
         },
         {
           "month": 84,
-          "retirement_balance_cents": 133401287,
+          "retirement_balance_cents": 131930574,
           "cash_cents": 16279644,
           "debt_cents": 0
         }
@@ -725,8 +756,8 @@
       "retirement_age": 65,
       "feasible": true,
       "shortfall_cents": null,
-      "retirement_balance_nominal_cents": 133401287,
-      "retirement_balance_today_cents": 112225865,
+      "retirement_balance_nominal_cents": 131930574,
+      "retirement_balance_today_cents": 110988605,
       "cash_nominal_cents": 16279644,
       "debt_nominal_cents": 0,
       "cumulative_debt_interest_cents": 0,
@@ -742,505 +773,505 @@
         },
         {
           "month": 1,
-          "retirement_balance_cents": 85489592,
+          "retirement_balance_cents": 85484502,
           "cash_cents": 3740000,
           "debt_cents": 0
         },
         {
           "month": 2,
-          "retirement_balance_cents": 85980851,
+          "retirement_balance_cents": 85970468,
           "cash_cents": 3880000,
           "debt_cents": 0
         },
         {
           "month": 3,
-          "retirement_balance_cents": 86473780,
+          "retirement_balance_cents": 86457899,
           "cash_cents": 4020000,
           "debt_cents": 0
         },
         {
           "month": 4,
-          "retirement_balance_cents": 86968383,
+          "retirement_balance_cents": 86946796,
           "cash_cents": 4160000,
           "debt_cents": 0
         },
         {
           "month": 5,
-          "retirement_balance_cents": 87464663,
+          "retirement_balance_cents": 87437159,
           "cash_cents": 4300000,
           "debt_cents": 0
         },
         {
           "month": 6,
-          "retirement_balance_cents": 87962624,
+          "retirement_balance_cents": 87928990,
           "cash_cents": 4440000,
           "debt_cents": 0
         },
         {
           "month": 7,
-          "retirement_balance_cents": 88462270,
+          "retirement_balance_cents": 88422289,
           "cash_cents": 4580000,
           "debt_cents": 0
         },
         {
           "month": 8,
-          "retirement_balance_cents": 88963604,
+          "retirement_balance_cents": 88917058,
           "cash_cents": 4720000,
           "debt_cents": 0
         },
         {
           "month": 9,
-          "retirement_balance_cents": 89466629,
+          "retirement_balance_cents": 89413297,
           "cash_cents": 4860000,
           "debt_cents": 0
         },
         {
           "month": 10,
-          "retirement_balance_cents": 89971350,
+          "retirement_balance_cents": 89911007,
           "cash_cents": 5000000,
           "debt_cents": 0
         },
         {
           "month": 11,
-          "retirement_balance_cents": 90477769,
+          "retirement_balance_cents": 90410189,
           "cash_cents": 5140000,
           "debt_cents": 0
         },
         {
           "month": 12,
-          "retirement_balance_cents": 90985891,
+          "retirement_balance_cents": 90910844,
           "cash_cents": 5280000,
           "debt_cents": 0
         },
         {
           "month": 13,
-          "retirement_balance_cents": 91499615,
+          "retirement_balance_cents": 91416868,
           "cash_cents": 5423500,
           "debt_cents": 0
         },
         {
           "month": 14,
-          "retirement_balance_cents": 92015064,
+          "retirement_balance_cents": 91924381,
           "cash_cents": 5567000,
           "debt_cents": 0
         },
         {
           "month": 15,
-          "retirement_balance_cents": 92532241,
+          "retirement_balance_cents": 92433384,
           "cash_cents": 5710500,
           "debt_cents": 0
         },
         {
           "month": 16,
-          "retirement_balance_cents": 93051150,
+          "retirement_balance_cents": 92943878,
           "cash_cents": 5854000,
           "debt_cents": 0
         },
         {
           "month": 17,
-          "retirement_balance_cents": 93571794,
+          "retirement_balance_cents": 93455863,
           "cash_cents": 5997500,
           "debt_cents": 0
         },
         {
           "month": 18,
-          "retirement_balance_cents": 94094178,
+          "retirement_balance_cents": 93969341,
           "cash_cents": 6141000,
           "debt_cents": 0
         },
         {
           "month": 19,
-          "retirement_balance_cents": 94618304,
+          "retirement_balance_cents": 94484312,
           "cash_cents": 6284500,
           "debt_cents": 0
         },
         {
           "month": 20,
-          "retirement_balance_cents": 95144177,
+          "retirement_balance_cents": 95000776,
           "cash_cents": 6428000,
           "debt_cents": 0
         },
         {
           "month": 21,
-          "retirement_balance_cents": 95671800,
+          "retirement_balance_cents": 95518734,
           "cash_cents": 6571500,
           "debt_cents": 0
         },
         {
           "month": 22,
-          "retirement_balance_cents": 96201176,
+          "retirement_balance_cents": 96038187,
           "cash_cents": 6715000,
           "debt_cents": 0
         },
         {
           "month": 23,
-          "retirement_balance_cents": 96732310,
+          "retirement_balance_cents": 96559136,
           "cash_cents": 6858500,
           "debt_cents": 0
         },
         {
           "month": 24,
-          "retirement_balance_cents": 97265204,
+          "retirement_balance_cents": 97081581,
           "cash_cents": 7002000,
           "debt_cents": 0
         },
         {
           "month": 25,
-          "retirement_balance_cents": 97803857,
+          "retirement_balance_cents": 97609517,
           "cash_cents": 7149087,
           "debt_cents": 0
         },
         {
           "month": 26,
-          "retirement_balance_cents": 98344293,
+          "retirement_balance_cents": 98138965,
           "cash_cents": 7296174,
           "debt_cents": 0
         },
         {
           "month": 27,
-          "retirement_balance_cents": 98886516,
+          "retirement_balance_cents": 98669926,
           "cash_cents": 7443261,
           "debt_cents": 0
         },
         {
           "month": 28,
-          "retirement_balance_cents": 99430530,
+          "retirement_balance_cents": 99202400,
           "cash_cents": 7590348,
           "debt_cents": 0
         },
         {
           "month": 29,
-          "retirement_balance_cents": 99976338,
+          "retirement_balance_cents": 99736388,
           "cash_cents": 7737435,
           "debt_cents": 0
         },
         {
           "month": 30,
-          "retirement_balance_cents": 100523944,
+          "retirement_balance_cents": 100271890,
           "cash_cents": 7884522,
           "debt_cents": 0
         },
         {
           "month": 31,
-          "retirement_balance_cents": 101073351,
+          "retirement_balance_cents": 100808907,
           "cash_cents": 8031609,
           "debt_cents": 0
         },
         {
           "month": 32,
-          "retirement_balance_cents": 101624564,
+          "retirement_balance_cents": 101347439,
           "cash_cents": 8178696,
           "debt_cents": 0
         },
         {
           "month": 33,
-          "retirement_balance_cents": 102177585,
+          "retirement_balance_cents": 101887487,
           "cash_cents": 8325783,
           "debt_cents": 0
         },
         {
           "month": 34,
-          "retirement_balance_cents": 102732419,
+          "retirement_balance_cents": 102429052,
           "cash_cents": 8472870,
           "debt_cents": 0
         },
         {
           "month": 35,
-          "retirement_balance_cents": 103289069,
+          "retirement_balance_cents": 102972133,
           "cash_cents": 8619957,
           "debt_cents": 0
         },
         {
           "month": 36,
-          "retirement_balance_cents": 103847538,
+          "retirement_balance_cents": 103516731,
           "cash_cents": 8767044,
           "debt_cents": 0
         },
         {
           "month": 37,
-          "retirement_balance_cents": 104411922,
+          "retirement_balance_cents": 104066939,
           "cash_cents": 8917808,
           "debt_cents": 0
         },
         {
           "month": 38,
-          "retirement_balance_cents": 104978149,
+          "retirement_balance_cents": 104618679,
           "cash_cents": 9068572,
           "debt_cents": 0
         },
         {
           "month": 39,
-          "retirement_balance_cents": 105546222,
+          "retirement_balance_cents": 105171952,
           "cash_cents": 9219336,
           "debt_cents": 0
         },
         {
           "month": 40,
-          "retirement_balance_cents": 106116144,
+          "retirement_balance_cents": 105726759,
           "cash_cents": 9370100,
           "debt_cents": 0
         },
         {
           "month": 41,
-          "retirement_balance_cents": 106687919,
+          "retirement_balance_cents": 106283100,
           "cash_cents": 9520864,
           "debt_cents": 0
         },
         {
           "month": 42,
-          "retirement_balance_cents": 107261551,
+          "retirement_balance_cents": 106840932,
           "cash_cents": 9671628,
           "debt_cents": 0
         },
         {
           "month": 43,
-          "retirement_balance_cents": 107837044,
+          "retirement_balance_cents": 107400255,
           "cash_cents": 9822392,
           "debt_cents": 0
         },
         {
           "month": 44,
-          "retirement_balance_cents": 108414401,
+          "retirement_balance_cents": 107961069,
           "cash_cents": 9973156,
           "debt_cents": 0
         },
         {
           "month": 45,
-          "retirement_balance_cents": 108993626,
+          "retirement_balance_cents": 108523373,
           "cash_cents": 10123920,
           "debt_cents": 0
         },
         {
           "month": 46,
-          "retirement_balance_cents": 109574722,
+          "retirement_balance_cents": 109087167,
           "cash_cents": 10274684,
           "debt_cents": 0
         },
         {
           "month": 47,
-          "retirement_balance_cents": 110157693,
+          "retirement_balance_cents": 109652451,
           "cash_cents": 10425448,
           "debt_cents": 0
         },
         {
           "month": 48,
-          "retirement_balance_cents": 110742542,
+          "retirement_balance_cents": 110219224,
           "cash_cents": 10576212,
           "debt_cents": 0
         },
         {
           "month": 49,
-          "retirement_balance_cents": 111333469,
+          "retirement_balance_cents": 110791680,
           "cash_cents": 10730745,
           "debt_cents": 0
         },
         {
           "month": 50,
-          "retirement_balance_cents": 111926297,
+          "retirement_balance_cents": 111365639,
           "cash_cents": 10885278,
           "debt_cents": 0
         },
         {
           "month": 51,
-          "retirement_balance_cents": 112521030,
+          "retirement_balance_cents": 111941101,
           "cash_cents": 11039811,
           "debt_cents": 0
         },
         {
           "month": 52,
-          "retirement_balance_cents": 113117672,
+          "retirement_balance_cents": 112518065,
           "cash_cents": 11194344,
           "debt_cents": 0
         },
         {
           "month": 53,
-          "retirement_balance_cents": 113716227,
+          "retirement_balance_cents": 113096531,
           "cash_cents": 11348877,
           "debt_cents": 0
         },
         {
           "month": 54,
-          "retirement_balance_cents": 114316698,
+          "retirement_balance_cents": 113676497,
           "cash_cents": 11503410,
           "debt_cents": 0
         },
         {
           "month": 55,
-          "retirement_balance_cents": 114919088,
+          "retirement_balance_cents": 114257964,
           "cash_cents": 11657943,
           "debt_cents": 0
         },
         {
           "month": 56,
-          "retirement_balance_cents": 115523402,
+          "retirement_balance_cents": 114840930,
           "cash_cents": 11812476,
           "debt_cents": 0
         },
         {
           "month": 57,
-          "retirement_balance_cents": 116129643,
+          "retirement_balance_cents": 115425395,
           "cash_cents": 11967009,
           "debt_cents": 0
         },
         {
           "month": 58,
-          "retirement_balance_cents": 116737814,
+          "retirement_balance_cents": 116011358,
           "cash_cents": 12121542,
           "debt_cents": 0
         },
         {
           "month": 59,
-          "retirement_balance_cents": 117347919,
+          "retirement_balance_cents": 116598818,
           "cash_cents": 12276075,
           "debt_cents": 0
         },
         {
           "month": 60,
-          "retirement_balance_cents": 117959962,
+          "retirement_balance_cents": 117187775,
           "cash_cents": 12430608,
           "debt_cents": 0
         },
         {
           "month": 61,
-          "retirement_balance_cents": 118578247,
+          "retirement_balance_cents": 117782528,
           "cash_cents": 12589004,
           "debt_cents": 0
         },
         {
           "month": 62,
-          "retirement_balance_cents": 119198493,
+          "retirement_balance_cents": 118378792,
           "cash_cents": 12747400,
           "debt_cents": 0
         },
         {
           "month": 63,
-          "retirement_balance_cents": 119820704,
+          "retirement_balance_cents": 118976565,
           "cash_cents": 12905796,
           "debt_cents": 0
         },
         {
           "month": 64,
-          "retirement_balance_cents": 120444883,
+          "retirement_balance_cents": 119575847,
           "cash_cents": 13064192,
           "debt_cents": 0
         },
         {
           "month": 65,
-          "retirement_balance_cents": 121071034,
+          "retirement_balance_cents": 120176636,
           "cash_cents": 13222588,
           "debt_cents": 0
         },
         {
           "month": 66,
-          "retirement_balance_cents": 121699160,
+          "retirement_balance_cents": 120778932,
           "cash_cents": 13380984,
           "debt_cents": 0
         },
         {
           "month": 67,
-          "retirement_balance_cents": 122329265,
+          "retirement_balance_cents": 121382733,
           "cash_cents": 13539380,
           "debt_cents": 0
         },
         {
           "month": 68,
-          "retirement_balance_cents": 122961353,
+          "retirement_balance_cents": 121988039,
           "cash_cents": 13697776,
           "debt_cents": 0
         },
         {
           "month": 69,
-          "retirement_balance_cents": 123595427,
+          "retirement_balance_cents": 122594849,
           "cash_cents": 13856172,
           "debt_cents": 0
         },
         {
           "month": 70,
-          "retirement_balance_cents": 124231491,
+          "retirement_balance_cents": 123203161,
           "cash_cents": 14014568,
           "debt_cents": 0
         },
         {
           "month": 71,
-          "retirement_balance_cents": 124869548,
+          "retirement_balance_cents": 123812975,
           "cash_cents": 14172964,
           "debt_cents": 0
         },
         {
           "month": 72,
-          "retirement_balance_cents": 125509602,
+          "retirement_balance_cents": 124424289,
           "cash_cents": 14331360,
           "debt_cents": 0
         },
         {
           "month": 73,
-          "retirement_balance_cents": 126156064,
+          "retirement_balance_cents": 125041511,
           "cash_cents": 14493717,
           "debt_cents": 0
         },
         {
           "month": 74,
-          "retirement_balance_cents": 126804547,
+          "retirement_balance_cents": 125660246,
           "cash_cents": 14656074,
           "debt_cents": 0
         },
         {
           "month": 75,
-          "retirement_balance_cents": 127455054,
+          "retirement_balance_cents": 126280494,
           "cash_cents": 14818431,
           "debt_cents": 0
         },
         {
           "month": 76,
-          "retirement_balance_cents": 128107588,
+          "retirement_balance_cents": 126902253,
           "cash_cents": 14980788,
           "debt_cents": 0
         },
         {
           "month": 77,
-          "retirement_balance_cents": 128762154,
+          "retirement_balance_cents": 127525522,
           "cash_cents": 15143145,
           "debt_cents": 0
         },
         {
           "month": 78,
-          "retirement_balance_cents": 129418754,
+          "retirement_balance_cents": 128150300,
           "cash_cents": 15305502,
           "debt_cents": 0
         },
         {
           "month": 79,
-          "retirement_balance_cents": 130077393,
+          "retirement_balance_cents": 128776585,
           "cash_cents": 15467859,
           "debt_cents": 0
         },
         {
           "month": 80,
-          "retirement_balance_cents": 130738074,
+          "retirement_balance_cents": 129404376,
           "cash_cents": 15630216,
           "debt_cents": 0
         },
         {
           "month": 81,
-          "retirement_balance_cents": 131400800,
+          "retirement_balance_cents": 130033672,
           "cash_cents": 15792573,
           "debt_cents": 0
         },
         {
           "month": 82,
-          "retirement_balance_cents": 132065575,
+          "retirement_balance_cents": 130664471,
           "cash_cents": 15954930,
           "debt_cents": 0
         },
         {
           "month": 83,
-          "retirement_balance_cents": 132732403,
+          "retirement_balance_cents": 131296772,
           "cash_cents": 16117287,
           "debt_cents": 0
         },
         {
           "month": 84,
-          "retirement_balance_cents": 133401287,
+          "retirement_balance_cents": 131930574,
           "cash_cents": 16279644,
           "debt_cents": 0
         }
@@ -1324,5 +1355,22 @@
     "narrative": "Maintain the 12% employee election, or $1,100.00 this month.",
     "source": "template",
     "changes": []
+  },
+  "rules_comparison": {
+    "basis": "adaptive",
+    "rules_priorities": [
+      "starter_reserve",
+      "high_apr_debt",
+      "full_reserve"
+    ],
+    "ai_priorities": [
+      "starter_reserve",
+      "high_apr_debt",
+      "full_reserve"
+    ],
+    "rules_retirement_balance_cents": 131930574,
+    "ai_retirement_balance_cents": 131930574,
+    "difference_cents": 0,
+    "outcome": "equal"
   }
 }

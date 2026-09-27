@@ -38,6 +38,12 @@
       }
     ],
     "planning_preference": "balanced",
+    "fund_id": "blackrock-lifepath-index-2060-k",
+    "fund_balance_confirmed": true,
+    "fund_account_type": "401k",
+    "plan_menu_fund_ids": [
+      "blackrock-lifepath-index-2060-k"
+    ],
     "provenance": {
       "schema_version": {
         "source": "fixture",
@@ -148,6 +154,22 @@
         "as_of_date": "2026-09-26"
       },
       "debts.0.minimum_payment_cents": {
+        "source": "fixture",
+        "as_of_date": "2026-09-26"
+      },
+      "fund_id": {
+        "source": "fixture",
+        "as_of_date": "2026-09-26"
+      },
+      "fund_balance_confirmed": {
+        "source": "fixture",
+        "as_of_date": "2026-09-26"
+      },
+      "fund_account_type": {
+        "source": "fixture",
+        "as_of_date": "2026-09-26"
+      },
+      "plan_menu_fund_ids.0": {
         "source": "fixture",
         "as_of_date": "2026-09-26"
       }

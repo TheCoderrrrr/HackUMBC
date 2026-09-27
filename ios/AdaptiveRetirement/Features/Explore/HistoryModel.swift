@@ -58,7 +58,8 @@ final class HistoryModel: ObservableObject {
     }
 
     /// Saves the shown result's inputs; the server rebuilds and checks it before storing.
-    func save(evaluation: API.Evaluation, scenario: API.Scenario?, client: APIClient?) async {
+    func save(evaluation: API.Evaluation, scenario: API.Scenario?,
+              planningPreference: API.PlanningPreference, client: APIClient?) async {
         guard let client, phase == .ready, !isSaving else { return }
         let current = generation
         isSaving = true
@@ -66,7 +67,8 @@ final class HistoryModel: ObservableObject {
         defer { if current == generation { isSaving = false } }
         let request = API.History.SaveRunRequest(profileID: evaluation.profileID, scenario: scenario,
                                                  decisionSummary: evaluation.decisionSummary,
-                                                 inputHash: evaluation.inputHash)
+                                                 inputHash: evaluation.inputHash,
+                                                 planningPreference: planningPreference)
         do {
             let response = try await client.saveRun(request)
             guard current == generation else { return }
