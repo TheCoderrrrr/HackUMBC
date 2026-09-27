@@ -82,7 +82,7 @@ function Loaded({ data, name, age }: { data: PlanStyles; name: string; age: numb
   const span = Math.max(...series.map((s) => s.values.length - 1), 0);
   const columns: StyleOutcome[] = [data.current, ...shown];
   const rows: [ReactNode, (o: StyleOutcome) => string][] = [
-    [<><Term id="high-interest-debt">High-interest debt</Term> cleared</>, (o) => when(o.debt_free_month, data.as_of_date, "None", "After retirement")],
+    ["Debt-free (all debts)", (o) => when(o.debt_free_month, data.as_of_date, "None", "After retirement")],
     [<Term id="emergency-fund">Emergency fund full</Term>, (o) => when(o.full_reserve_month, data.as_of_date, "Already", "Not reached")],
     ["Debt interest paid", (o) => cents(o.cumulative_debt_interest_cents)],
     [`Balance at ${data.current.retirement_age}`, (o) => cents(o.retirement_balance_nominal_cents)],

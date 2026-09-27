@@ -124,7 +124,7 @@ function Timeline({ display }: { display: Display }) {
 
   const m = Math.round(month);
   const milestones = [
-    { month: adaptive.debt_free_month, title: "Debt cleared", icon: "seal" },
+    { month: adaptive.debt_free_month, title: "Debt-free", icon: "seal" },
     { month: adaptive.starter_reserve_month, title: "Starter reserve", icon: "umbrella" },
     { month: adaptive.full_reserve_month, title: "Reserve target reached", icon: "flag" },
   ].filter((x): x is { month: number; title: string; icon: string } => x.month !== null && x.month > 0 && x.month <= last);
@@ -418,7 +418,7 @@ function ScenarioControls({ display, onResult }: { display: Display; onResult: (
 function Outcomes({ evaluation, custom, asOf }: { evaluation: Evaluation; custom: Projection | null; asOf: string }) {
   const columns: [string, Projection][] = [["Current", evaluation.projections.current], ["Adaptive", evaluation.projections.adaptive]];
   if (custom) columns.push(["Your scenario", custom]);
-  const when = (m: number | null) => (m === null ? "—" : m === 0 ? "Now" : monthLabel(asOf, m));
+  const when = (m: number | null) => (m === null ? "Not by retirement" : m === 0 ? "Already" : monthLabel(asOf, m));
   const cash = (v: number | null) => (v === null ? "—" : money(v));
   const rows: [string, (p: Projection) => string][] = [
     ["Retirement-account balance", (p) => cash(p.retirement_balance_nominal_cents)],

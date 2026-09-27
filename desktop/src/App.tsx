@@ -7,7 +7,7 @@ import { Overview } from "./views/Overview";
 import { Plan } from "./views/Plan";
 import { errorMessage } from "./api/client";
 import { STYLE_INFO } from "./data/styles";
-import { MY_ID, useStore, type Tab } from "./store";
+import { MAX_PEOPLE, isPersonal, useStore, type Tab } from "./store";
 
 // Pages opened less often load on demand, keeping the first download small.
 const Explore = lazy(() => import("./views/Explore").then((m) => ({ default: m.Explore })));
@@ -32,7 +32,7 @@ const PAGES: { id: Tab; title: string; icon: string; group: string; description:
 const GROUPS = ["Your money", "Plan ahead", "Learn"] as const;
 
 export function App() {
-  const { tab, display, profile, load, setDrawer, dataMode, savedMatchesStyle, style, numbersOpen } = useStore();
+  const { tab, display, profile, load, setDrawer, dataMode, savedMatchesStyle, style, numbersOpen, numbers } = useStore();
   const showNumbers = numbersOpen && tab !== "funds";
   const page = PAGES.find((p) => p.id === tab) ?? PAGES[0];
   const [chatOpen, setChatOpen] = useState(false);
@@ -52,7 +52,7 @@ export function App() {
         <div className="main-inner">
           <header className="topbar">
             <div>
-              <h1>{showNumbers ? "Your numbers" : page.title}</h1>
+              <h1>{showNumbers ? (numbers?.id ? "Edit numbers" : "Add a person") : page.title}</h1>
               <p className="page-desc">{showNumbers
                 ? "Enter your own finances; ARM builds your plan from them."
                 : page.description(profile.name.split(" ")[0])}</p>
@@ -80,12 +80,12 @@ export function App() {
           )}
 
           <Suspense fallback={<PageLoading />}>
-            {tab === "funds" && <Funds />}
-            {showNumbers && <YourNumbers />}
+            {tab === "funds" && <Funds onContext={setFundContext} />}
+            {showNumbers && <YourNumbers key={numbers?.id ?? "new"} />}
             {!showNumbers && !display && tab !== "funds" && <EmptyState />}
             {!showNumbers && display && tab === "overview" && <Overview display={display} />}
             {!showNumbers && display && tab === "plan" && <Plan display={display} />}
-            {!showNumbers && display && tab === "explore" && <Explore display={display} />}
+            {!showNumbers && display && tab === "explore" && <Explore display={display} onContext={setExploreContext} />}
             {!showNumbers && display && tab === "learn" && <Learn display={display} />}
           </Suspense>
         </div>
@@ -142,18 +142,34 @@ function Sidebar() {
       </button>
 
       <div className="profiles">
-        <p className="eyebrow" style={{ marginBottom: 6 }}>Customer</p>
-        {profiles.map((p) => (
+        <p className="eyebrow" style={{ marginBottom: 6 }}>Demo profiles</p>
+        {profiles.filter((p) => !isPersonal(p.id)).map((p) => (
           <button key={p.id} className="profile-btn" aria-pressed={p.id === profile.id} onClick={() => selectProfile(p.id)}>
-            <Avatar id={p.id} name={p.name} size={38} />
+            <Avatar id={p.id} name={p.name} size={34} />
             <span>
               <span className="name" style={{ display: "block" }}>{p.name}</span>
-              <span className="sub">{p.id === MY_ID ? "Your numbers" : PROFILE_SUBTITLE[p.id] ?? `Age ${p.age}`}</span>
+              <span className="sub">{PROFILE_SUBTITLE[p.id] ?? `Age ${p.age}`}</span>
             </span>
           </button>
         ))}
-        <button className="add-numbers" onClick={() => { if (mine) selectProfile(MY_ID); openNumbers(); }}>
-          <Icon name={mine ? "sliders" : "person"} size={15} /> {mine ? "Edit your numbers" : "Add your numbers"}
+
+        <p className="eyebrow" style={{ margin: "14px 0 6px" }}>Your people · {mine.length}/{MAX_PEOPLE}</p>
+        {mine.length === 0 && <p className="caption" style={{ padding: "0 12px 4px" }}>Add someone with their own numbers.</p>}
+        {mine.map(({ profile: p }) => (
+          <div key={p.id} className="profile-row">
+            <button className="profile-btn" aria-pressed={p.id === profile.id} onClick={() => selectProfile(p.id)}>
+              <Avatar id="me" name={p.name} size={34} />
+              <span>
+                <span className="name" style={{ display: "block" }}>{p.name}</span>
+                <span className="sub">Age {p.age} · retire at {p.retirement_age}</span>
+              </span>
+            </button>
+            <button className="profile-edit" onClick={() => { selectProfile(p.id); openNumbers(p.id); }} aria-label={`Edit ${p.name}'s numbers`}
+              title="Edit numbers"><Icon name="sliders" size={14} /></button>
+          </div>
+        ))}
+        <button className="add-numbers" onClick={() => openNumbers(null)} disabled={mine.length >= MAX_PEOPLE}>
+          <Icon name="person" size={15} /> {mine.length >= MAX_PEOPLE ? "Limit reached (10 people)" : "Add a person"}
         </button>
       </div>
 

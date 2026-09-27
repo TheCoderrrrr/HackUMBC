@@ -20,7 +20,7 @@ function tsFields(name: string): Set<string> {
 const SHARED = [
   "FinancialProfile", "Scenario", "FinancialState", "ProjectionPoint", "Projection", "ModelAssumptions",
   "Evaluation", "Health", "RunSummary", "Comparison", "HistoryStatus", "PlanStyles", "StyleOutcome", "YearValues",
-  "ProfileInput", "MatchInput", "DebtInput", "ProfileBuild", "StoredProfile",
+  "ProfileInput", "MatchInput", "DebtInput", "ProfileBuild", "StoredProfile", "StoredProfiles",
 ];
 
 describe.each(SHARED)("%s", (name) => {

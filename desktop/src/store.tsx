@@ -59,12 +59,16 @@ interface Store {
   /** A scenario another view asks Explore to run next (from a Learn lesson). */
   pendingScenario: Scenario | null;
   setPendingScenario: (scenario: Scenario | null) => void;
-  /** The user's own numbers (stored in Tiger Data under their anonymous key), or null. */
-  mine: StoredProfile | null;
-  setMine: (stored: StoredProfile | null) => void;
-  /** True while the "Your numbers" form should show instead of the page. */
+  /** People the user added with their own numbers (stored in Tiger Data under their anonymous key). */
+  mine: StoredProfile[];
+  /** Adds or replaces one of them and selects it. */
+  upsertMine: (stored: StoredProfile) => void;
+  /** Forgets one of them (after it was erased on the server) and selects a demo profile. */
+  removeMine: (profileID: string) => void;
+  /** The numbers form: null when closed, else the person being edited (null ID = adding someone new). */
+  numbers: { id: string | null } | null;
   numbersOpen: boolean;
-  openNumbers: () => void;
+  openNumbers: (profileID: string | null) => void;
   closeNumbers: () => void;
   /** The open tab inside Your plan. */
   planSection: PlanSection;
@@ -78,8 +82,17 @@ interface Store {
 const StoreContext = createContext<Store | null>(null);
 
 /** The profile ID the backend gives the user's own numbers. */
-export const MY_ID = "me";
-const MINE_CACHE = "arm:myProfile";
+export const isPersonal = (profileID: string) => profileID === "me" || profileID.startsWith("u-");
+const MINE_CACHE = "arm:myProfiles";
+export const MAX_PEOPLE = 10;
+
+function cacheMine(list: StoredProfile[]) {
+  try {
+    localStorage.setItem(MINE_CACHE, JSON.stringify(list));
+  } catch {
+    // Storage unavailable: the list still loads from Tiger Data next time.
+  }
+}
 
 const current = (load: Load): Loaded | undefined =>
   load.status === "loaded" ? load.loaded : load.status === "idle" ? undefined : load.previous;
@@ -89,20 +102,20 @@ function stored<T extends string>(key: string, fallback: T): T {
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  // The user's own numbers: a local copy for instant start, refreshed from Tiger Data when live.
-  const [mine, setMineState] = useState<StoredProfile | null>(() => {
+  // People with their own numbers: a local copy for instant start, refreshed from Tiger Data when live.
+  const [mine, setMineState] = useState<StoredProfile[]>(() => {
     try {
-      const cached = localStorage.getItem(MINE_CACHE);
-      return cached ? (JSON.parse(cached) as StoredProfile) : null;
+      const cached = JSON.parse(localStorage.getItem(MINE_CACHE) ?? "[]");
+      return Array.isArray(cached) ? (cached as StoredProfile[]) : [];
     } catch {
-      return null;
+      return [];
     }
   });
-  const [numbersOpen, setNumbersOpen] = useState(false);
-  const profiles = useMemo(() => (mine ? [...savedProfiles, mine.profile] : savedProfiles), [mine]);
+  const [numbers, setNumbers] = useState<{ id: string | null } | null>(null);
+  const profiles = useMemo(() => [...savedProfiles, ...mine.map((m) => m.profile)], [mine]);
   const [profileID, setProfileID] = useState(() => {
     const id: string = stored<string>("profile", "morgan");
-    return id === MY_ID || savedProfiles.some((p) => p.id === id) ? id : savedProfiles[0].id;
+    return isPersonal(id) || savedProfiles.some((p) => p.id === id) ? id : savedProfiles[0].id;
   });
   const [tab, setTab] = useState<Tab>(() => {
     const saved = localStorage.getItem("tab");
@@ -121,39 +134,49 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const baseProfile = profiles.find((p) => p.id === profileID) ?? profiles[0];
 
-  const setMine = useCallback((next: StoredProfile | null) => {
-    setMineState(next);
-    lastLive.current.delete(MY_ID);
-    try {
-      if (next) localStorage.setItem(MINE_CACHE, JSON.stringify(next));
-      else localStorage.removeItem(MINE_CACHE);
-    } catch {
-      // Storage unavailable: the numbers still load from Tiger Data next time.
-    }
-    if (next) {
-      setProfileID(MY_ID);
-      localStorage.setItem("profile", MY_ID);
-    }
+  const upsertMine = useCallback((next: StoredProfile) => {
+    const id = next.profile.id;
+    lastLive.current.delete(id);
+    setMineState((list) => {
+      const updated = list.some((m) => m.profile.id === id)
+        ? list.map((m) => (m.profile.id === id ? next : m))
+        : [...list, next];
+      cacheMine(updated);
+      return updated;
+    });
+    setProfileID(id);
+    localStorage.setItem("profile", id);
   }, []);
 
-  // With live calculation on, the stored copy in Tiger Data wins over the local one.
+  const removeMine = useCallback((id: string) => {
+    lastLive.current.delete(id);
+    setMineState((list) => {
+      const updated = list.filter((m) => m.profile.id !== id);
+      cacheMine(updated);
+      return updated;
+    });
+    setProfileID((current) => (current === id ? savedProfiles[0].id : current));
+    localStorage.setItem("profile", savedProfiles[0].id);
+  }, []);
+
+  // With live calculation on, the list stored in Tiger Data wins over the local copy.
   useEffect(() => {
     const key = peekProfileKey();
     if (!key || !liveEnabled) return;
     const controller = new AbortController();
-    api.profiles.load(key, controller.signal)
-      .then((remote) => {
+    api.profiles.list(key, controller.signal)
+      .then(({ profiles: remote }) => {
         setMineState(remote);
-        try { localStorage.setItem(MINE_CACHE, JSON.stringify(remote)); } catch { /* ignore */ }
+        cacheMine(remote);
       })
-      .catch((error: unknown) => {
-        if (error instanceof APIError && error.body?.code === "PROFILE_NOT_FOUND") {
-          setMineState(null);
-          try { localStorage.removeItem(MINE_CACHE); } catch { /* ignore */ }
-        }
+      .catch(() => {
+        // Offline or database off: keep the local copy.
       });
     return () => controller.abort();
   }, [liveEnabled]);
+
+  // A selected personal profile that no longer exists falls back to the first demo profile.
+  const selectedMissing = isPersonal(profileID) && !mine.some((m) => m.profile.id === profileID);
   const [styles, setStyles] = useState<Record<string, PlanningPreference>>(() => {
     const out: Record<string, PlanningPreference> = {};
     for (const p of profiles) {
@@ -362,10 +385,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     pendingScenario,
     setPendingScenario,
     mine,
-    setMine,
-    numbersOpen: numbersOpen || (profileID === MY_ID && !mine),
-    openNumbers: () => setNumbersOpen(true),
-    closeNumbers: () => setNumbersOpen(false),
+    upsertMine,
+    removeMine,
+    numbers: numbers ?? (selectedMissing ? { id: null } : null),
+    numbersOpen: numbers !== null || selectedMissing,
+    openNumbers: (id: string | null) => setNumbers({ id }),
+    closeNumbers: () => {
+      setNumbers(null);
+      if (selectedMissing) {
+        setProfileID(savedProfiles[0].id);
+        localStorage.setItem("profile", savedProfiles[0].id);
+      }
+    },
     planSection,
     setPlanSection,
     openPlan,

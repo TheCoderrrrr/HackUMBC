@@ -142,12 +142,15 @@ export const api = {
   profiles: {
     build: (form: ProfileInput, signal?: AbortSignal) =>
       send<ProfileBuild>("/v1/profiles/build", { method: "POST", body: JSON.stringify(form) }, REQUEST_TIMEOUT_MS, signal),
-    save: (form: ProfileInput, key: string) =>
-      send<ProfileBuild>("/v1/profiles/me", { method: "PUT", body: JSON.stringify(form) }, REQUEST_TIMEOUT_MS, undefined, keyHeader(key)),
-    load: (key: string, signal?: AbortSignal) =>
-      send<StoredProfile>("/v1/profiles/me", { method: "GET" }, REQUEST_TIMEOUT_MS, signal, keyHeader(key)),
-    erase: (key: string) =>
-      send<null>("/v1/profiles/me", { method: "DELETE" }, REQUEST_TIMEOUT_MS, undefined, keyHeader(key)),
+    list: (key: string, signal?: AbortSignal) =>
+      send<{ profiles: StoredProfile[] }>("/v1/profiles", { method: "GET" }, REQUEST_TIMEOUT_MS, signal, keyHeader(key)),
+    create: (form: ProfileInput, key: string) =>
+      send<ProfileBuild>("/v1/profiles", { method: "POST", body: JSON.stringify(form) }, REQUEST_TIMEOUT_MS, undefined, keyHeader(key)),
+    update: (profileID: string, form: ProfileInput, key: string) =>
+      send<ProfileBuild>(`/v1/profiles/${encodeURIComponent(profileID)}`, { method: "PUT", body: JSON.stringify(form) },
+        REQUEST_TIMEOUT_MS, undefined, keyHeader(key)),
+    erase: (profileID: string, key: string) =>
+      send<null>(`/v1/profiles/${encodeURIComponent(profileID)}`, { method: "DELETE" }, REQUEST_TIMEOUT_MS, undefined, keyHeader(key)),
   },
 };
 

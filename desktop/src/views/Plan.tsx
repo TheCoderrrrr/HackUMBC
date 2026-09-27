@@ -3,7 +3,7 @@ import { AllocationRing, Icon, MonthMeter } from "../components/ui";
 import { LineChart } from "../components/LineChart";
 import { Tabs, type TabItem } from "../components/Tabs";
 import { Term } from "../components/Term";
-import { yearlyBalances, type Display } from "../data/display";
+import { monthBudget, yearlyBalances, type Display } from "../data/display";
 import { firstReach, gapAt, goalPresets, moneyShort, parseGoal, yearMarkers, yearsSooner } from "../data/chart";
 import { money, moneyExact, monthLabel, months, percent } from "../data/format";
 import { STYLE_INFO } from "../data/styles";
@@ -90,7 +90,7 @@ function Future({ display }: { display: Display }) {
   const presets = useMemo(() => goalPresets(plan[years] ?? 0), [plan, years]);
   const startYear = Number(profile.as_of_date.slice(0, 4));
   const markers = yearMarkers([
-    { month: adaptive.debt_free_month, label: "Debt cleared" },
+    { month: adaptive.debt_free_month, label: "Debt-free" },
     { month: adaptive.full_reserve_month, label: "Emergency fund full" },
   ], years);
 
@@ -214,50 +214,75 @@ function Stat({ label, value, sub, accent }: { label: ReactNode; value: string; 
 }
 
 function ThisMonth({ display }: { display: Display }) {
-  const { profile } = display;
-  const minimums = display.debts.reduce((s, d) => s + d.minimumCents, 0);
-  const steps = display.cash.filter((c) => c.amountCents > 0 || c.kind === "retirement");
-  const title = { retirement: "Retirement contribution", debt: "Extra toward debt", emergency: "Emergency savings", remaining: "Left for you" } as const;
-  const note = {
-    retirement: "What saving costs you after tax savings",
-    debt: "On top of the minimum payment",
-    emergency: "Into your cash cushion",
-    remaining: "Yours to spend or save",
-  } as const;
+  const b = monthBudget(display);
+  const balanced = b.totalCents === b.toPlanCents;
+  const blocked = display.evaluation.financial_state.warnings.includes("CASH_FLOW_SHORTFALL");
   return (
     <div className="panel">
       <PanelHead title="Where this month's money goes" short={display.nextStep.headline} why="month" />
-      <p className="panel-note">
-        First, the basics: {money(profile.monthly_living_expenses_cents)} for living costs
-        {minimums > 0 && <> and {money(minimums)} in minimum debt payments</>}. Then:
-      </p>
+      <div className="budget">
+        <div className="budget-line">
+          <span>Take-home pay</span><span className="num">{moneyExact(b.takeHomeCents)}</span>
+        </div>
+        {b.currentContributionCents > 0 && (
+          <div className="budget-line">
+            <span>
+              + Your current 401(k) contribution
+              <span className="caption"> · already taken out of your pay, so it's part of what ARM can direct</span>
+            </span>
+            <span className="num">{moneyExact(b.currentContributionCents)}</span>
+          </div>
+        )}
+        <div className="budget-line budget-sum">
+          <span>Money to plan with</span><span className="num">{moneyExact(b.toPlanCents)}</span>
+        </div>
+      </div>
       <ol className="money-steps">
-        {steps.map((c) => (
-          <li key={c.kind}>
-            <span className="money-step-text"><b>{title[c.kind]}</b><span className="caption">{note[c.kind]}</span></span>
-            <span className="num money-step-amount">{moneyExact(c.amountCents)}<span className="caption"> /mo</span></span>
+        {b.lines.map((l) => (
+          <li key={l.key}>
+            <span className="money-step-text"><b>{l.label}</b><span className="caption">{l.note}</span></span>
+            <span className="num money-step-amount">{moneyExact(l.cents)}<span className="caption"> /mo</span></span>
           </li>
         ))}
       </ol>
+      <p className={`budget-check ${balanced ? "ok" : "off"}`}>
+        {balanced
+          ? <><Icon name="check" size={13} /> Adds up to {moneyExact(b.totalCents)}, every dollar accounted for.</>
+          : blocked
+            ? "Living costs and minimum payments are more than the money available, so nothing else can be funded yet."
+            : `These lines total ${moneyExact(b.totalCents)}; the engine's budget is ${moneyExact(b.toPlanCents)}.`}
+      </p>
     </div>
   );
 }
 
 function Saving({ display }: { display: Display }) {
-  const fullMatch = display.evaluation.financial_state.employee_rate_for_full_match;
+  const state = display.evaluation.financial_state;
+  const fullMatch = state.employee_rate_for_full_match;
   const employer = display.employerCents;
   const short = employer
     ? <>You put in {moneyExact(display.employeeCents)} a month and your employer adds {moneyExact(employer)}.</>
     : <>You put in {moneyExact(display.employeeCents)} a month.</>;
+  const changed = Math.abs(display.rate - display.currentRate) > 1e-9;
   return (
     <div className="panel">
       <PanelHead title="Saving for retirement" short={short} why="saving" />
       <div className="kstats">
-        <Stat label="Your contribution" value={percent(display.rate)} sub={display.rate !== display.currentRate ? `Today: ${percent(display.currentRate)}` : "of your pay"} accent />
+        <Stat label="Your contribution" value={percent(display.rate)} accent
+          sub={changed ? `${display.rate > display.currentRate ? "Up" : "Down"} from ${percent(display.currentRate)} today` : "of your pay"} />
         <Stat label={<Term id="employer-match">Employer adds</Term>} value={employer === null ? "—" : moneyExact(employer)}
-          sub={fullMatch === null ? "No match" : display.matchCaptured ? "Full match" : `Full match at ${percent(fullMatch)}`} />
-        <Stat label="Cost to your take-home" value={moneyExact(display.takeHomeCostCents)} sub="per month, after tax savings" />
+          sub={fullMatch === null ? "No match" : display.matchCaptured ? "Full match, per month" : `Full match needs ${percent(fullMatch)}`} />
+        <Stat label="Cost to your take-home" value={moneyExact(display.takeHomeCostCents)}
+          sub={display.profile.contribution_tax_treatment === "roth"
+            ? "Roth: taxed now, so the full amount comes from take-home"
+            : `${moneyExact(display.employeeCents)} goes in; lower income tax covers the rest`} />
       </div>
+      {changed && display.rate < display.currentRate && (
+        <p className="panel-note">
+          The plan lowers your contribution for now to free cash for {display.debts.some((d) => d.extraCents > 0) ? "expensive debt" : "your emergency fund"},
+          while still keeping {display.matchCaptured ? "the full employer match" : "as much of the match as it can"}. It rises again once that's handled.
+        </p>
+      )}
     </div>
   );
 }
@@ -265,21 +290,36 @@ function Saving({ display }: { display: Display }) {
 function Debt({ display }: { display: Display }) {
   const { evaluation, profile } = display;
   const { adaptive, current } = evaluation.projections;
+  const threshold = evaluation.assumptions.high_interest_apr_threshold;
   const paying = display.debts.find((d) => d.extraCents > 0);
   const short = paying
-    ? <>Paying {moneyExact(paying.extraCents)} extra clears high-interest debt by {when(adaptive.debt_free_month, profile.as_of_date, "now")}.</>
-    : <>Minimum payments keep your debt on schedule.</>;
+    ? <>Paying {moneyExact(paying.extraCents)} extra on your {paying.name.toLowerCase()} makes you debt-free by {when(adaptive.debt_free_month, profile.as_of_date, "now")}.</>
+    : <>Minimum payments keep every debt on schedule; no extra payments are needed.</>;
   return (
     <div className="panel">
       <PanelHead title="Paying down debt" short={short} why="debt" />
-      {display.debts.map((d) => (
-        <div key={d.id} className="kstats">
-          <Stat label={d.name} value={money(d.balanceCents)} sub={<>{percent(d.apr)} <Term id="apr">APR</Term></>} />
-          <Stat label="Monthly payment" value={moneyExact(d.minimumCents + d.extraCents)} sub={d.extraCents > 0 ? `${moneyExact(d.minimumCents)} minimum + ${moneyExact(d.extraCents)} extra` : "Minimum"} accent />
-          <Stat label={<Term id="high-interest-debt">High-interest debt cleared</Term>} value={when(adaptive.debt_free_month, profile.as_of_date, "None")}
-            sub={`Current habits: ${when(current.debt_free_month, profile.as_of_date, "None")}`} />
-        </div>
-      ))}
+      <table className="table debt-table">
+        <thead><tr><th>Debt</th><th>Balance</th><th><Term id="apr">APR</Term></th><th>Minimum</th><th>Extra this month</th></tr></thead>
+        <tbody>
+          {display.debts.map((d) => (
+            <tr key={d.id}>
+              <td>{d.name}{d.apr >= threshold && <span className="chip muted" style={{ marginLeft: 8 }}><Term id="high-interest-debt">High interest</Term></span>}</td>
+              <td className="num">{money(d.balanceCents)}</td>
+              <td className="num">{percent(d.apr)}</td>
+              <td className="num">{moneyExact(d.minimumCents)}</td>
+              <td className="num" style={{ color: d.extraCents > 0 ? "var(--accent)" : undefined }}>{d.extraCents > 0 ? moneyExact(d.extraCents) : "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="kstats">
+        <Stat label="Debt-free (every debt paid off)" value={when(adaptive.debt_free_month, profile.as_of_date, "Now")} accent
+          sub={`Current habits: ${when(current.debt_free_month, profile.as_of_date, "now")}`} />
+        <Stat label="Interest you'll pay" value={money(adaptive.cumulative_debt_interest_cents ?? 0)}
+          sub={`Current habits: ${money(current.cumulative_debt_interest_cents ?? 0)}`} />
+        <Stat label="Paid each month now" value={moneyExact(display.debts.reduce((s, d) => s + d.minimumCents + d.extraCents, 0))}
+          sub="Minimums plus any extra" />
+      </div>
     </div>
   );
 }
@@ -332,7 +372,7 @@ function Milestones({ display }: { display: Display }) {
     { key: "today", title: "Today", when: monthLabel(profile.as_of_date, 0), done: true, value: `${money(profile.retirement_balance_cents)} saved` },
   ];
   if (display.debts.length > 0 && adaptive.debt_free_month !== null) {
-    rows.push({ key: "debt", title: "High-interest debt cleared", when: when(adaptive.debt_free_month, profile.as_of_date), done: adaptive.debt_free_month === 0, section: "debt" });
+    rows.push({ key: "debt", title: "Debt-free", when: when(adaptive.debt_free_month, profile.as_of_date), done: adaptive.debt_free_month === 0, section: "debt" });
   }
   if (adaptive.full_reserve_month !== null) {
     rows.push({ key: "fund", title: "Emergency fund full", when: when(adaptive.full_reserve_month, profile.as_of_date), done: adaptive.full_reserve_month === 0, section: "emergency" });
