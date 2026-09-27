@@ -10,7 +10,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=FFD43B) ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?style=flat-square&logo=fastapi&logoColor=white) ![Gemini](https://img.shields.io/badge/Gemini-3.5_Flash--Lite-8E75B2?style=flat-square&logo=googlegemini&logoColor=white) ![Tiger Data](https://img.shields.io/badge/Tiger_Data-TimescaleDB-F5A623?style=flat-square&logo=postgresql&logoColor=white) ![React](https://img.shields.io/badge/React-desktop-61DAFB?style=flat-square&logo=react&logoColor=black) ![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS_17+-F05138?style=flat-square&logo=swift&logoColor=white)
 <br/>
-![Backend tests](https://img.shields.io/badge/backend_tests-567_passing-22C55E?style=flat-square) ![Desktop tests](https://img.shields.io/badge/desktop_tests-160_passing-22C55E?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-2563EB?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-EC4899?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_+_anonymous-0EA5E9?style=flat-square)
+![Backend tests](https://img.shields.io/badge/backend_tests-574_passing-22C55E?style=flat-square) ![Desktop tests](https://img.shields.io/badge/desktop_tests-172_passing-22C55E?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-2563EB?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-EC4899?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_+_anonymous-0EA5E9?style=flat-square)
 
 <sub><b>HackUMBC 2026</b> · University of Maryland, Baltimore County</sub>
 
@@ -39,7 +39,7 @@ T. Rowe Price, whose target-date lineup is its largest product line, has said pu
 
 | Feature | What it does |
 |---|---|
-| 🧭 **Getting started** | Two short, skippable pages: a welcome and the order ARM funds each month, pointing to **Plan style** for the one step you choose |
+| 🧭 **Getting started** | Three skippable pages from the person's live numbers: a snapshot and next step, a pie of this month's money (click a slice or line to make it grow and glow), and a menu tour that lights up each item in the real sidebar |
 | 🏠 **Overview** | The single most useful next step, three at-a-glance tiles, and a first-steps checklist |
 | 📈 **Your plan** | Plan vs. current habits on one chart (drag to any age, shaded difference, goal line with "N years sooner"), then tabs for this month, saving, debt, emergency fund and fund, each with **Why this matters** |
 | 🎚️ **Plan style** | Balanced, Cash security first or Debt payoff first: a button beside the plan title and a sidebar menu switch it anytime; a panel compares all three on the person's numbers |
@@ -166,7 +166,7 @@ flowchart LR
 - **No demographic inference:** prompts contain only computed indicators, never names, IDs or account data.
 - **User choice over the tradeoff:** three plan styles, compared honestly (styles that make no difference are shown as the same; an AI override of the chosen style is disclosed).
 - **Grounded products:** a fund shortlist over 6 target-date share classes (BlackRock LifePath Index, State Street Target Retirement) where every fee and allocation cites its SEC filing and missing data excludes a fund instead of being estimated.
-- **Built for beginners:** a short Getting started guide, a **?** on every key term, and **Why this matters** on every section.
+- **Built for beginners:** an interactive Getting started, a **?** on every key term, and **Why this matters** on every section.
 
 ### 2. [MLH] Best Use of Gemini API
 
@@ -214,6 +214,41 @@ ORDER BY y.month, r.created_at;
 
 </details>
 
+### 4. Community Impact and Social Innovation (STARS)
+
+> *"Demonstrate a clear understanding of the needs of the Baltimore or UMBC community … and present a realistic plan for evaluating that impact."*
+
+**The need:** UMBC graduates starting their first jobs and Baltimore workers joining an employer plan are handed the same default as everyone their age, whether they have savings or a 25% credit card. Personalized help is usually paid, needs an account or bank login, or assumes money people don't have yet. **What we built for it:**
+- **Free, private, no sign-up:** no account and no bank credentials; a person's numbers live under a random browser key (the server keeps only its hash) and are erased in one click.
+- **Made for coaches and workshops:** **Your people** holds up to 10 people per browser, each with private saved runs, so a volunteer coach or a UMBC workshop leader can model several attendees side by side.
+- **Plain language first:** Getting started shows this month's money as a pie in the person's own numbers, plus a **?** on key terms, **Why this matters** on every section, six lessons and an Ask chat.
+- **Works where people are:** any laptop browser, and an iPhone app with an offline bundle for rooms without Wi-Fi.
+
+**How we'd evaluate it** (opt-in, anonymous, aggregate only):
+
+| Phase | Who | Measured at start and after 90 days |
+|---|---|---|
+| **1. UMBC pilot** | A financial-wellness workshop for graduating seniors and student employees | Share capturing the full employer match · contribution rate · months of emergency savings · high-APR balance and whether extra payments started · confidence (1–5 survey) |
+| **2. Baltimore pilot** | Nonprofit financial-coaching sessions, with coaches using **Your people** | The same measures, plus coaching time per client |
+| **Counterfactual** | Every participant | ARM's own current-habits projection for that person, so change is measured against what their habits would have produced |
+
+Success looks like: participants who were missing the match move to capture it; people with high-APR debt start the extra payment ARM names; and emergency months rise, without contribution rates falling below the match.
+
+### 5. Best Entrepreneurial Idea (Entrepreneurs Club)
+
+**Problem:** target-date funds are the default retirement investment for millions of workers, and they personalize on age alone. **Product:** ARM is a personalization layer that sits *around* an existing fund. It doesn't sell a new fund or move money, and it works today as an API, a web app and an iPhone app.
+
+| Customer | What they get | How it pays |
+|---|---|---|
+| **Recordkeepers and target-date providers** | The API and a white-label UI that personalize contributions and cash priorities around their own funds | Per-participant annual license |
+| **Employers** | A financial-wellness benefit that lifts match capture and emergency savings | Per-employee subscription |
+| **Individuals, students, nonprofit coaches** | The full app, free | Free tier; builds the evidence for the paid tiers |
+
+- **Why it can win:** no new fund to launch or approve; a deterministic engine that compliance teams can replay (`input_hash`, model and policy versions, fund snapshot); AI that is cheap, optional and labeled, with a rules fallback that always works.
+- **Go-to-market:** community pilots (track 4) produce outcome data → employer wellness pilots → recordkeeper integrations.
+- **Risks and answers:** advice regulation → educational framing now, review with a registered adviser before personalized advice; manual data entry → account aggregation later; steady-return projections → clearly labeled illustrations, volatility modeling next.
+- **Pitch in one line:** *Your target-date fund knows your birth year. ARM knows your budget.*
+
 ---
 
 ## 📊 Results
@@ -259,12 +294,12 @@ ORDER BY y.month, r.created_at;
 
 | Check | Result |
 |---|---|
-| Backend (`pytest`) | **567 passed**: engine, policy, simulation, AI pipeline, history, people, plan styles, funds, chat, contracts |
+| Backend (`pytest`) | **574 passed**: engine, policy, simulation, AI pipeline, history, people, plan styles, funds, chat, contracts |
 | Real Tiger Data (opt-in) | **6/6**: hypertable, aggregate = chart values, compression, delete, pool reuse, people with private runs |
-| Desktop (`vitest`) | **160 passed**: chart math, the monthly budget adding up to the cent on 12 engine results, restoring saved runs, fund helpers, API↔UI contract (20 schemas) |
+| Desktop (`vitest`) | **172 passed**: chart math, the monthly budget (and its Getting started pie) adding up to the cent on 12 engine results, restoring saved runs, fund helpers, API↔UI contract (20 schemas) |
 | Live API | **13/13**: adaptive scenarios, reopening a saved run to the same `input_hash`, fund scores = weighted parts, several people end to end |
 | Mutation checks | Deliberate bugs (off-by-one dates, reversed differences, sampling drift, a skipped hash check) each fail the suites |
-| Performance | First download **264 KB** (from 1,126 KB); plan-style comparisons cached **~340 ms → 2.5 ms** |
+| Performance | First download **252 KB** (from 1,126 KB); plan-style comparisons cached **~340 ms → 2.5 ms** |
 
 ---
 
@@ -289,8 +324,8 @@ Four of us built ARM in 24 hours as three clients (React desktop, SwiftUI iPhone
 
 ## 🎬 Demo script
 
-1. **Getting started** opens → walk through *how ARM decides* (you choose one step: the plan style).
-2. **Your plan** → $1.46M at 67 vs. $1.32M on current habits. Drag the chart, set a **$1M goal line**, read "N years sooner". Click **Plan style** → pick **Debt payoff first**.
+1. **Getting started** opens → Morgan's snapshot → click slices of this month's pie → tour the menu (items light up in the sidebar).
+2. **Your plan** → $1.45M at 67 vs. $1.31M on current habits. Drag the chart, set a **$1M goal line**, read "N years sooner". Click **Plan style** → pick **Debt payoff first**.
 3. **Debt → Why this matters** → card cleared in month 16 instead of 135, with interest on both sides.
 4. **Explore** → retire two years later → **Save run** → **Saved runs** → click it to reopen with the same choices, or compare two from Tiger Data.
 5. **Fund shortlist** → change risk tolerance → read the side-by-side table and a fund's score breakdown.
@@ -323,7 +358,7 @@ A reusable pattern: **the model proposes, a deterministic engine decides**, and 
 </tr>
 </table>
 
-**How we'd measure it in a pilot:** share of users getting the full match, time to clear high-interest debt, months of emergency savings, and contribution-rate changes, each against the same person's current-habits projection.
+**How we'd measure it:** the UMBC and Baltimore pilot plan under [track 4](#4-community-impact-and-social-innovation-stars): full-match capture, time to clear high-interest debt, months of emergency savings and contribution rates, each against the same person's current-habits projection.
 
 ---
 
