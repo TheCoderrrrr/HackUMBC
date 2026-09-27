@@ -68,6 +68,18 @@ def list_runs(request: Request, profile_id: str = Query(min_length=1, max_length
         raise _unavailable() from None
 
 
+@router.delete("/runs/{run_id}", status_code=204, responses=_ERRORS)
+def delete_run(run_id: str, request: Request) -> Response:
+    store = _store(request)
+    run_id = _run_id(run_id, "run_id")
+    try:
+        if not store.delete(run_id):
+            raise ApiError(404, "RUN_NOT_FOUND", "That saved run doesn't exist.", ["run_id"])
+    except HistoryUnavailable:
+        raise _unavailable() from None
+    return Response(status_code=204)
+
+
 @router.get("/compare", response_model=Comparison, responses=_ERRORS)
 def compare(request: Request, base: str = Query(), other: str = Query()) -> Comparison:
     store = _store(request)

@@ -8,6 +8,8 @@ order and the style is the default and fallback.
 """
 from __future__ import annotations
 
+import threading
+from collections import OrderedDict
 from datetime import date
 from typing import get_args
 
@@ -15,7 +17,9 @@ from fastapi import APIRouter, Request
 
 from app import engine_port as engine
 from app.ai.prompts import PROMPT_VERSION
+from app.engine.canonical import profile_hash
 from app.errors import ApiError
+from app.limits import client_key
 from app.schemas import (
     Cents, ErrorEnvelope, FinancialProfile, PlanningPreference, Priority, Projection, Strict,
 )
@@ -89,6 +93,28 @@ def _outcome(projection: Projection, style: str | None, order: list[str] | None)
     )
 
 
+_CACHE_SIZE = 64
+_cache: OrderedDict[str, PlanStyles] = OrderedDict()
+_cache_lock = threading.Lock()
+
+
+def cached_compare_styles(profile: FinancialProfile) -> PlanStyles:
+    """compare_styles is deterministic for a profile and engine version (no AI), so results are
+    kept in a small LRU keyed by the canonical profile hash plus model, policy and prompt versions."""
+    key = "|".join((profile_hash(profile.model_dump(mode="json")), engine.MODEL_VERSION, engine.POLICY_VERSION, PROMPT_VERSION))
+    with _cache_lock:
+        hit = _cache.get(key)
+        if hit is not None:
+            _cache.move_to_end(key)
+            return hit
+    result = compare_styles(profile)
+    with _cache_lock:
+        _cache[key] = result
+        while len(_cache) > _CACHE_SIZE:
+            _cache.popitem(last=False)
+    return result
+
+
 def compare_styles(profile: FinancialProfile) -> PlanStyles:
     outcomes, current, core = [], None, None
     for style in STYLES:
@@ -104,6 +130,6 @@ def compare_styles(profile: FinancialProfile) -> PlanStyles:
 
 @router.post("", response_model=PlanStyles, responses=_ERRORS)
 def plan_styles(body: PlanStylesRequest, request: Request) -> PlanStyles:
-    if not request.app.state.evaluate_limiter.allow():
+    if not request.app.state.evaluate_limiter.allow(client_key(request)):
         raise ApiError(429, "RATE_LIMITED", "Too many requests. Try again in a minute.", retryable=True)
-    return compare_styles(body.profile)
+    return cached_compare_styles(body.profile)

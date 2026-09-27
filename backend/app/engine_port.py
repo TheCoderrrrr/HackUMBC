@@ -8,6 +8,7 @@ contract at the boundary.
 """
 from __future__ import annotations
 
+import functools
 import json
 from pathlib import Path
 
@@ -41,8 +42,15 @@ def _dump(profile: FinancialProfile) -> dict:
     return profile.model_dump(mode="json")
 
 
+@functools.cache
+def _demo_profiles() -> tuple[FinancialProfile, ...]:
+    return tuple(FinancialProfile.model_validate(p) for p in json.loads(_FIXTURES.read_text(encoding="utf-8")))
+
+
 def load_demo_profiles() -> list[FinancialProfile]:
-    return [FinancialProfile.model_validate(p) for p in json.loads(_FIXTURES.read_text(encoding="utf-8"))]
+    """The demo fixtures, read and validated once per process. Callers get their own list;
+    use model_copy(update=...) rather than mutating a profile."""
+    return list(_demo_profiles())
 
 
 def derive_state(profile: FinancialProfile) -> State:

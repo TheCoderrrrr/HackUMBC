@@ -118,6 +118,8 @@ export interface Projection {
   starter_reserve_month: number | null;
   full_reserve_month: number | null;
   points: ProjectionPoint[];
+  /** Codes such as "CUSTOM_INFEASIBLE_MONTH_42"; absent from older responses. */
+  warnings?: string[];
 }
 
 export interface ModelAssumptions {
@@ -173,6 +175,8 @@ export interface Health {
   model_version: string;
   policy_version: string;
   plaid_enabled: boolean;
+  /** True when the server has a working AI provider configured. */
+  ai_available?: boolean;
 }
 
 export interface ErrorBody {

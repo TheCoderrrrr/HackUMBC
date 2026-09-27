@@ -43,4 +43,20 @@ describe.skipIf(!API)("live backend", async () => {
       expect(outcome.yearly[outcome.yearly.length - 1].retirement_balance_cents).toBe(outcome.retirement_balance_nominal_cents);
     }
   }, 20_000);
+
+  it("history: save then delete a run (skipped when history is off)", async () => {
+    const status = (await (await fetch(`${API}/v1/history/status`)).json()) as { enabled: boolean; available: boolean };
+    if (!status.enabled || !status.available) return;
+    const profile = profiles[0];
+    const evaluation = await post<Evaluation>("/v1/evaluate", { profile });
+    const res = await fetch(`${API}/v1/history/runs`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ profile_id: profile.id, scenario: null, decision_summary: evaluation.decision_summary, input_hash: evaluation.input_hash }),
+    });
+    expect([200, 201]).toContain(res.status);
+    const { run } = (await res.json()) as { run: { run_id: string } };
+    expect((await fetch(`${API}/v1/history/runs/${run.run_id}`, { method: "DELETE" })).status).toBe(204);
+    expect((await fetch(`${API}/v1/history/runs/${run.run_id}`, { method: "DELETE" })).status).toBe(404);
+  }, 30_000);
 });
+

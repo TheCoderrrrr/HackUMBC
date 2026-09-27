@@ -8,6 +8,9 @@ with the rules decision (no AI call). Saving is idempotent, so rerunning adds no
 from __future__ import annotations
 
 import sys
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 from app import engine_port as engine
 from app.ai.prompts import PROMPT_VERSION
@@ -17,6 +20,7 @@ from app.schemas import Scenario
 
 
 def main() -> int:
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")  # the app loads it in app.main; scripts do it here
     store = build_history_store()
     if store is None:
         print("TIGER_DATABASE_URL is not set in backend/.env")

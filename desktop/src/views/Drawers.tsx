@@ -195,6 +195,9 @@ function Assumptions({ display, onClose }: { display: Display; onClose: () => vo
         connection === "online" ? `Online · model ${health?.model_version ?? "?"}`
           : connection === "offline" ? "Unreachable" : connection === "checking" ? "Checking…" : "Off (saved only)"
       } />
+      {connection === "online" && health?.ai_available !== undefined && (
+        <Row label="AI" value={health.ai_available ? "Available" : "Off: rules only"} />
+      )}
       <button className="link" onClick={checkConnection} style={{ marginTop: 8 }}>Check again</button>
       <p className="caption" style={{ marginTop: 10 }}>
         To use another backend, restart the desktop app with BACKEND_URL set (see docs/DESKTOP.md).

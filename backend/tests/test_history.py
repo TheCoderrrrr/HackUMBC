@@ -73,6 +73,11 @@ class FakeHistoryStore:
         self._check()
         return {i: service.yearly_reference(i, self.records[i].points, s) for i, s in pairs}
 
+    def delete(self, run_id):
+        self._check()
+        self.created.pop(run_id, None)
+        return self.records.pop(run_id, None) is not None
+
 
 # --- helpers ---------------------------------------------------------------------
 
@@ -330,3 +335,20 @@ def test_compare_rejects_rows_off_the_yearly_boundary():
     bad = [YearRow("a", "adaptive", 13, date(2027, 10, 1), 1, 1, 1)]
     with pytest.raises(ValueError):
         service.compare(summary, other, bad, [])
+
+
+def test_delete_removes_a_run_and_is_404_afterwards(client, store):
+    run = client.post("/v1/history/runs", json=save_body(live_evaluation(client, "morgan"))).json()["run"]
+    assert client.delete(f"/v1/history/runs/{run['run_id']}").status_code == 204
+    assert store.records == {}
+    again = client.delete(f"/v1/history/runs/{run['run_id']}")
+    assert again.status_code == 404 and again.json()["error"]["code"] == "RUN_NOT_FOUND"
+    assert client.get("/v1/history/runs", params={"profile_id": "morgan"}).json()["runs"] == []
+
+
+def test_delete_rejects_a_bad_id_and_reports_outages(client, store):
+    assert client.delete("/v1/history/runs/not-a-uuid").status_code == 422
+    store.down = True
+    res = client.delete("/v1/history/runs/00000000-0000-0000-0000-000000000000")
+    assert res.status_code == 503 and res.json()["error"]["code"] == "HISTORY_UNAVAILABLE"
+
