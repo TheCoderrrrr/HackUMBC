@@ -519,6 +519,8 @@ Projection
       retirement_balance_cents: integer
       cash_cents: integer
       debt_cents: integer
+  warnings: string[]   # this projection's own months; the top-level
+                       # warnings cover state + the opening-month plan only
 
 ModelAssumptions
   annual_equity_return: number
