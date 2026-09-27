@@ -167,9 +167,13 @@ def prepare(model, profiles_path: Path, *, attempts: int = 3,
 
 def model_from_settings():
     """A's client for AI_PROVIDER in backend/.env, or an error message saying what is missing."""
+    from dotenv import load_dotenv
+
     from app.ai.client import build_model
     from app.config import load_settings
 
+    # This script needs the real key; the library modules no longer load .env (REPORT C7).
+    load_dotenv(Path(__file__).resolve().parents[1] / ".env")
     settings = load_settings()
     model = build_model(settings)
     if model is not None:

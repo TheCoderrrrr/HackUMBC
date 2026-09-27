@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import logging
 import time
+from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.gzip import GZipMiddleware
 
@@ -67,4 +69,8 @@ def create_app(settings: Settings | None = None, model: StructuredModel | None =
 
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+
+# Secrets and settings come from backend/.env at app startup — not at app.config
+# import time, so tests never read the developer's real .env (REPORT C7).
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 app = create_app()

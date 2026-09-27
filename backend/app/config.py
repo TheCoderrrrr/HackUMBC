@@ -1,19 +1,18 @@
 """Environment configuration (BACKEND.md section 15). Secrets stay in backend/.env.
 
 Invalid values stop startup with one clear ConfigError line instead of a traceback.
+
+`.env` is loaded by the app entry point (app.main) and the scripts that need it,
+never at this module's import — so tests reading settings never see the
+developer's real `.env` (REPORT C7).
 """
 from __future__ import annotations
 
 import logging
 import os
 from dataclasses import dataclass
-from pathlib import Path
-
-from dotenv import load_dotenv
 
 from app.ai.prompts import PROMPT_VERSION
-
-load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 THINKING_LEVELS = {"minimal", "low", "medium", "high"}
 REASONING_EFFORTS = {"none", "minimal", "low", "medium", "high"}

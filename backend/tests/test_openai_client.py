@@ -116,12 +116,28 @@ def test_pipeline_labels_openai_failures(morgan):
 # --- configuration ---------------------------------------------------------------------------
 
 
+AI_ENV_VARS = (
+    "AI_ENABLED", "AI_PROVIDER", "AI_MODEL", "OPENAI_API_KEY", "GEMINI_API_KEY",
+    "AI_REASONING_EFFORT", "AI_THINKING_LEVEL", "AI_TOTAL_TIMEOUT_SECONDS", "AI_PROMPT_VERSION",
+)
+
+
 def settings_env(monkeypatch, **env):
-    for name in ("AI_PROVIDER", "AI_MODEL", "OPENAI_API_KEY", "GEMINI_API_KEY", "AI_REASONING_EFFORT"):
+    # Clear every AI variable so the developer's shell (and nothing else) can't leak in
+    # (REPORT C7; `AI_ENABLED=false pytest` used to fail the availability test).
+    for name in AI_ENV_VARS:
         monkeypatch.delenv(name, raising=False)
     for name, value in env.items():
         monkeypatch.setenv(name, value)
     return load_settings()
+
+
+def test_settings_ignore_the_real_env_file(monkeypatch):
+    # REPORT C7: app.config no longer loads backend/.env at import, so settings reflect
+    # only the process environment — a developer's .env or shell can't leak into tests.
+    for name in AI_ENV_VARS:
+        monkeypatch.delenv(name, raising=False)
+    assert load_settings().ai_available is False
 
 
 def test_default_provider_is_gemini_flash_lite(monkeypatch):
