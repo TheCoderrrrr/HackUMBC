@@ -227,6 +227,8 @@ export interface RunSummary {
   fund_name?: string | null;
   catalog_version?: string | null;
   glide_path_mode?: string | null;
+  /** The plan style the run was calculated with; null for runs saved before it was recorded. */
+  planning_preference?: PlanningPreference | null;
 }
 
 export interface YearValues {
@@ -330,3 +332,8 @@ export interface StoredProfile {
   form: ProfileInput;
   profile: FinancialProfile;
 }
+
+export interface StoredProfiles {
+  profiles: StoredProfile[];
+}
+

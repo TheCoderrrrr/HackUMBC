@@ -122,6 +122,7 @@ def build_run(body_profile_id: str, scenario: Scenario | None, decision: Decisio
         assumptions=core.assumptions.model_dump(mode="json"),
         points=points,
         owner=owner,
+        planning_preference=profile.planning_preference,
     )
 
 

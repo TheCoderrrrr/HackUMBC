@@ -1,13 +1,15 @@
 import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import { screenContext, type ScreenFact } from "./api/chatContext";
 import { Avatar, Icon, LiveStatus, PROFILE_SUBTITLE } from "./components/ui";
+import { Brand } from "./components/Brand";
+import { StylePanel } from "./views/StylePanel";
 import { Drawers } from "./views/Drawers";
 import { Guide } from "./views/Guide";
 import { Overview } from "./views/Overview";
 import { Plan } from "./views/Plan";
 import { errorMessage } from "./api/client";
-import { STYLE_INFO } from "./data/styles";
-import { MY_ID, useStore, type Tab } from "./store";
+import { STYLE_INFO, STYLE_ORDER } from "./data/styles";
+import { MAX_PEOPLE, isPersonal, useStore, type Tab } from "./store";
 
 // Pages opened less often load on demand, keeping the first download small.
 const Explore = lazy(() => import("./views/Explore").then((m) => ({ default: m.Explore })));
@@ -32,7 +34,7 @@ const PAGES: { id: Tab; title: string; icon: string; group: string; description:
 const GROUPS = ["Your money", "Plan ahead", "Learn"] as const;
 
 export function App() {
-  const { tab, display, profile, load, setDrawer, dataMode, savedMatchesStyle, style, numbersOpen } = useStore();
+  const { tab, display, profile, load, setDrawer, dataMode, savedMatchesStyle, style, numbersOpen, numbers, openStyle } = useStore();
   const showNumbers = numbersOpen && tab !== "funds";
   const page = PAGES.find((p) => p.id === tab) ?? PAGES[0];
   const [chatOpen, setChatOpen] = useState(false);
@@ -52,7 +54,15 @@ export function App() {
         <div className="main-inner">
           <header className="topbar">
             <div>
-              <h1>{showNumbers ? "Your numbers" : page.title}</h1>
+              <div className="topbar-title">
+                <h1>{showNumbers ? (numbers?.id ? "Edit numbers" : "Add a person") : page.title}</h1>
+                {tab === "plan" && !showNumbers && (
+                  <button className="style-btn" onClick={openStyle} aria-haspopup="dialog" title="Choose or compare plan styles"
+                    style={{ ["--style" as string]: STYLE_INFO[style].color }}>
+                    <i /> <span className="style-btn-label">Plan style</span> <b>{STYLE_INFO[style].label}</b> <Icon name="chevron" size={13} />
+                  </button>
+                )}
+              </div>
               <p className="page-desc">{showNumbers
                 ? "Enter your own finances; ARM builds your plan from them."
                 : page.description(profile.name.split(" ")[0])}</p>
@@ -81,7 +91,7 @@ export function App() {
 
           <Suspense fallback={<PageLoading />}>
             {tab === "funds" && <Funds onContext={setFundContext} />}
-            {showNumbers && <YourNumbers />}
+            {showNumbers && <YourNumbers key={numbers?.id ?? "new"} />}
             {!showNumbers && !display && tab !== "funds" && <EmptyState />}
             {!showNumbers && display && tab === "overview" && <Overview display={display} />}
             {!showNumbers && display && tab === "plan" && <Plan display={display} />}
@@ -96,12 +106,13 @@ export function App() {
       </button>
       {chatLoaded && <Suspense fallback={null}><Chat key={profile.id} open={chatOpen} onClose={closeChat} context={context} /></Suspense>}
       <Guide />
+      <StylePanel />
     </div>
   );
 }
 
 function Sidebar() {
-  const { tab, setTab, profiles, profile, selectProfile, connection, liveEnabled, setLiveEnabled, checkConnection, style, openGuide, mine, openNumbers } = useStore();
+  const { tab, setTab, profiles, profile, selectProfile, connection, liveEnabled, setLiveEnabled, checkConnection, style, setStyle, openGuide, openStyle, mine, openNumbers } = useStore();
   const connectionText = {
     online: "Backend connected",
     offline: "Backend unreachable",
@@ -111,10 +122,7 @@ function Sidebar() {
 
   return (
     <aside className="sidebar">
-      <div className="wordmark">
-        ARM
-        <small>Adaptive Retirement Management</small>
-      </div>
+      <Brand />
 
       <nav className="nav" aria-label="Pages">
         {GROUPS.map((group) => (
@@ -132,28 +140,50 @@ function Sidebar() {
         ))}
       </nav>
 
-      <button className="style-chip" onClick={openGuide} title="Change plan style">
-        <span className="eyebrow" style={{ padding: 0 }}>Plan style</span>
-        <span className="style-chip-row">
-          <i style={{ background: STYLE_INFO[style].color }} />
-          <span>{STYLE_INFO[style].label}</span>
-          <span className="link" style={{ marginLeft: "auto", fontSize: 12 }}>Change</span>
+      <div className="style-chip">
+        <span className="style-chip-head">
+          <label className="eyebrow" htmlFor="sidebar-plan-style">Plan style</label>
+          <button className="style-chip-cta" onClick={openStyle} aria-haspopup="dialog">Compare</button>
         </span>
-      </button>
+        <div className="style-chip-row">
+          <i style={{ background: STYLE_INFO[style].color }} aria-hidden="true" />
+          <select id="sidebar-plan-style" value={style} onChange={(event) => setStyle(event.target.value as typeof style)}>
+            {STYLE_ORDER.map((option) => (
+              <option key={option} value={option}>{STYLE_INFO[option].label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       <div className="profiles">
-        <p className="eyebrow" style={{ marginBottom: 6 }}>Customer</p>
-        {profiles.map((p) => (
+        <p className="eyebrow side-title">Demo profiles</p>
+        {profiles.filter((p) => !isPersonal(p.id)).map((p) => (
           <button key={p.id} className="profile-btn" aria-pressed={p.id === profile.id} onClick={() => selectProfile(p.id)}>
-            <Avatar id={p.id} name={p.name} size={38} />
+            <Avatar id={p.id} name={p.name} size={34} />
             <span>
               <span className="name" style={{ display: "block" }}>{p.name}</span>
-              <span className="sub">{p.id === MY_ID ? "Your numbers" : PROFILE_SUBTITLE[p.id] ?? `Age ${p.age}`}</span>
+              <span className="sub">{PROFILE_SUBTITLE[p.id] ?? `Age ${p.age}`}</span>
             </span>
           </button>
         ))}
-        <button className="add-numbers" onClick={() => { if (mine) selectProfile(MY_ID); openNumbers(); }}>
-          <Icon name={mine ? "sliders" : "person"} size={15} /> {mine ? "Edit your numbers" : "Add your numbers"}
+
+        <p className="eyebrow side-title" style={{ marginTop: 12 }}>Your people · {mine.length}/{MAX_PEOPLE}</p>
+        {mine.length === 0 && <p className="caption" style={{ padding: "0 12px 4px" }}>Add someone with their own numbers.</p>}
+        {mine.map(({ profile: p }) => (
+          <div key={p.id} className="profile-row">
+            <button className="profile-btn" aria-pressed={p.id === profile.id} onClick={() => selectProfile(p.id)}>
+              <Avatar id="me" name={p.name} size={34} />
+              <span>
+                <span className="name" style={{ display: "block" }}>{p.name}</span>
+                <span className="sub">Age {p.age} · retire at {p.retirement_age}</span>
+              </span>
+            </button>
+            <button className="profile-edit" onClick={() => { selectProfile(p.id); openNumbers(p.id); }} aria-label={`Edit ${p.name}'s numbers`}
+              title="Edit numbers"><Icon name="sliders" size={14} /></button>
+          </div>
+        ))}
+        <button className="add-numbers" onClick={() => openNumbers(null)} disabled={mine.length >= MAX_PEOPLE}>
+          <Icon name="person" size={15} /> {mine.length >= MAX_PEOPLE ? "Limit reached (10 people)" : "Add a person"}
         </button>
       </div>
 

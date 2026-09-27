@@ -76,25 +76,28 @@ export function Overview({ display }: { display: Display }) {
   );
 }
 
+/** One figure with its context; the arrow opens that topic in Your plan. */
 function Tile({ section, label, value, sub }: { section: PlanSection; label: ReactNode; value: string; sub: string }) {
   const { openPlan } = useStore();
   return (
     <div className="tile">
-      <span className="tile-label">{label}</span>
+      <span className="tile-top">
+        <span className="tile-label">{label}</span>
+        <button className="tile-open" onClick={() => openPlan(section)} aria-label="Open in Your plan" title="Open in Your plan">
+          <Icon name="chevron" size={13} />
+        </button>
+      </span>
       <span className="tile-value num">{value}</span>
       <span className="tile-sub">{sub}</span>
-      <button className="tile-link" onClick={() => openPlan(section)} aria-label={`Open ${typeof label === "string" ? label : "details"} in Your plan`}>
-        Details <Icon name="chevron" size={12} />
-      </button>
     </div>
   );
 }
 
-/** A short guided path for first-time users; the first step reflects real state. */
+/** A short guided path for first-time users. Every step looks the same; a finished one gets a small check. */
 function FirstSteps() {
-  const { styleChosen, style, openGuide, openPlan, setTab } = useStore();
+  const { styleChosen, style, openStyle, openPlan, setTab } = useStore();
   const steps: { title: string; sub: string; done?: boolean; run: () => void }[] = [
-    { title: "Choose a plan style", sub: styleChosen ? `You're on ${STYLE_INFO[style].label}` : "Takes a minute", done: styleChosen, run: openGuide },
+    { title: "Choose a plan style", sub: styleChosen ? `On ${STYLE_INFO[style].label}` : "Takes a minute", done: styleChosen, run: openStyle },
     { title: "Review this month's money", sub: "Where each dollar goes", run: () => openPlan("month") },
     { title: "See where you're heading", sub: "Your balance at any age", run: () => setTab("plan") },
     { title: "Learn the basics", sub: "Six short lessons", run: () => setTab("learn") },
@@ -105,10 +108,10 @@ function FirstSteps() {
       <ol>
         {steps.map((s, i) => (
           <li key={s.title}>
-            <button onClick={s.run} className={s.done ? "done" : ""}>
-              <span className="fs-num" aria-hidden="true">{s.done ? <Icon name="check" size={12} /> : i + 1}</span>
+            <button onClick={s.run}>
+              <span className="fs-num" aria-hidden="true">{i + 1}</span>
               <span className="fs-text"><b>{s.title}</b><span className="caption">{s.sub}</span></span>
-              <Icon name="chevron" size={13} />
+              {s.done ? <span className="fs-done" role="img" aria-label="Done"><Icon name="check" size={12} /></span> : <Icon name="chevron" size={13} />}
             </button>
           </li>
         ))}

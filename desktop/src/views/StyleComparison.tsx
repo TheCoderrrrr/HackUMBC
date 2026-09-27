@@ -1,7 +1,6 @@
 import { useMemo, type ReactNode } from "react";
 import { errorMessage } from "../api/client";
 import type { PlanStyles, StyleOutcome } from "../api/types";
-import { Icon } from "../components/ui";
 import { LineChart, type Series } from "../components/LineChart";
 import { Term } from "../components/Term";
 import { money, monthLabel } from "../data/format";
@@ -22,20 +21,15 @@ const cents = (v: number | null) => (v === null ? "–" : money(v));
  * the chosen style highlighted. Every number comes from /v1/plan-styles.
  */
 export function StyleComparison() {
-  const { planStyles, style, profile, openGuide, liveEnabled } = useStore();
+  const { planStyles, style, profile, liveEnabled } = useStore();
 
   return (
     <section aria-labelledby="styles-title">
-      <div className="section-head">
-        <div>
-          <h2 id="styles-title" className="h-section" tabIndex={-1}>How your plan style compares</h2>
-          <p className="caption" style={{ marginTop: 3 }}>
-            You're on <span style={{ color: STYLE_INFO[style].color, fontWeight: 500 }}>{STYLE_INFO[style].label}</span>.
-            Projected retirement balance by year.
-          </p>
-        </div>
-        <button className="pill neutral" onClick={openGuide}><Icon name="sliders" /> Change style</button>
-      </div>
+      <h2 id="styles-title" className="h-section" tabIndex={-1}>How the three styles compare</h2>
+      <p className="subtitle">
+        Projected retirement balance by year · you're on{" "}
+        <span style={{ color: STYLE_INFO[style].color, fontWeight: 500 }}>{STYLE_INFO[style].label}</span>
+      </p>
 
       {planStyles.status === "idle" && (
         <p className="body state-note">{liveEnabled ? "Loading…" : "Turn on live calculation to compare plan styles on your numbers."}</p>
@@ -82,7 +76,7 @@ function Loaded({ data, name, age }: { data: PlanStyles; name: string; age: numb
   const span = Math.max(...series.map((s) => s.values.length - 1), 0);
   const columns: StyleOutcome[] = [data.current, ...shown];
   const rows: [ReactNode, (o: StyleOutcome) => string][] = [
-    [<><Term id="high-interest-debt">High-interest debt</Term> cleared</>, (o) => when(o.debt_free_month, data.as_of_date, "None", "After retirement")],
+    ["Debt-free (all debts)", (o) => when(o.debt_free_month, data.as_of_date, "None", "After retirement")],
     [<Term id="emergency-fund">Emergency fund full</Term>, (o) => when(o.full_reserve_month, data.as_of_date, "Already", "Not reached")],
     ["Debt interest paid", (o) => cents(o.cumulative_debt_interest_cents)],
     [`Balance at ${data.current.retirement_age}`, (o) => cents(o.retirement_balance_nominal_cents)],

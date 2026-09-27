@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { errorMessage } from "../api/client";
 import type { ScreenFact } from "../api/chatContext";
-import type { Evaluation, Projection, Scenario } from "../api/types";
-import type { PlanningPreference } from "../api/types";
+import type { Evaluation, PlanningPreference, Projection, RunSummary, Scenario } from "../api/types";
 import { parseAmount } from "../data/numbers";
 import { Icon, Stepper } from "../components/ui";
 import { LineChart, type Series } from "../components/LineChart";
@@ -14,6 +13,7 @@ import { Tabs } from "../components/Tabs";
 
 type ExploreView = "compare" | "timeline" | "saved";
 import { History, type Shown } from "./History";
+import { restoreRun, runChoices } from "../data/runs";
 
 type Policy = "adaptive" | "fixed";
 interface Draft {
@@ -26,7 +26,7 @@ interface Draft {
   preset: Preset | null;
 }
 
-const original = (d: Display): Draft => ({
+export const original = (d: Display): Draft => ({
   retirementAge: d.profile.retirement_age,
   policy: "adaptive",
   fixedRate: d.currentRate * 100,
@@ -34,7 +34,7 @@ const original = (d: Display): Draft => ({
   priorityStyle: "same",
   preset: "original",
 });
-const sameDraft = (a: Draft, b: Draft) =>
+export const sameDraft = (a: Draft, b: Draft) =>
   a.retirementAge === b.retirementAge && a.policy === b.policy && (a.policy === "adaptive" || a.fixedRate === b.fixedRate)
   && a.extraDebt === b.extraDebt && a.priorityStyle === b.priorityStyle;
 
@@ -42,9 +42,22 @@ const SECONDS_PER_MONTH = 0.11;
 
 export function Explore({ display, onContext }: { display: Display; onContext: (facts: ScreenFact[]) => void }) {
   const { profile, evaluation } = display;
-  const { setDrawer } = useStore();
+  const { setDrawer, style, setStyle, setPendingScenario, load } = useStore();
   const [compared, setCompared] = useState<Shown | null>(null);
   const [view, setView] = useState<ExploreView>("compare");
+  // A saved run the person opened: its plan style and scenario are restored and recalculated.
+  const [opened, setOpened] = useState<RunSummary | null>(null);
+  const openRun = (run: RunSummary) => {
+    const restored = restoreRun(run, profile.retirement_age);
+    setOpened(run);
+    if (restored.style && restored.style !== style) setStyle(restored.style);
+    setPendingScenario(restored.scenario);
+    setView("compare");
+  };
+  // The reopened result: the scenario's evaluation, or the plan itself for a run saved without one.
+  const reopened = !opened ? null
+    : opened.scenario ? compared?.evaluation ?? null
+      : load.status === "loading" ? null : evaluation;
   const custom = compared?.evaluation ?? null;
   useEffect(() => () => onContext([]), [onContext]);
   useEffect(() => {
@@ -73,23 +86,37 @@ export function Explore({ display, onContext }: { display: Display; onContext: (
     <div className="grid explore fade-in" key={profile.id}>
       <div className="section explore-tabs">
         <Tabs label="Explore views" value={view} onChange={setView} items={[
-          { id: "compare", label: "Compare", hint: compared ? (feasible === false ? "Can't be funded" : "Your scenario") : "Plan vs current habits" },
+          { id: "compare", label: "Compare", hint: compared ? (feasible === false ? "Can't be funded" : "With your scenario") : "Plan vs current habits" },
           { id: "timeline", label: "Timeline", hint: "Next five years" },
           { id: "saved", label: "Saved runs", hint: "Tiger Data history" },
         ]}>
           {view === "compare" && (
             <div className="stack" style={{ gap: 20 }}>
+              {opened && (
+                <div className="opened-run fade-in" role="status">
+                  <Icon name="replay" size={15} />
+                  <span>
+                    <b>{runChoices(opened)}</b>
+                    <span className="caption">
+                      {" · "}{!reopened ? "Recalculating…"
+                        : reopened.input_hash === opened.input_hash ? "Same inputs as when you saved it, so the numbers match."
+                          : "Recalculated with the current numbers; results can differ from when it was saved."}
+                    </span>
+                  </span>
+                  <button className="close small" onClick={() => setOpened(null)} aria-label="Close saved run"><Icon name="close" size={12} /></button>
+                </div>
+              )}
               <Comparison display={display} custom={custom?.projections.custom ?? null} />
               <Outcomes evaluation={evaluation} custom={custom?.projections.custom ?? null} asOf={profile.as_of_date} />
               <FundAndRules evaluation={custom ?? evaluation} />
             </div>
           )}
           {view === "timeline" && <Timeline display={display} />}
-          {view === "saved" && <History shown={compared ?? { evaluation, scenario: null }} />}
+          {view === "saved" && <History shown={compared ?? { evaluation, scenario: null }} onOpen={openRun} openedID={opened?.run_id ?? null} />}
         </Tabs>
       </div>
       <div className="stack" style={{ position: "sticky", top: 84 }}>
-        <ScenarioControls display={display} onResult={onResult} />
+        <ScenarioControls display={display} onResult={onResult} onEdit={() => setOpened(null)} />
         <button className="link" style={{ display: "inline-flex", gap: 8, alignItems: "center", fontSize: 15, alignSelf: "flex-start" }}
           onClick={() => setDrawer("assumptions")}>
           <Icon name="sliders" size={16} /> Modeling assumptions
@@ -161,9 +188,9 @@ function Timeline({ display }: { display: Display }) {
 
   const m = Math.round(month);
   const milestones = [
-    { month: adaptive.debt_free_month, title: "Debt cleared", icon: "seal" },
-    { month: adaptive.starter_reserve_month, title: "Starter reserve", icon: "umbrella" },
-    { month: adaptive.full_reserve_month, title: "Reserve target reached", icon: "flag" },
+    { month: adaptive.debt_free_month, title: "Debt-free", icon: "seal" },
+    { month: adaptive.starter_reserve_month, title: "One-month cushion", icon: "umbrella" },
+    { month: adaptive.full_reserve_month, title: "Emergency fund full", icon: "flag" },
   ].filter((x): x is { month: number; title: string; icon: string } => x.month !== null && x.month > 0 && x.month <= last);
 
   const context = (() => {
@@ -189,7 +216,8 @@ function Timeline({ display }: { display: Display }) {
 
   return (
     <section className="glass card">
-      <p className="body" style={{ marginBottom: 14 }}>Your money over time.</p>
+      <h2 className="h-section">The next five years</h2>
+      <p className="subtitle" style={{ marginBottom: 16 }}>Press play, or drag to any month.</p>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
           <div className="num" style={{ fontSize: 28, fontWeight: 500, letterSpacing: -0.6 }}>{monthLabel(profile.as_of_date, m)}</div>
@@ -238,7 +266,7 @@ function Timeline({ display }: { display: Display }) {
         ))}
       </div>
       <p className="caption" style={{ marginTop: 12, fontSize: 11 }}>
-        Adaptive plan in green, current contributions in blue · monthly balances from the plan calculation
+        Your plan in green, current habits in blue · monthly balances from the plan calculation
       </p>
     </section>
   );
@@ -262,8 +290,8 @@ function Comparison({ display, custom }: { display: Display; custom: Projection 
   const span = Math.max(years, customYears);
   const series = useMemo(() => {
     const list: Series[] = [
-      { name: "Current", values: yearlyBalances(evaluation.projections.current, years), color: "var(--blue)", dashed: true, width: 2 },
-      { name: "Adaptive", values: yearlyBalances(evaluation.projections.adaptive, years), color: "var(--accent)", area: true, width: 2.4 },
+      { name: "Current habits", values: yearlyBalances(evaluation.projections.current, years), color: "var(--blue)", dashed: true, width: 2 },
+      { name: "Your plan", values: yearlyBalances(evaluation.projections.adaptive, years), color: "var(--accent)", area: true, width: 2.4 },
     ];
     if (custom?.feasible) list.push({ name: "Your scenario", values: yearlyBalances(custom, customYears), color: "#f2c46d", width: 2.2 });
     return list;
@@ -271,11 +299,11 @@ function Comparison({ display, custom }: { display: Display; custom: Projection 
 
   return (
     <section className="section">
-      <h2 className="h-section">Retirement accounts</h2>
-      <p className="caption" style={{ marginTop: 3 }}>Projected balance · nominal, illustrative assumptions</p>
+      <h2 className="h-section">Retirement balance</h2>
+      <p className="subtitle">Projected by year, before inflation · illustrative assumptions</p>
       <div className="legend" style={{ margin: "16px 0 40px" }}>
-        <span style={{ color: "var(--blue)" }}><i className="dashed" /> Current</span>
-        <span style={{ color: "var(--accent)", fontWeight: 500 }}><i /> Adaptive</span>
+        <span style={{ color: "var(--blue)" }}><i className="dashed" /> Current habits</span>
+        <span style={{ color: "var(--accent)", fontWeight: 500 }}><i /> Your plan</span>
         {custom?.feasible && <span style={{ color: "#f2c46d", fontWeight: 500 }}><i /> Your scenario</span>}
       </div>
       <LineChart height={230} series={series} renderTooltip={(i) => (
@@ -304,7 +332,12 @@ const scenarioOf = (d: Draft): Scenario => ({
   priority_style: d.priorityStyle === "same" ? null : d.priorityStyle,
 });
 
-function ScenarioControls({ display, onResult }: { display: Display; onResult: (shown: Shown | null) => void }) {
+function ScenarioControls({ display, onResult, onEdit }: {
+  display: Display;
+  onResult: (shown: Shown | null) => void;
+  /** The person changed a choice by hand (so an opened saved run no longer applies). */
+  onEdit: () => void;
+}) {
   const { liveEnabled, evaluateScenario, savedPreset, pendingScenario, setPendingScenario } = useStore();
   const { profile } = display;
   const [draft, setDraft] = useState<Draft>(() => original(display));
@@ -314,6 +347,7 @@ function ScenarioControls({ display, onResult }: { display: Display; onResult: (
   const requestID = useRef(0);
 
   const edit = (next: Partial<Draft>) => {
+    onEdit();
     const updated = { ...draft, ...next };
     setDraft(updated);
     if (!compared || !sameDraft(updated, compared)) {
@@ -395,13 +429,16 @@ function ScenarioControls({ display, onResult }: { display: Display; onResult: (
   };
 
   const fmt = (v: number) => (Number.isInteger(v) ? `${v}%` : `${v.toFixed(1)}%`);
+  // Adaptive at the plan's own retirement age is the plan itself: nothing new to compare.
+  const atPlan = sameDraft(draft, original(display));
 
   return (
     <section className="glass card">
-      <h2 className="h-section" style={{ marginBottom: 18 }}>Try a scenario</h2>
+      <h2 className="h-section">Try a scenario</h2>
+      <p className="subtitle">Change one thing and compare it with your plan.</p>
 
-      <div className="row">
-        <span className="strong" style={{ fontSize: 16 }}>Retirement age</span>
+      <div className="row" style={{ marginTop: 16 }}>
+        <span className="field-title">Retirement age</span>
         <span style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <span className="num" style={{ fontSize: 18, fontWeight: 500 }}>{draft.retirementAge}</span>
           <Stepper label="retirement age"
@@ -411,7 +448,7 @@ function ScenarioControls({ display, onResult }: { display: Display; onResult: (
         </span>
       </div>
 
-      <p className="strong" style={{ fontSize: 16, margin: "18px 0 10px" }}>Employee contribution</p>
+      <p className="field-title" style={{ margin: "16px 0 10px" }}>Your contribution</p>
       <div className="segmented">
         {(["adaptive", "fixed"] as const).map((p) => (
           <button key={p} aria-pressed={draft.policy === p} onClick={() => edit({ policy: p, preset: null })}>
@@ -419,14 +456,14 @@ function ScenarioControls({ display, onResult }: { display: Display; onResult: (
           </button>
         ))}
       </div>
-      <p className="caption" style={{ fontSize: 13, marginTop: 10, color: "var(--text-2)" }}>
+      <p className="caption" style={{ marginTop: 8 }}>
         {draft.policy === "adaptive"
-          ? <>Starts at <span className="strong">{percent(display.rate)}</span> and adjusts as your priorities change.</>
-          : "A fixed employee rate for every month, subject to plan limits."}
+          ? <>ARM sets it each month, starting at <span className="strong">{percent(display.rate)}</span>.</>
+          : "The same rate every month, within plan limits."}
       </p>
       {draft.policy === "fixed" && (
         <div className="row fade-in" style={{ marginTop: 8 }}>
-          <span className="label" style={{ fontSize: 15 }}>Fixed rate</span>
+          <span className="label">Fixed rate</span>
           <span style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <span className="num" style={{ fontSize: 18, fontWeight: 500 }}>{fmt(draft.fixedRate)}</span>
             <Stepper label="fixed rate" canDecrement={draft.fixedRate > 0} canIncrement={draft.fixedRate < 20}
@@ -452,17 +489,19 @@ function ScenarioControls({ display, onResult }: { display: Display; onResult: (
         </select>
       </label>
 
-      <button className="btn-primary full" style={{ marginTop: 22 }} onClick={() => compare()}
-        disabled={busy || (draft.extraDebt !== "" && parseAmount(draft.extraDebt) === null)}>
+      <button className="btn-primary full" style={{ marginTop: 20 }} onClick={() => compare()}
+        disabled={busy || atPlan || (draft.extraDebt !== "" && parseAmount(draft.extraDebt) === null)}>
         {busy ? <span className="spinner" /> : <Icon name="compare" />} Compare scenario
       </button>
-      {compared && status && <p className="caption fade-in" style={{ marginTop: 10 }}>{status}</p>}
+      <p className="caption" style={{ marginTop: 10 }} role="status">
+        {atPlan ? "This is your plan as it stands. Change a choice above to compare."
+          : compared && status ? status : null}
+      </p>
 
-      <p className="strong" style={{ fontSize: 17, margin: "24px 0 12px" }}>Saved scenarios</p>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {([["original", "Original plan"], ["retire-plus-two", "Retire +2 years"], ["contribution-plus-one", "Rate +1 pt"]] as const).map(([id, label]) => (
-          <button key={id} className={`pill ${draft.preset === id ? "selected" : "neutral"}`} style={{ height: 34, fontSize: 13 }}
-            onClick={() => apply(id)}>
+      <p className="field-title" style={{ margin: "20px 0 10px" }}>Quick scenarios</p>
+      <div className="quick-row">
+        {([["original", "Your plan"], ["retire-plus-two", "Retire 2 years later"], ["contribution-plus-one", "Save 1 pt more"]] as const).map(([id, label]) => (
+          <button key={id} className={`pill small ${draft.preset === id ? "selected" : "neutral"}`} onClick={() => apply(id)}>
             {label}
           </button>
         ))}
@@ -474,29 +513,27 @@ function ScenarioControls({ display, onResult }: { display: Display; onResult: (
 // ---------- Outcomes ----------
 
 function Outcomes({ evaluation, custom, asOf }: { evaluation: Evaluation; custom: Projection | null; asOf: string }) {
-  const columns: [string, Projection][] = [["Current", evaluation.projections.current], ["Adaptive", evaluation.projections.adaptive]];
+  const columns: [string, Projection][] = [["Current habits", evaluation.projections.current], ["Your plan", evaluation.projections.adaptive]];
   if (custom) columns.push(["Your scenario", custom]);
-  const when = (m: number | null) => (m === null ? "—" : m === 0 ? "Now" : monthLabel(asOf, m));
+  const when = (m: number | null) => (m === null ? "Not by retirement" : m === 0 ? "Already" : monthLabel(asOf, m));
   const cash = (v: number | null) => (v === null ? "—" : money(v));
   const rows: [string, (p: Projection) => string][] = [
     ["Retirement-account balance", (p) => cash(p.retirement_balance_nominal_cents)],
     ["In today's dollars", (p) => cash(p.retirement_balance_today_cents)],
     ["Debt-free", (p) => when(p.debt_free_month)],
     ["Total debt interest", (p) => cash(p.cumulative_debt_interest_cents)],
-    ["Starter reserve", (p) => when(p.starter_reserve_month)],
-    ["Full reserve", (p) => when(p.full_reserve_month)],
+    ["One-month cushion", (p) => when(p.starter_reserve_month)],
+    ["Emergency fund full", (p) => when(p.full_reserve_month)],
     ["Cash at retirement", (p) => cash(p.cash_nominal_cents)],
     ["Debt at retirement", (p) => cash(p.debt_nominal_cents)],
   ];
   return (
     <section className="section">
-      <h2 className="h-section">Compare the whole picture</h2>
-      <p className="body" style={{ margin: "6px 0 18px", fontSize: 14 }}>
-        Retirement balance is only part of the result. Compare debt interest, payoff timing, and emergency cash alongside it.
-      </p>
+      <h2 className="h-section">The whole picture</h2>
+      <p className="subtitle" style={{ marginBottom: 16 }}>Debt, interest and emergency cash alongside the balance.</p>
       <table className="table">
         <thead>
-          <tr><th />{columns.map(([name]) => <th key={name} style={{ color: name === "Adaptive" ? "var(--accent)" : name === "Current" ? "var(--blue)" : "#f2c46d" }}>{name}</th>)}</tr>
+          <tr><th />{columns.map(([name]) => <th key={name} style={{ color: name === "Your plan" ? "var(--accent)" : name === "Current habits" ? "var(--blue)" : "#f2c46d" }}>{name}</th>)}</tr>
         </thead>
         <tbody>
           {rows.map(([title, value]) => (
@@ -507,7 +544,7 @@ function Outcomes({ evaluation, custom, asOf }: { evaluation: Evaluation; custom
           ))}
         </tbody>
       </table>
-      <p className="caption" style={{ marginTop: 14 }}>Nominal values from the plan calculation, using the illustrative assumptions.</p>
+      <p className="caption" style={{ marginTop: 14 }}>Before inflation, from the plan calculation · illustrative assumptions.</p>
     </section>
   );
 }

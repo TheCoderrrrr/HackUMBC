@@ -26,8 +26,9 @@ const BLOCKING: Record<string, string> = {
  * previews what it sees as they type, and saving stores it in Tiger Data under an anonymous key.
  */
 export function YourNumbers() {
-  const { mine, setMine, closeNumbers, liveEnabled, selectProfile, setTab } = useStore();
-  const [form, setForm] = useState<NumbersForm>(() => (mine ? inputToForm(mine.form) : EMPTY_FORM));
+  const { mine, numbers, upsertMine, removeMine, closeNumbers, liveEnabled, setTab } = useStore();
+  const editing = numbers?.id ? mine.find((m) => m.profile.id === numbers.id) ?? null : null;
+  const [form, setForm] = useState<NumbersForm>(() => (editing ? inputToForm(editing.form) : EMPTY_FORM));
   const [preview, setPreview] = useState<Preview>({ status: "idle" });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -79,8 +80,9 @@ export function YourNumbers() {
     setSaving(true);
     setSaveError(null);
     try {
-      const built = await api.profiles.save(input, ensureProfileKey());
-      setMine({ form: input, profile: built.profile });
+      const key = ensureProfileKey();
+      const built = editing ? await api.profiles.update(editing.profile.id, input, key) : await api.profiles.create(input, key);
+      upsertMine({ form: input, profile: built.profile });
       closeNumbers();
       setTab("overview");
     } catch (error) {
@@ -90,23 +92,20 @@ export function YourNumbers() {
     }
   };
   const erase = async () => {
+    if (!editing) return;
     const key = peekProfileKey();
     try {
-      if (key) await api.profiles.erase(key);
+      if (key) await api.profiles.erase(editing.profile.id, key);
     } catch (error) {
       if (!(error instanceof APIError && error.body?.code === "PROFILE_NOT_FOUND")) {
         setSaveError(errorMessage(error));
         return;
       }
     }
-    setMine(null);
-    selectProfile(savedProfiles[0].id);
+    removeMine(editing.profile.id);
     closeNumbers();
   };
-  const cancel = () => {
-    if (!mine) selectProfile(savedProfiles[0].id);
-    closeNumbers();
-  };
+  const cancel = () => closeNumbers();
   const morgan = savedProfiles.find((p) => p.id === "morgan");
   const canSave = Boolean(input) && preview.status === "ok" && !saving;
 
@@ -114,7 +113,7 @@ export function YourNumbers() {
     <div className="numbers fade-in">
       <div className="numbers-intro">
         <div>
-          <h2 className="h-section">{mine ? "Edit your numbers" : "Enter your numbers"}</h2>
+          <h2 className="h-section">{editing ? `Edit ${editing.profile.name}'s numbers` : "Add a person"}</h2>
           <p className="body" style={{ fontSize: 14, marginTop: 4 }}>
             About two minutes. Rough figures are fine; you can change them anytime. ARM uses them to build your plan.
           </p>
@@ -226,18 +225,18 @@ export function YourNumbers() {
             <p className="eyebrow" style={{ padding: 0 }}>What ARM sees</p>
             <PreviewPanel preview={preview} missing={missing.length} live={liveEnabled} />
             <button className="btn-primary full" style={{ marginTop: 18 }} onClick={save} disabled={!canSave}>
-              {saving ? <span className="spinner" /> : <Icon name="check" />} {mine ? "Save changes" : "Save and build my plan"}
+              {saving ? <span className="spinner" /> : <Icon name="check" />} {editing ? "Save changes" : "Save and build the plan"}
             </button>
             {saveError && <p className="caption goal-error" style={{ marginTop: 8 }}>{saveError}</p>}
-            <button className="link" style={{ marginTop: 12 }} onClick={cancel}>{mine ? "Cancel" : "Back to the demo profiles"}</button>
+            <button className="link" style={{ marginTop: 12 }} onClick={cancel}>Cancel</button>
           </section>
           <p className="caption numbers-privacy">
             <Icon name="seal" size={13} /> Saved in Tiger Data under an anonymous key kept in this browser: no email or account.
-            The server stores only a hash of the key. {mine && (confirmErase ? (
-              <span className="numbers-erase">Erase your numbers and saved plans?{" "}
+            The server stores only a hash of the key. {editing && (confirmErase ? (
+              <span className="numbers-erase">Erase {editing.profile.name}'s numbers and saved plans?{" "}
                 <button className="link" onClick={() => setConfirmErase(false)}>Keep</button>{" "}
                 <button className="pill danger" onClick={erase}>Erase</button></span>
-            ) : <button className="link" onClick={() => setConfirmErase(true)}>Erase my numbers</button>)}
+            ) : <button className="link" onClick={() => setConfirmErase(true)}>Erase {editing.profile.name}</button>)}
           </p>
         </aside>
       </div>

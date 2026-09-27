@@ -28,13 +28,13 @@ If the backend sets `DEMO_KEY`, set the same value in the desktop env so the Vit
 | Group | Page | What it does |
 |---|---|---|
 | Your money | **Overview** | Next step, three at-a-glance tiles that open their Plan tab, where you're heading, a first-steps checklist, collapsible details |
-| Your money | **Your plan** | An always-visible projection, then one topic per tab (This month, Saving, Debt, Emergency fund, Your fund, Plan style), a milestones rail, and a **Why this matters** drawer per section |
-| Plan ahead | **Explore** | Scenario controls, plus tabs for Compare, Timeline and Saved runs (Tiger Data: save, compare, delete) |
-| Plan ahead | **Fund shortlist** | Target-date fund ranking from the reviewed catalog ([FUNDS.md](FUNDS.md)) |
+| Your money | **Your plan** | An always-visible projection, then one topic per tab (This month, Saving, Debt, Emergency fund, Your fund), a milestones rail, and a **Why this matters** drawer per section. The **Plan style** button beside the title opens a panel to switch styles anytime and compare all three; the sidebar menu also switches it directly |
+| Plan ahead | **Explore** | Scenario controls, plus tabs for Compare, Timeline and Saved runs (Tiger Data). Clicking a saved run reopens it: its plan style and scenario are restored from the database and recalculated, and the page says whether the result matches the saved `input_hash` |
+| Plan ahead | **Fund shortlist** | Screener layout: criteria bar (results update as it changes), a side-by-side table with the best value in each row marked, and a detail card per fund. From the reviewed catalog ([FUNDS.md](FUNDS.md)) |
 | Learn | **Learn** | Six short lessons; **Try** applies each one to your numbers (a scenario in Explore or a plan style) |
-| Learn | **Getting started** | Five-page guide: welcome, how ARM decides, three key ideas, choose a plan style, where to find things. Opens on first visit per profile |
+| Learn | **Getting started** | Two-page guide: welcome and how ARM decides. **Skip for now** on every page. Opens once per browser, and anytime from the sidebar |
 
-- **Your numbers** (sidebar → *Add your numbers*): a five-part form (about you, income and spending, savings, employer match, debts) in dollars and percents. The engine previews what it sees as you type (monthly budget after essentials, emergency months, rate for the full match, high-interest debt), and server errors highlight the exact field. Saving stores the numbers in Tiger Data under an anonymous key kept in this browser; the "You" profile then works like the demo profiles, including private saved plans. *Start from Morgan's numbers* pre-fills the form for demos, and *Erase my numbers* removes everything.
+- **Your people** (sidebar → *Add a person*, up to 10): a five-part form (about you, income and spending, savings, employer match, debts) in dollars and percents. The engine previews what it sees as you type (monthly budget after essentials, emergency months, rate for the full match, high-interest debt), and server errors highlight the exact field. Saving stores the numbers in Tiger Data under an anonymous key kept in this browser; each person then works like a demo profile, including private saved plans. The sidebar lists them under *Your people · n/10* with an edit button each, and the list scrolls. *Start from Morgan's numbers* pre-fills the form for demos, and *Erase* removes that person and only their plans.
 - **Ask** (bottom right) opens the education chat ([EDUCATION_CHAT.md](EDUCATION_CHAT.md)).
 - **Key terms** carry a **?** popover. Definitions that quote numbers read them from the engine's `assumptions`.
 
@@ -48,13 +48,13 @@ If the backend sets `DEMO_KEY`, set the same value in the desktop env so the Vit
 
 ## Plan styles
 
-Balanced, Cash security first and Debt payoff first are compared with `POST /v1/plan-styles`: each style's own rule order through the engine, with no AI call. The priority order shown in the guide comes from that response, not from frontend copy. When the live AI chooses a different order than the chosen style, Your plan says so.
+Balanced, Cash security first and Debt payoff first are compared with `POST /v1/plan-styles`: each style's own rule order through the engine, with no AI call. The priority order shown in the Plan style panel comes from that response, not from frontend copy. When the live AI chooses a different order than the chosen style, Your plan says so.
 
 ## Data and efficiency
 
 - **Saved results** show immediately: the offline bundle in `ios/AdaptiveRetirement/Resources/Demo/` when it exists, otherwise the real engine responses in `contracts/examples/`. Each saved result is its own chunk, loaded the first time it's needed.
 - **Live results** replace them when "Live calculation" is on and the backend answers. Failures keep the previous result, labelled "Last live" or "Saved".
-- **Code splitting:** Explore, Funds, Learn and Chat load on demand. The first download is 255 KB (77 KB gzipped), down from 1,126 KB.
+- **Code splitting:** Explore, Funds, Learn and Chat load on demand. The first download is 264 KB (80 KB gzipped), down from 1,126 KB.
 
 ## Tests (`npm test`)
 

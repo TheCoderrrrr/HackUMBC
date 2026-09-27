@@ -5,7 +5,6 @@ import { asOfLabel, money, moneyExact, months, percent } from "../data/format";
 import { usesBundle } from "../data/saved";
 import { useStore, type PlanSection } from "../store";
 import { Term } from "../components/Term";
-import { STYLE_INFO } from "../data/styles";
 import { when } from "./Plan";
 
 const CHECK_LABEL: Record<string, string> = {
@@ -228,7 +227,7 @@ type WhyContent = { title: string; what: ReactNode; effect: ReactNode; change: R
  * your plan next to current habits), and what could change the outcome.
  */
 function SectionWhy({ section, display, onClose }: { section: PlanSection; display: Display; onClose: () => void }) {
-  const { setDrawer, setTab, style } = useStore();
+  const { setDrawer, setTab } = useStore();
   const { profile, evaluation } = display;
   const { adaptive, current } = evaluation.projections;
   const a = evaluation.assumptions;
@@ -263,10 +262,10 @@ function SectionWhy({ section, display, onClose }: { section: PlanSection; displ
       title: "Why paying down debt matters",
       what: <>Your debts and what the plan pays on them each month. <Term id="high-interest-debt">High-interest debt</Term> gets
         extra payments first.</>,
-      effect: <>Interest is money that can't grow for retirement. With this plan, high-interest debt is cleared
+      effect: <>Interest is money that can't grow for retirement. With this plan you're debt-free
         by <b>{when(adaptive.debt_free_month, asOf, "now")}</b> and you pay <b>{cents(adaptive.cumulative_debt_interest_cents)}</b> in
         interest. On current habits: <b>{when(current.debt_free_month, asOf, "now")}</b> and <b>{cents(current.cumulative_debt_interest_cents)}</b>.
-        Once it's gone, that payment can go to savings.</>,
+        Once the debt is gone, those payments can go to savings.</>,
       change: <>New borrowing, a missed payment or a rate increase pushes the payoff date later. The model assumes
         your <Term id="apr">APR</Term> and minimums stay fixed.</>,
     },
@@ -290,15 +289,6 @@ function SectionWhy({ section, display, onClose }: { section: PlanSection; displ
       change: <>Real returns rise and fall from year to year, so actual balances will differ from the steady projection.
         A fund with higher fees or a different mix would change the result.</>,
       action: { label: "Compare target-date funds", run: () => { setTab("funds"); onClose(); } },
-    },
-    style: {
-      title: "Why your plan style matters",
-      what: <>You're on <b>{STYLE_INFO[style].label}</b>. A <Term id="plan-style">plan style</Term> decides what your extra
-        money pays for first once the basics are covered.</>,
-      effect: <>It changes when debt is cleared and when your emergency fund is full, and so how soon more money can
-        go to retirement. For some people all three styles end up the same.</>,
-      change: <>You can switch anytime. The live plan may choose a different order within the same rules when that
-        fits your numbers better, and it tells you when it does.</>,
     },
   };
 

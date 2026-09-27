@@ -43,9 +43,10 @@ class HistoryStore(Protocol):
     def get_runs(self, run_ids: list[str], owner: str | None = None) -> dict[str, RunSummary]: ...
     def yearly(self, pairs: list[tuple[str, str]]) -> dict[str, list[YearRow]]: ...
     def delete(self, run_id: str, owner: str | None = None) -> bool: ...
-    def save_profile(self, owner: str, form: dict, profile: dict) -> None: ...
-    def get_profile(self, owner: str) -> tuple[dict, dict] | None: ...
-    def delete_profile(self, owner: str) -> bool: ...
+    def save_profile(self, owner: str, profile_id: str, form: dict, profile: dict) -> None: ...
+    def get_profile(self, owner: str, profile_id: str) -> tuple[dict, dict] | None: ...
+    def list_profiles(self, owner: str) -> list[tuple[dict, dict]]: ...
+    def delete_profile(self, owner: str, profile_id: str) -> bool: ...
 
 
 def migrations(schema: str) -> list[str]:
@@ -113,6 +114,9 @@ def migrations(schema: str) -> list[str]:
         f"ALTER TABLE {s}.scenario_run DROP CONSTRAINT IF EXISTS scenario_run_input_hash_key",
         f"CREATE UNIQUE INDEX IF NOT EXISTS scenario_run_hash_owner ON {s}.scenario_run (input_hash, (coalesce(owner_key_hash, '')))",
         f"CREATE INDEX IF NOT EXISTS scenario_run_owner_idx ON {s}.scenario_run (owner_key_hash, profile_id, created_at DESC)",
+        # The plan style each run used, so opening a saved run restores every choice behind it.
+        f"ALTER TABLE {s}.scenario_run ADD COLUMN IF NOT EXISTS planning_preference text "
+        f"CHECK (planning_preference IN ('balanced', 'cash_security', 'debt_reduction'))",
         f"""CREATE TABLE IF NOT EXISTS {s}.user_profile (
             owner_key_hash text PRIMARY KEY CHECK (owner_key_hash ~ '^[0-9a-f]{{64}}$'),
             form jsonb NOT NULL,
@@ -120,12 +124,26 @@ def migrations(schema: str) -> list[str]:
             created_at timestamptz NOT NULL DEFAULT now(),
             updated_at timestamptz NOT NULL DEFAULT now()
         )""",
+        # Several people per key: one row per (owner, profile_id). The first version stored one
+        # profile per owner (as "me"); copy those across once.
+        f"""CREATE TABLE IF NOT EXISTS {s}.user_profiles (
+            owner_key_hash text NOT NULL CHECK (owner_key_hash ~ '^[0-9a-f]{{64}}$'),
+            profile_id text NOT NULL CHECK (profile_id ~ '^(me|u-[0-9a-f]{{8}})$'),
+            form jsonb NOT NULL,
+            profile jsonb NOT NULL,
+            created_at timestamptz NOT NULL DEFAULT now(),
+            updated_at timestamptz NOT NULL DEFAULT now(),
+            PRIMARY KEY (owner_key_hash, profile_id)
+        )""",
+        f"""INSERT INTO {s}.user_profiles (owner_key_hash, profile_id, form, profile, created_at, updated_at)
+            SELECT owner_key_hash, 'me', form, profile, created_at, updated_at FROM {s}.user_profile
+            ON CONFLICT DO NOTHING""",
     ]
 
 
 _SUMMARY_COLUMNS = ("run_id::text, profile_id, label, created_at, as_of_date, scenario, primary_strategy, "
                     "retirement_age, final_retirement_balance_cents, decision_source, model_id, prompt_version, "
-                    "model_version, policy_version, input_hash, assumptions")
+                    "model_version, policy_version, input_hash, planning_preference, assumptions")
 
 
 def _summary(row) -> RunSummary:
@@ -225,8 +243,8 @@ class TigerHistoryStore:
                     f"""INSERT INTO {s}.scenario_run (run_id, input_hash, profile_id, label, as_of_date, scenario,
                             primary_strategy, retirement_age, final_retirement_balance_cents, decision_source,
                             model_id, prompt_version, ordered_priorities, schema_version, model_version,
-                            policy_version, assumptions, owner_key_hash)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            policy_version, assumptions, owner_key_hash, planning_preference)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (input_hash, (coalesce(owner_key_hash, ''))) DO NOTHING
                         RETURNING run_id""",
                     (record.run_id, record.input_hash, record.profile_id, record.label, record.as_of_date,
@@ -234,7 +252,7 @@ class TigerHistoryStore:
                      record.primary_strategy, record.retirement_age, record.final_retirement_balance_cents,
                      record.decision_source, record.model_id, record.prompt_version, record.ordered_priorities,
                      record.schema_version, record.model_version, record.policy_version,
-                     json.dumps(record.assumptions), record.owner),
+                     json.dumps(record.assumptions), record.owner, record.planning_preference),
                 ).fetchone()
                 created = inserted is not None
                 if created:
@@ -310,30 +328,39 @@ class TigerHistoryStore:
 
     # --- users' own profiles ---------------------------------------------------------
 
-    def save_profile(self, owner: str, form: dict, profile: dict) -> None:
+    def save_profile(self, owner: str, profile_id: str, form: dict, profile: dict) -> None:
         s = self.schema
         self._run(lambda conn: conn.execute(
-            f"""INSERT INTO {s}.user_profile (owner_key_hash, form, profile) VALUES (%s, %s, %s)
-                ON CONFLICT (owner_key_hash) DO UPDATE
+            f"""INSERT INTO {s}.user_profiles (owner_key_hash, profile_id, form, profile) VALUES (%s, %s, %s, %s)
+                ON CONFLICT (owner_key_hash, profile_id) DO UPDATE
                 SET form = EXCLUDED.form, profile = EXCLUDED.profile, updated_at = now()""",
-            (owner, json.dumps(form), json.dumps(profile))))
+            (owner, profile_id, json.dumps(form), json.dumps(profile))))
 
-    def get_profile(self, owner: str) -> tuple[dict, dict] | None:
+    def get_profile(self, owner: str, profile_id: str) -> tuple[dict, dict] | None:
         s = self.schema
         row = self._run(lambda conn: conn.execute(
-            f"SELECT form, profile FROM {s}.user_profile WHERE owner_key_hash = %s", (owner,)).fetchone())
+            f"SELECT form, profile FROM {s}.user_profiles WHERE owner_key_hash = %s AND profile_id = %s",
+            (owner, profile_id)).fetchone())
         return (row[0], row[1]) if row else None
 
-    def delete_profile(self, owner: str) -> bool:
-        """Erases the profile and every run it owns."""
+    def list_profiles(self, owner: str) -> list[tuple[dict, dict]]:
+        s = self.schema
+        rows = self._run(lambda conn: conn.execute(
+            f"SELECT form, profile FROM {s}.user_profiles WHERE owner_key_hash = %s ORDER BY created_at, profile_id",
+            (owner,)).fetchall())
+        return [(r[0], r[1]) for r in rows]
+
+    def delete_profile(self, owner: str, profile_id: str) -> bool:
+        """Erases one person's numbers and every plan saved from them."""
         s = self.schema
 
         def erase(conn):
             with conn.transaction():
-                runs = conn.execute(f"DELETE FROM {s}.scenario_run WHERE owner_key_hash = %s RETURNING run_id",
-                                    (owner,)).fetchall()
-                gone = conn.execute(f"DELETE FROM {s}.user_profile WHERE owner_key_hash = %s RETURNING owner_key_hash",
-                                    (owner,)).fetchone()
+                runs = conn.execute(f"DELETE FROM {s}.scenario_run WHERE owner_key_hash = %s AND profile_id = %s "
+                                    f"RETURNING run_id", (owner, profile_id)).fetchall()
+                gone = conn.execute(f"DELETE FROM {s}.user_profiles WHERE owner_key_hash = %s AND profile_id = %s "
+                                    f"RETURNING profile_id", (owner, profile_id)).fetchone()
+                conn.execute(f"DELETE FROM {s}.user_profile WHERE owner_key_hash = %s AND %s = 'me'", (owner, profile_id))
             if runs:
                 conn.execute(f"CALL refresh_continuous_aggregate('{s}.projection_yearly', 0, NULL)")
             return gone is not None

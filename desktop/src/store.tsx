@@ -19,7 +19,7 @@ export type Load =
 export type Tab = "overview" | "plan" | "explore" | "funds" | "learn";
 export type StyleLoad = { status: "idle" | "loading" } | { status: "loaded"; data: PlanStyles } | { status: "failed"; error: unknown };
 /** Sections of Your plan, in tab order. "debt" only shows when the profile has debt. */
-export type PlanSection = "month" | "saving" | "debt" | "emergency" | "fund" | "style";
+export type PlanSection = "month" | "saving" | "debt" | "emergency" | "fund";
 /** A drawer: the whole-plan explanation, reference panels, or one section's "Why". */
 export type Drawer = "explanation" | "snapshot" | "assumptions" | { why: PlanSection } | null;
 export type Connection = "checking" | "online" | "offline" | "disabled";
@@ -47,24 +47,33 @@ interface Store {
   savedPreset: (preset: Preset) => Promise<Evaluation | undefined>;
   /** The plan style applied to every evaluation of this profile. */
   style: PlanningPreference;
-  /** True once the user picked (or skipped to) a style for this profile. */
+  /** True once the user picked a style for this profile. */
   styleChosen: boolean;
   setStyle: (style: PlanningPreference) => void;
   /** Saved (offline) results use the profile's default style; false when the chosen style differs. */
   savedMatchesStyle: boolean;
   planStyles: StyleLoad;
+  /** Getting started: opens by itself once per browser, and anytime from the sidebar. */
   guideOpen: boolean;
   openGuide: () => void;
   closeGuide: () => void;
+  /** The plan-style panel (choose and compare styles); open from Your plan or the sidebar. */
+  styleOpen: boolean;
+  openStyle: () => void;
+  closeStyle: () => void;
   /** A scenario another view asks Explore to run next (from a Learn lesson). */
   pendingScenario: Scenario | null;
   setPendingScenario: (scenario: Scenario | null) => void;
-  /** The user's own numbers (stored in Tiger Data under their anonymous key), or null. */
-  mine: StoredProfile | null;
-  setMine: (stored: StoredProfile | null) => void;
-  /** True while the "Your numbers" form should show instead of the page. */
+  /** People the user added with their own numbers (stored in Tiger Data under their anonymous key). */
+  mine: StoredProfile[];
+  /** Adds or replaces one of them and selects it. */
+  upsertMine: (stored: StoredProfile) => void;
+  /** Forgets one of them (after it was erased on the server) and selects a demo profile. */
+  removeMine: (profileID: string) => void;
+  /** The numbers form: null when closed, else the person being edited (null ID = adding someone new). */
+  numbers: { id: string | null } | null;
   numbersOpen: boolean;
-  openNumbers: () => void;
+  openNumbers: (profileID: string | null) => void;
   closeNumbers: () => void;
   /** The open tab inside Your plan. */
   planSection: PlanSection;
@@ -78,8 +87,18 @@ interface Store {
 const StoreContext = createContext<Store | null>(null);
 
 /** The profile ID the backend gives the user's own numbers. */
-export const MY_ID = "me";
-const MINE_CACHE = "arm:myProfile";
+export const isPersonal = (profileID: string) => profileID === "me" || profileID.startsWith("u-");
+const MINE_CACHE = "arm:myProfiles";
+export const MAX_PEOPLE = 10;
+const GUIDE_SEEN = "arm:guideSeen";
+
+function cacheMine(list: StoredProfile[]) {
+  try {
+    localStorage.setItem(MINE_CACHE, JSON.stringify(list));
+  } catch {
+    // Storage unavailable: the list still loads from Tiger Data next time.
+  }
+}
 
 const current = (load: Load): Loaded | undefined =>
   load.status === "loaded" ? load.loaded : load.status === "idle" ? undefined : load.previous;
@@ -89,20 +108,20 @@ function stored<T extends string>(key: string, fallback: T): T {
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  // The user's own numbers: a local copy for instant start, refreshed from Tiger Data when live.
-  const [mine, setMineState] = useState<StoredProfile | null>(() => {
+  // People with their own numbers: a local copy for instant start, refreshed from Tiger Data when live.
+  const [mine, setMineState] = useState<StoredProfile[]>(() => {
     try {
-      const cached = localStorage.getItem(MINE_CACHE);
-      return cached ? (JSON.parse(cached) as StoredProfile) : null;
+      const cached = JSON.parse(localStorage.getItem(MINE_CACHE) ?? "[]");
+      return Array.isArray(cached) ? (cached as StoredProfile[]) : [];
     } catch {
-      return null;
+      return [];
     }
   });
-  const [numbersOpen, setNumbersOpen] = useState(false);
-  const profiles = useMemo(() => (mine ? [...savedProfiles, mine.profile] : savedProfiles), [mine]);
+  const [numbers, setNumbers] = useState<{ id: string | null } | null>(null);
+  const profiles = useMemo(() => [...savedProfiles, ...mine.map((m) => m.profile)], [mine]);
   const [profileID, setProfileID] = useState(() => {
     const id: string = stored<string>("profile", "morgan");
-    return id === MY_ID || savedProfiles.some((p) => p.id === id) ? id : savedProfiles[0].id;
+    return isPersonal(id) || savedProfiles.some((p) => p.id === id) ? id : savedProfiles[0].id;
   });
   const [tab, setTab] = useState<Tab>(() => {
     const saved = localStorage.getItem("tab");
@@ -121,39 +140,49 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const baseProfile = profiles.find((p) => p.id === profileID) ?? profiles[0];
 
-  const setMine = useCallback((next: StoredProfile | null) => {
-    setMineState(next);
-    lastLive.current.delete(MY_ID);
-    try {
-      if (next) localStorage.setItem(MINE_CACHE, JSON.stringify(next));
-      else localStorage.removeItem(MINE_CACHE);
-    } catch {
-      // Storage unavailable: the numbers still load from Tiger Data next time.
-    }
-    if (next) {
-      setProfileID(MY_ID);
-      localStorage.setItem("profile", MY_ID);
-    }
+  const upsertMine = useCallback((next: StoredProfile) => {
+    const id = next.profile.id;
+    lastLive.current.delete(id);
+    setMineState((list) => {
+      const updated = list.some((m) => m.profile.id === id)
+        ? list.map((m) => (m.profile.id === id ? next : m))
+        : [...list, next];
+      cacheMine(updated);
+      return updated;
+    });
+    setProfileID(id);
+    localStorage.setItem("profile", id);
   }, []);
 
-  // With live calculation on, the stored copy in Tiger Data wins over the local one.
+  const removeMine = useCallback((id: string) => {
+    lastLive.current.delete(id);
+    setMineState((list) => {
+      const updated = list.filter((m) => m.profile.id !== id);
+      cacheMine(updated);
+      return updated;
+    });
+    setProfileID((current) => (current === id ? savedProfiles[0].id : current));
+    localStorage.setItem("profile", savedProfiles[0].id);
+  }, []);
+
+  // With live calculation on, the list stored in Tiger Data wins over the local copy.
   useEffect(() => {
     const key = peekProfileKey();
     if (!key || !liveEnabled) return;
     const controller = new AbortController();
-    api.profiles.load(key, controller.signal)
-      .then((remote) => {
+    api.profiles.list(key, controller.signal)
+      .then(({ profiles: remote }) => {
         setMineState(remote);
-        try { localStorage.setItem(MINE_CACHE, JSON.stringify(remote)); } catch { /* ignore */ }
+        cacheMine(remote);
       })
-      .catch((error: unknown) => {
-        if (error instanceof APIError && error.body?.code === "PROFILE_NOT_FOUND") {
-          setMineState(null);
-          try { localStorage.removeItem(MINE_CACHE); } catch { /* ignore */ }
-        }
+      .catch(() => {
+        // Offline or database off: keep the local copy.
       });
     return () => controller.abort();
   }, [liveEnabled]);
+
+  // A selected personal profile that no longer exists falls back to the first demo profile.
+  const selectedMissing = isPersonal(profileID) && !mine.some((m) => m.profile.id === profileID);
   const [styles, setStyles] = useState<Record<string, PlanningPreference>>(() => {
     const out: Record<string, PlanningPreference> = {};
     for (const p of profiles) {
@@ -166,7 +195,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const style: PlanningPreference = styles[profileID] ?? baseProfile.planning_preference ?? "balanced";
   // Every evaluation, preset and saved run uses the profile with the chosen style applied.
   const profile = useMemo(() => ({ ...baseProfile, planning_preference: style }), [baseProfile, style]);
-  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(() => localStorage.getItem(GUIDE_SEEN) === null);
+  const [styleOpen, setStyleOpen] = useState(false);
   const [pendingScenario, setPendingScenario] = useState<Scenario | null>(null);
   const [planSection, setPlanSection] = useState<PlanSection>("month");
   const [planJump, setPlanJump] = useState(0);
@@ -177,11 +207,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
   const [planStyles, setPlanStyles] = useState<StyleLoad>({ status: "idle" });
   const styleCache = useRef(new Map<string, PlanStyles>());
-
-  // First open, and the first time a profile (account) is opened: show the guide.
-  useEffect(() => {
-    if (!styleChosen) setGuideOpen(true);
-  }, [profileID, styleChosen]);
 
   const setStyle = useCallback((next: PlanningPreference) => {
     localStorage.setItem(`style:${profileID}`, next);
@@ -359,15 +384,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     savedMatchesStyle: style === (baseProfile.planning_preference ?? "balanced"),
     planStyles,
     guideOpen,
-    openGuide: () => setGuideOpen(true),
-    closeGuide: () => setGuideOpen(false),
+    openGuide: () => { setStyleOpen(false); setGuideOpen(true); },
+    closeGuide: () => {
+      setGuideOpen(false);
+      try { localStorage.setItem(GUIDE_SEEN, "1"); } catch { /* storage unavailable: it shows again next time */ }
+    },
+    styleOpen,
+    openStyle: () => { setDrawer(null); setStyleOpen(true); },
+    closeStyle: () => setStyleOpen(false),
     pendingScenario,
     setPendingScenario,
     mine,
-    setMine,
-    numbersOpen: numbersOpen || (profileID === MY_ID && !mine),
-    openNumbers: () => setNumbersOpen(true),
-    closeNumbers: () => setNumbersOpen(false),
+    upsertMine,
+    removeMine,
+    numbers: numbers ?? (selectedMissing ? { id: null } : null),
+    numbersOpen: numbers !== null || selectedMissing,
+    openNumbers: (id: string | null) => setNumbers({ id }),
+    closeNumbers: () => {
+      setNumbers(null);
+      if (selectedMissing) {
+        setProfileID(savedProfiles[0].id);
+        localStorage.setItem("profile", savedProfiles[0].id);
+      }
+    },
     planSection,
     setPlanSection,
     openPlan,

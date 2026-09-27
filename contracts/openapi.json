@@ -1073,20 +1073,21 @@
         }
       }
     },
-    "/v1/profiles/me": {
+    "/v1/profiles": {
       "get": {
         "tags": [
           "profiles"
         ],
-        "summary": "Load Mine",
-        "operationId": "load_mine_v1_profiles_me_get",
+        "summary": "List Mine",
+        "description": "Every person saved under this key, oldest first.",
+        "operationId": "list_mine_v1_profiles_get",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StoredProfile"
+                  "$ref": "#/components/schemas/StoredProfiles"
                 }
               }
             }
@@ -1143,13 +1144,13 @@
           }
         }
       },
-      "put": {
+      "post": {
         "tags": [
           "profiles"
         ],
-        "summary": "Save Mine",
-        "description": "Validates, builds and stores the user's numbers; returns the engine preview.",
-        "operationId": "save_mine_v1_profiles_me_put",
+        "summary": "Create Mine",
+        "description": "Adds a person under this key (up to 10) with a new server-made ID.",
+        "operationId": "create_mine_v1_profiles_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1161,7 +1162,7 @@
           "required": true
         },
         "responses": {
-          "200": {
+          "201": {
             "description": "Successful Response",
             "content": {
               "application/json": {
@@ -1222,67 +1223,250 @@
             }
           }
         }
+      }
+    },
+    "/v1/profiles/{profile_id}": {
+      "put": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Update Mine",
+        "operationId": "update_mine_v1_profiles__profile_id__put",
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileBuild"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Load Mine",
+        "operationId": "load_mine_v1_profiles__profile_id__get",
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoredProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
       },
       "delete": {
         "tags": [
           "profiles"
         ],
         "summary": "Erase Mine",
-        "description": "Erases the user's numbers and every plan they saved.",
-        "operationId": "erase_mine_v1_profiles_me_delete",
+        "description": "Erases one person's numbers and every plan saved from them.",
+        "operationId": "erase_mine_v1_profiles__profile_id__delete",
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Profile Id"
+            }
+          }
+        ],
         "responses": {
           "204": {
             "description": "Successful Response"
           },
           "401": {
-            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
-            }
+            },
+            "description": "Unauthorized"
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "422": {
-            "description": "Unprocessable Entity",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
-            }
+            },
+            "description": "Unprocessable Entity"
           },
           "429": {
-            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
-            }
+            },
+            "description": "Too Many Requests"
           },
           "503": {
-            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
-            }
+            },
+            "description": "Service Unavailable"
           }
         }
       }
@@ -4547,6 +4731,22 @@
               }
             ],
             "title": "Glide Path Mode"
+          },
+          "planning_preference": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "balanced",
+                  "cash_security",
+                  "debt_reduction"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planning Preference"
           }
         },
         "additionalProperties": false,
@@ -4809,6 +5009,23 @@
         ],
         "title": "StoredProfile",
         "description": "The user's saved numbers: the form as entered, and the profile built from it."
+      },
+      "StoredProfiles": {
+        "properties": {
+          "profiles": {
+            "items": {
+              "$ref": "#/components/schemas/StoredProfile"
+            },
+            "type": "array",
+            "title": "Profiles"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profiles"
+        ],
+        "title": "StoredProfiles"
       },
       "StyleOutcome": {
         "properties": {

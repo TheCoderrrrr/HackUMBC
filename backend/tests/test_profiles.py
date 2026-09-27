@@ -118,78 +118,99 @@ def test_build_endpoint_and_evaluate_accept_a_manual_profile(client):
     assert evaluation.status_code == 200 and evaluation.json()["profile_id"] == "me"
 
 
-# --- storing the user's numbers under an anonymous key ---------------------------------------
+# --- storing people's numbers under an anonymous key --------------------------------------
+
+H = lambda key: {"x-profile-key": key}
+OWNER_A = hashlib.sha256(KEY_A.encode()).hexdigest()
 
 
-def test_store_load_and_erase_my_numbers(client, store):
-    assert client.put("/v1/profiles/me", json=morgan_form()).status_code == 401  # no key
-    assert client.put("/v1/profiles/me", json=morgan_form(), headers={"x-profile-key": "short"}).status_code == 422
+def _create(client, key=KEY_A, **change):
+    res = client.post("/v1/profiles", json=morgan_form() | change, headers=H(key))
+    assert res.status_code == 201, res.text
+    return res.json()["profile"]
 
-    saved = client.put("/v1/profiles/me", json=morgan_form(), headers={"x-profile-key": KEY_A})
-    assert saved.status_code == 200, saved.text
+
+def test_add_several_people_load_update_and_erase(client, store):
+    assert client.post("/v1/profiles", json=morgan_form()).status_code == 401  # no key
+    assert client.post("/v1/profiles", json=morgan_form(), headers=H("short")).status_code == 422
+
+    first, second = _create(client, name="Alex"), _create(client, name="Sam", age=28)
+    assert first["id"] != second["id"] and first["id"].startswith("u-") and len(first["id"]) == 10
     # Only the key's hash is stored, never the key.
-    assert list(store.profiles) == [hashlib.sha256(KEY_A.encode()).hexdigest()]
+    assert {o for o, _ in store.profiles} == {OWNER_A}
 
-    loaded = client.get("/v1/profiles/me", headers={"x-profile-key": KEY_A}).json()
-    assert loaded["form"]["annual_gross_salary_cents"] == morgan_form()["annual_gross_salary_cents"]
-    assert loaded["profile"]["source"] == "manual"
-    assert client.get("/v1/profiles/me", headers={"x-profile-key": KEY_B}).status_code == 404
+    listed = client.get("/v1/profiles", headers=H(KEY_A)).json()["profiles"]
+    assert [p["profile"]["name"] for p in listed] == ["Alex", "Sam"]
+    assert client.get("/v1/profiles", headers=H(KEY_B)).json()["profiles"] == []
 
-    assert client.delete("/v1/profiles/me", headers={"x-profile-key": KEY_A}).status_code == 204
-    assert client.get("/v1/profiles/me", headers={"x-profile-key": KEY_A}).status_code == 404
+    updated = client.put(f"/v1/profiles/{second['id']}", json=morgan_form() | {"name": "Sam", "age": 29}, headers=H(KEY_A))
+    assert updated.status_code == 200 and updated.json()["profile"]["age"] == 29
+    assert client.get(f"/v1/profiles/{second['id']}", headers=H(KEY_A)).json()["form"]["age"] == 29
+    assert client.get(f"/v1/profiles/{second['id']}", headers=H(KEY_B)).status_code == 404
+    assert client.put(f"/v1/profiles/{second['id']}", json=morgan_form(), headers=H(KEY_B)).status_code == 404
+
+    assert client.delete(f"/v1/profiles/{first['id']}", headers=H(KEY_A)).status_code == 204
+    assert [p["profile"]["name"] for p in client.get("/v1/profiles", headers=H(KEY_A)).json()["profiles"]] == ["Sam"]
+
+
+def test_profile_ids_are_validated(client):
+    assert client.get("/v1/profiles/not-an-id", headers=H(KEY_A)).status_code == 422
+    assert client.delete("/v1/profiles/u-XYZ", headers=H(KEY_A)).status_code == 422
+
+
+def test_up_to_ten_people_per_key(client):
+    for _ in range(10):
+        _create(client)
+    res = client.post("/v1/profiles", json=morgan_form(), headers=H(KEY_A))
+    assert res.status_code == 409 and res.json()["error"]["code"] == "PROFILE_LIMIT"
 
 
 def test_invalid_numbers_are_never_stored(client, store):
-    res = client.put("/v1/profiles/me", json=morgan_form() | {"retirement_age": 30}, headers={"x-profile-key": KEY_A})
+    res = client.post("/v1/profiles", json=morgan_form() | {"retirement_age": 30}, headers=H(KEY_A))
     assert res.status_code == 422 and store.profiles == {}
 
 
 def test_storage_needs_the_database():
     client = TestClient(create_app(Settings(ai_enabled=False), history=None))
-    res = client.put("/v1/profiles/me", json=morgan_form(), headers={"x-profile-key": KEY_A})
+    res = client.post("/v1/profiles", json=morgan_form(), headers=H(KEY_A))
     assert res.status_code == 503 and res.json()["error"]["code"] == "HISTORY_DISABLED"
 
 
-# --- plans saved from my numbers belong to me -----------------------------------------------
+# --- plans saved from a person's numbers belong to that key ---------------------------------
 
 
-def _save_my_plan(client, key):
-    profile = client.put("/v1/profiles/me", json=morgan_form(), headers={"x-profile-key": key}).json()["profile"]
+def _save_plan(client, key, profile):
     evaluation = client.post("/v1/evaluate", json={"profile": profile}).json()
-    return client.post("/v1/history/runs", headers={"x-profile-key": key}, json={
-        "profile_id": "me", "scenario": None, "decision_summary": evaluation["decision_summary"],
+    return client.post("/v1/history/runs", headers=H(key), json={
+        "profile_id": profile["id"], "scenario": None, "decision_summary": evaluation["decision_summary"],
         "input_hash": evaluation["input_hash"]})
 
 
-def test_my_plans_are_private_to_my_key(client, store):
-    mine = _save_my_plan(client, KEY_A)
+def test_plans_are_private_to_the_key(client, store):
+    profile = _create(client)
+    mine = _save_plan(client, KEY_A, profile)
     assert mine.status_code == 201, mine.text
     run_id = mine.json()["run"]["run_id"]
-    assert store.records[run_id].owner == hashlib.sha256(KEY_A.encode()).hexdigest()
+    assert store.records[run_id].owner == OWNER_A and store.records[run_id].profile_id == profile["id"]
 
-    listed = lambda key: client.get("/v1/history/runs", params={"profile_id": "me"}, headers={"x-profile-key": key})
+    listed = lambda key: client.get("/v1/history/runs", params={"profile_id": profile["id"]}, headers=H(key))
     assert [r["run_id"] for r in listed(KEY_A).json()["runs"]] == [run_id]
     assert listed(KEY_B).json()["runs"] == []
-    assert client.get("/v1/history/runs", params={"profile_id": "me"}).status_code == 401
-
-    # Someone else can't delete or compare it.
-    assert client.delete(f"/v1/history/runs/{run_id}", headers={"x-profile-key": KEY_B}).status_code == 404
+    assert client.get("/v1/history/runs", params={"profile_id": profile["id"]}).status_code == 401
+    assert client.delete(f"/v1/history/runs/{run_id}", headers=H(KEY_B)).status_code == 404
     assert client.delete(f"/v1/history/runs/{run_id}").status_code == 404
     assert run_id in store.records
 
 
-def test_saving_my_plan_needs_my_saved_numbers(client):
-    res = client.post("/v1/history/runs", headers={"x-profile-key": KEY_B}, json={
-        "profile_id": "me", "scenario": None,
-        "decision_summary": {"decision_id": "x", "source": "rules_fallback", "model_id": None, "prompt_version": PROMPT_VERSION,
-                             "ordered_priorities": ["starter_reserve", "high_apr_debt", "full_reserve"], "rationale": [],
-                             "constraint_checks": [], "fallback_reason": None},
-        "input_hash": "0" * 64})
+def test_saving_a_plan_needs_that_persons_saved_numbers(client):
+    profile = _create(client)
+    res = _save_plan(client, KEY_B, profile)  # another key can't save plans for this person
     assert res.status_code == 404 and res.json()["error"]["code"] == "PROFILE_NOT_FOUND"
 
 
-def test_erasing_my_numbers_erases_my_plans(client, store):
-    _save_my_plan(client, KEY_A)
-    assert store.records
-    assert client.delete("/v1/profiles/me", headers={"x-profile-key": KEY_A}).status_code == 204
-    assert store.records == {}
+def test_erasing_a_person_erases_only_their_plans(client, store):
+    alex, sam = _create(client, name="Alex"), _create(client, name="Sam")
+    _save_plan(client, KEY_A, alex)
+    _save_plan(client, KEY_A, sam)
+    assert client.delete(f"/v1/profiles/{alex['id']}", headers=H(KEY_A)).status_code == 204
+    assert {r.profile_id for r in store.records.values()} == {sam["id"]}
