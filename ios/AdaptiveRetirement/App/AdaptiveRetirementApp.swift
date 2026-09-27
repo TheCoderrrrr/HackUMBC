@@ -28,7 +28,7 @@ struct RootView: View {
             Palette.page.ignoresSafeArea()
 
             switch store.phase {
-            case .splash, .onboarding:
+            case .splash, .intro, .onboarding:
                 SetupFlowView()
                     .transition(.opacity)
             case .main:

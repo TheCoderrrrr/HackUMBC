@@ -36,7 +36,7 @@ struct ProjectionChart: View {
             ZStack {
                 // Fills: grained, fading into the page.
                 chart { series, name, _ in
-                    AreaMark(x: .value("Progress", series.x), y: .value("Balance", series.y))
+                    AreaMark(x: .value("Progress", series.x), y: .value("Balance", series.y), stacking: .unstacked)
                         .interpolationMethod(.catmullRom)
                         .foregroundStyle(by: .value("Series", name))
                 }

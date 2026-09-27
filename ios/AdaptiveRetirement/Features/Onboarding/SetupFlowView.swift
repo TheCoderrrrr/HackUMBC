@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Splash → four-step setup. The brand field shows behind the wordmark, then
+/// Splash → intro slideshow → four-step setup. The brand field shows behind the wordmark, then
 /// crossfades to the bottom flame field as the setup content appears.
 struct SetupFlowView: View {
     @EnvironmentObject private var store: AppStore
@@ -17,6 +17,9 @@ struct SetupFlowView: View {
 
             if isSplash {
                 SplashWordmark(onTap: advanceFromSplash)
+                    .transition(.opacity)
+            } else if store.phase == .intro {
+                IntroFlow()
                     .transition(.opacity)
             } else {
                 OnboardingFlow()
@@ -43,8 +46,8 @@ struct SetupFlowView: View {
     private func advanceFromSplash() {
         guard store.phase == .splash else { return }
         withAnimation(Motion.respecting(reduceMotion, Motion.handoff)) {
-            store.onboardingStep = .profile
-            store.phase = .onboarding
+            store.introSlide = .autopilot
+            store.phase = .intro
         }
     }
 
@@ -130,9 +133,7 @@ struct OnboardingFlow: View {
                     .background(SetupStyle.disc, in: Circle())
             }
             .buttonStyle(PressableStyle())
-            .accessibilityLabel("Back")
-            .opacity(step == .profile ? 0 : 1)
-            .disabled(step == .profile)
+            .accessibilityLabel(step == .profile ? "Back to intro" : "Back")
 
             Spacer()
         }
@@ -187,7 +188,11 @@ struct OnboardingFlow: View {
     }
 
     private func back() {
-        if let previous = OnboardingStep(rawValue: step.rawValue - 1) {
+        if step == .profile {
+            withAnimation(Motion.respecting(reduceMotion, Motion.handoff)) {
+                store.phase = .intro
+            }
+        } else if let previous = OnboardingStep(rawValue: step.rawValue - 1) {
             go(to: previous)
         }
     }

@@ -2,6 +2,7 @@ import SwiftUI
 
 enum AppPhase: Equatable {
     case splash
+    case intro
     case onboarding
     case main
 }
@@ -62,6 +63,7 @@ enum EvaluationLoad {
 @MainActor
 final class AppStore: ObservableObject {
     @Published var phase: AppPhase = .splash
+    @Published var introSlide: IntroSlide = .autopilot
     @Published var onboardingStep: OnboardingStep = .profile
     @Published var focus: Focus = .debt
     @Published var profile: Profile = .morgan
@@ -113,18 +115,20 @@ final class AppStore: ObservableObject {
     }
 
     /// `-screen <name>` jumps straight to a screen for previews and screenshots:
-    /// splash, profile, accounts, focus, result, overview, plan, explore,
+    /// splash, intro, profile, accounts, focus, result, overview, plan, explore,
     /// and sheet names (picker, snapshot, explanation, assumptions, accountPreview).
-    /// `-focus debt|cash|retirement`, `-profile morgan|jordan|casey`, `-hint 0`,
+    /// `-slide 0…4` picks the intro slide. `-focus debt|cash|retirement`, `-profile morgan|jordan|casey`, `-hint 0`,
     /// `-serverBaseURL https://…` (read in `init`), `-evaluationFixtures <dir>`.
     private func applyDebugLaunchArguments() {
         let defaults = UserDefaults.standard
         if let id = defaults.string(forKey: "profile"), let p = Profile.all.first(where: { $0.id == id }) { profile = p }
         if let f = defaults.string(forKey: "focus"), let value = Focus(rawValue: f) { focus = value }
+        if defaults.object(forKey: "slide") != nil, let s = IntroSlide(rawValue: defaults.integer(forKey: "slide")) { introSlide = s }
         if defaults.object(forKey: "hint") != nil { showsPlayheadHint = defaults.bool(forKey: "hint") }
         guard let screen = defaults.string(forKey: "screen") else { return }
         switch screen {
         case "splash": phase = .splash
+        case "intro": phase = .intro
         case "profile": phase = .onboarding; onboardingStep = .profile
         case "accounts": phase = .onboarding; onboardingStep = .accounts
         case "focus": phase = .onboarding; onboardingStep = .focus
@@ -265,8 +269,9 @@ final class AppStore: ObservableObject {
     }
 
     func replayOnboarding() {
+        introSlide = .autopilot
         onboardingStep = .profile
         focus = .debt
-        phase = .onboarding
+        phase = .intro
     }
 }
