@@ -16,7 +16,9 @@ from app.schemas import ErrorEnvelope, FinancialProfile
 router = APIRouter(prefix="/v1/history", tags=["history"])
 
 _ERRORS = {code: {"model": ErrorEnvelope} for code in (401, 404, 409, 422, 429, 503)}
-MANUAL_PROFILE_ID = "me"
+def is_personal(profile_id: str) -> bool:
+    """IDs of users' own profiles: "me" (first version) or server-made "u-" + 8 hex characters."""
+    return profile_id == "me" or profile_id.startswith("u-")
 LIST_LIMIT = 20
 
 
@@ -51,9 +53,9 @@ def save_run(body: SaveRunRequest, request: Request, response: Response) -> Save
     if not request.app.state.evaluate_limiter.allow(client_key(request)):
         raise ApiError(429, "RATE_LIMITED", "Too many requests. Try again in a minute.", retryable=True)
     try:
-        if body.profile_id == MANUAL_PROFILE_ID:  # the user's own stored numbers
+        if is_personal(body.profile_id):  # one of the user's own stored profiles
             owner = owner_from(request, required=True)
-            stored = store.get_profile(owner)
+            stored = store.get_profile(owner, body.profile_id)
             if stored is None:
                 raise ApiError(404, "PROFILE_NOT_FOUND", "Save your numbers first.", ["profile_id"])
             record = service.build_run(body.profile_id, body.scenario, body.decision_summary, body.input_hash,
@@ -73,7 +75,7 @@ def save_run(body: SaveRunRequest, request: Request, response: Response) -> Save
 @router.get("/runs", response_model=RunList, responses=_ERRORS)
 def list_runs(request: Request, profile_id: str = Query(min_length=1, max_length=64)) -> RunList:
     store = _store(request)
-    owner = owner_from(request, required=True) if profile_id == MANUAL_PROFILE_ID else None
+    owner = owner_from(request, required=True) if is_personal(profile_id) else None
     try:
         return RunList(runs=store.list_runs(profile_id, LIST_LIMIT, owner))
     except HistoryUnavailable:

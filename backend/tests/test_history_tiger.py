@@ -141,25 +141,38 @@ def test_user_profiles_and_owner_scoped_runs_on_tiger(tiger):
     import dataclasses
     import hashlib
 
+    import psycopg
+
     alice, bob = hashlib.sha256(b"alice-key").hexdigest(), hashlib.sha256(b"bob-key").hexdigest()
     record, _ = _record("jordan")
 
-    # The profile table round-trips JSON and upserts.
-    tiger.save_profile(alice, {"age": 35}, {"id": "me"})
-    tiger.save_profile(alice, {"age": 36}, {"id": "me"})
-    assert tiger.get_profile(alice) == ({"age": 36}, {"id": "me"})
-    assert tiger.get_profile(bob) is None
+    # Several people per owner; upserts; listing is per owner.
+    tiger.save_profile(alice, "u-00000001", {"age": 35}, {"id": "u-00000001"})
+    tiger.save_profile(alice, "u-00000001", {"age": 36}, {"id": "u-00000001"})
+    tiger.save_profile(alice, "u-00000002", {"age": 28}, {"id": "u-00000002"})
+    assert tiger.get_profile(alice, "u-00000001") == ({"age": 36}, {"id": "u-00000001"})
+    assert [p for _, p in tiger.list_profiles(alice)] == [{"id": "u-00000001"}, {"id": "u-00000002"}]
+    assert tiger.get_profile(bob, "u-00000001") is None and tiger.list_profiles(bob) == []
 
-    # The same plan saved by two owners is two private runs, and a shared demo run stays separate.
-    mine = dataclasses.replace(record, run_id=str(uuid.uuid4()), profile_id="me", owner=alice)
+    # A profile saved by the first (one-per-owner) version is migrated as "me".
+    with psycopg.connect(URL, autocommit=True) as conn:
+        conn.execute(f"INSERT INTO {tiger.schema}.user_profile (owner_key_hash, form, profile) VALUES (%s, %s, %s)",
+                     (bob, '{"age": 50}', '{"id": "me"}'))
+    tiger._ready = False  # rerun the idempotent migrations
+    tiger.ping()
+    assert tiger.get_profile(bob, "me") == ({"age": 50}, {"id": "me"})
+
+    # The same plan saved by two owners is two private runs.
+    mine = dataclasses.replace(record, run_id=str(uuid.uuid4()), profile_id="u-00000001", owner=alice)
     theirs = dataclasses.replace(record, run_id=str(uuid.uuid4()), profile_id="me", owner=bob)
     assert tiger.save(mine)[1] and tiger.save(theirs)[1]
     assert not tiger.save(dataclasses.replace(mine, run_id=str(uuid.uuid4())))[1]  # idempotent per owner
-    assert [r.run_id for r in tiger.list_runs("me", 10, alice)] == [mine.run_id]
+    assert [r.run_id for r in tiger.list_runs("u-00000001", 10, alice)] == [mine.run_id]
     assert set(tiger.get_runs([mine.run_id, theirs.run_id], alice)) == {mine.run_id}
     assert tiger.delete(theirs.run_id, alice) is False and tiger.delete(theirs.run_id) is False
 
-    # Erasing a profile removes its runs, and only its runs.
-    assert tiger.delete_profile(alice) is True
-    assert tiger.list_runs("me", 10, alice) == [] and tiger.get_profile(alice) is None
+    # Erasing one person removes only their runs.
+    assert tiger.delete_profile(alice, "u-00000001") is True
+    assert tiger.list_runs("u-00000001", 10, alice) == [] and tiger.get_profile(alice, "u-00000001") is None
+    assert [p for _, p in tiger.list_profiles(alice)] == [{"id": "u-00000002"}]
     assert [r.run_id for r in tiger.list_runs("me", 10, bob)] == [theirs.run_id]
