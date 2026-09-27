@@ -90,7 +90,7 @@ class FinancialProfile(Strict):
     name: str = Field(min_length=1, max_length=100)
     as_of_date: date
     currency: Literal["USD"]
-    source: Literal["demo", "plaid_sandbox"]
+    source: Literal["demo", "plaid_sandbox", "manual"]  # manual: the user typed their own numbers
     age: int = Field(ge=18, le=75)
     retirement_age: int = Field(le=80)
     annual_gross_salary_cents: Cents = Field(gt=0)

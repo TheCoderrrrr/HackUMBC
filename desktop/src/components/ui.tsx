@@ -47,6 +47,7 @@ const AVATAR: Record<string, [string, string]> = {
   jordan: ["#3F7A7A", "#2A3F66"],
   casey: ["#52709A", "#35405A"],
   morgan: ["#6FD08A", "#2A7A4A"],
+  me: ["#F2C46D", "#B5782A"], // the user's own numbers
 };
 
 export function Avatar({ id, name, size = 40 }: { id: string; name: string; size?: number }) {
