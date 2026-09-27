@@ -10,4 +10,5 @@
 DEVELOPMENT_TEAM = 7AG43Y3Q47
 BUNDLE_ID_SUFFIX =
 
+#include "Server.xcconfig"
 #include? "Signing.local.xcconfig"

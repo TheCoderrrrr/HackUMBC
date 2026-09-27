@@ -1,0 +1,15 @@
+// Default backend URL for the AdaptiveRetirement app target.
+//
+// The committed default is EMPTY on purpose: no live tunnel domain is baked into the
+// repo, so a fresh install runs on the bundled saved calculations only. The team picks
+// ONE demo host laptop and ONE ngrok domain per event (see backend/RUNBOOK.md), and
+// that host sets the domain in their git-ignored Signing.local.xcconfig:
+//
+//   SERVER_BASE_URL = https:/$()/your-team.ngrok-free.dev
+//
+// (The $()/ trick keeps the // from starting a comment.) The value reaches the app as
+// the ServerBaseURL Info.plist key; AppStore reads it from there. Testers can still
+// override at runtime in Explore › Modeling assumptions › Live calculation — that
+// choice is saved on the phone and wins over this build-time default.
+
+SERVER_BASE_URL =

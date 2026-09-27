@@ -216,10 +216,11 @@ For live AI, put `OPENAI_API_KEY=...` in `backend/.env` (git-ignored; never in `
 
 **2. Tunnel (terminal 2, once per machine: `brew install ngrok`)**
 
+1. Sign up at <https://dashboard.ngrok.com> and run `ngrok config add-authtoken <token>`.
+2. Claim one free static domain under **Domains** (e.g. `your-team.ngrok-free.dev`). The team uses **one domain on one host laptop** per event, and the domain is never committed to the repo.
+3. Start the tunnel: `ngrok http --url=your-team.ngrok-free.dev 8000`
 
-3. Start the tunnel: `ngrok http --url=unsheathe-chemicals-truth.ngrok-free.dev 8000`
-
-`scripts/serve_demo.sh unsheathe-chemicals-truth.ngrok-free.dev 8000` runs the API, the tunnel and `caffeinate` together.
+`scripts/serve_demo.sh your-team.ngrok-free.dev` runs the API, the tunnel and `caffeinate` together.
 
 **3. Smoke test (terminal 3, from `backend`)**
 
@@ -242,9 +243,10 @@ Run it from `backend/`, since the path is relative. If it fails with `CERTIFICAT
    Set `DEVELOPMENT_TEAM` to your Team ID (**Xcode → Settings → Accounts**) and `BUNDLE_ID_SUFFIX` to something unique like `.yourname`. The file is git-ignored, so it can't be committed. Without it, the app signs with the team defaults in `ios/Config/Signing.xcconfig`.
 4. Press ⌘R. With a free Apple ID, trust the profile under **Settings → General → VPN & Device Management**. Free installs expire after 7 days.
 
-**5. Point the app at your server (saved on the phone)**
+**5. Point the app at your server**
 
-In the app: **Explore → Modeling assumptions → Live calculation**, enter `https://your-name.ngrok-free.app`. Without it, the app uses the built-in team domain (`AppStore.defaultServerBaseURL`).
+- **Build time (demo host):** set `SERVER_BASE_URL = https:/$()/your-team.ngrok-free.dev` in the git-ignored `ios/Config/Signing.local.xcconfig` (see `ios/Config/Server.xcconfig`; the `$()/` keeps `//` from starting a comment). The committed default is **empty**, so a fresh install runs on the bundled saved calculations only.
+- **Run time (any phone):** **Explore → Modeling assumptions → Live calculation**, enter `https://your-team.ngrok-free.dev`. The choice is saved on the device and wins over the build-time default.
 
 **6. Check it**
 

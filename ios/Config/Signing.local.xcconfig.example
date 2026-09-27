@@ -7,3 +7,8 @@
 
 DEVELOPMENT_TEAM = YOURTEAMID
 BUNDLE_ID_SUFFIX = .yourname
+
+// Optional: point builds at your tunnel. Empty (the committed default in
+// Server.xcconfig) means the app runs on bundled saved calculations only.
+// The $()/ keeps the // in https:// from starting a comment.
+// SERVER_BASE_URL = https:/$()/your-team.ngrok-free.dev

@@ -73,12 +73,18 @@ final class AppStore: ObservableObject {
 
     /// Backend evaluation for `profile`. `.idle` until a bundle or server supplies one.
     @Published private(set) var evaluationLoad: EvaluationLoad = .idle
-    /// Public HTTPS base URL, e.g. the Cloudflare tunnel. Empty means saved data only.
+    /// Public HTTPS base URL, e.g. the ngrok tunnel. Empty means saved data only.
     @Published private(set) var serverBaseURL: String
 
     static let serverBaseURLKey = "serverBaseURL"
-    /// Fixed ngrok domain used until someone saves a different URL (or an empty one for saved-only).
-    static let defaultServerBaseURL = "https://coral-sandbox-apron.ngrok-free.dev"
+    /// Build-time default from the `ServerBaseURL` Info.plist key (set by
+    /// `Config/Server.xcconfig`, overridden by the git-ignored `Signing.local.xcconfig`).
+    /// The committed default is empty — saved data only — until someone sets a domain for
+    /// the build or saves one in Explore › Modeling assumptions.
+    static var defaultServerBaseURL: String {
+        (Bundle.main.object(forInfoDictionaryKey: "ServerBaseURL") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
 
     private let demo: DemoRepository
     private var client: APIClient?

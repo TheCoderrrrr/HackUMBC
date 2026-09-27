@@ -19,7 +19,10 @@ Install the tunnel (macOS `brew install ngrok`; Windows `winget install ngrok.ng
 
 1. Sign up at https://dashboard.ngrok.com and run `ngrok config add-authtoken <token>`.
 2. Claim the free static domain under **Domains** (e.g. `your-name.ngrok-free.app`).
-   The iOS app uses it by default (`AppStore.defaultServerBaseURL`).
+   **One domain, one host laptop per event.** The host puts the domain in their
+   git-ignored `ios/Config/Signing.local.xcconfig` as `SERVER_BASE_URL` (see
+   `ios/Config/Server.xcconfig`) before building the demo phone. The domain is never
+   committed; the app ships with no built-in server and runs saved-only without one.
 
 Recommended `.env` for the demo:
 
@@ -64,8 +67,9 @@ python scripts/smoke.py https://your-name.ngrok-free.app   # exactly what the ph
 
 `RESULT: OK` means health, profiles, all three evaluations and the error cases work.
 The `Live AI decisions: n/3` line shows how many came from Gemini this minute.
-Then, on the phone: the badge should read "Live calculation" (the domain is built in;
-Explore › Modeling assumptions › Live calculation overrides it). Test once on **cellular** (not venue Wi-Fi).
+Then, on the phone: the badge should read "Live calculation" (the domain comes from the
+build's `SERVER_BASE_URL`; Explore › Modeling assumptions › Live calculation overrides it
+on the phone, and DEBUG builds show the active host under the badge). Test once on **cellular** (not venue Wi-Fi).
 
 ## 4. Reading the AI labels
 

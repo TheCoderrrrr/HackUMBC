@@ -385,7 +385,19 @@ struct LiveStatusRow: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: Space.s) {
-            DataModeBadge(mode: store.dataMode)
+            VStack(alignment: .leading, spacing: 2) {
+                DataModeBadge(mode: store.dataMode)
+                #if DEBUG
+                // Which host this build is actually talking to, so testers can tell (REPORT A2).
+                Text(store.serverBaseURL.isEmpty
+                     ? "no server configured"
+                     : URL(string: store.serverBaseURL)?.host ?? store.serverBaseURL)
+                    .font(TypeScale.caption)
+                    .foregroundStyle(Palette.textCaption)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                #endif
+            }
             if store.evaluationLoad.isLoading {
                 ProgressView()
                     .controlSize(.small)
