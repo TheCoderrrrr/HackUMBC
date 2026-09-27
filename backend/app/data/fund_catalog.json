@@ -1,0 +1,425 @@
+{
+  "schema_version": "fund-catalog-1",
+  "catalog_version": "2026-09-26.1",
+  "published_on": "2026-09-26",
+  "reviewed_by": "Kevin (fund developer)",
+  "review_note": "Every value was checked by hand against the rendered SEC filing named in its evidence on 2026-09-26. Class identity comes from the filing header; fees from the prospectus fee table; allocation from the issuer's semi-annual shareholder report. No value was estimated or filled in.",
+  "documents": {
+    "blackrock-lpi-prospectus-2026": {
+      "issuer": "BlackRock",
+      "form": "485BPOS",
+      "accession": "0001193125-26-197798",
+      "filed_date": "2026-04-30",
+      "effective_date": "2026-04-30",
+      "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/d20560d485bpos.htm",
+      "title": "BlackRock LifePath Index Funds prospectus (Form 485BPOS, effective 2026-04-30)"
+    },
+    "blackrock-lpi-ncsrs-2026h1": {
+      "issuer": "BlackRock",
+      "form": "N-CSRS",
+      "accession": "0001193125-26-381511",
+      "filed_date": "2026-09-03",
+      "period_date": "2026-06-30",
+      "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526381511/d148271dncsrs.htm",
+      "title": "BlackRock LifePath Index Funds semi-annual shareholder report (Form N-CSRS)"
+    },
+    "ssga-tr-prospectus-2026": {
+      "issuer": "State Street",
+      "form": "485BPOS",
+      "accession": "0001193125-26-177471",
+      "filed_date": "2026-04-24",
+      "effective_date": "2026-04-30",
+      "url": "https://www.sec.gov/Archives/edgar/data/1107414/000119312526177471/d34171d485bpos.htm",
+      "title": "State Street Target Retirement Funds prospectus (Form 485BPOS, effective 2026-04-30)"
+    },
+    "ssga-tr2030-summary-2026": {
+      "issuer": "State Street",
+      "form": "497K",
+      "accession": "0001193125-26-191827",
+      "filed_date": "2026-04-29",
+      "effective_date": "2026-04-30",
+      "url": "https://www.sec.gov/Archives/edgar/data/1107414/000119312526191827/d134609d497k.htm",
+      "title": "State Street Target Retirement 2030 Fund summary prospectus (Form 497K, dated 2026-04-30)"
+    },
+    "ssga-tr2055-summary-2026": {
+      "issuer": "State Street",
+      "form": "497K",
+      "accession": "0001193125-26-191821",
+      "filed_date": "2026-04-29",
+      "effective_date": "2026-04-30",
+      "url": "https://www.sec.gov/Archives/edgar/data/1107414/000119312526191821/d134150d497k.htm",
+      "title": "State Street Target Retirement 2055 Fund summary prospectus (Form 497K, dated 2026-04-30)"
+    },
+    "ssga-tr-ncsrs-2026h1": {
+      "issuer": "State Street",
+      "form": "N-CSRS",
+      "accession": "0001193125-26-381731",
+      "filed_date": "2026-09-03",
+      "period_date": "2026-06-30",
+      "url": "https://www.sec.gov/Archives/edgar/data/1107414/000119312526381731/d108183dncsrs.htm",
+      "title": "State Street Institutional Investment Trust semi-annual shareholder report (Form N-CSRS)"
+    }
+  },
+  "funds": [
+    {
+      "fund_id": "blackrock-lifepath-index-2030-k",
+      "name": "BlackRock LifePath Index 2030 Fund, Class K",
+      "issuer": "BlackRock",
+      "registrant": "BlackRock Funds III",
+      "registrant_cik": "0000893818",
+      "series_id": "S000032778",
+      "share_class_id": "C000101145",
+      "class_name": "Class K Shares",
+      "ticker": null,
+      "target_year": 2030,
+      "currency": "USD",
+      "catalog_status": "listed",
+      "identity_evidence": {
+        "document": "blackrock-lpi-prospectus-2026",
+        "locator": "Filing header, series and classes",
+        "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/0001193125-26-197798-index-headers.html"
+      },
+      "prospectus_document": "blackrock-lpi-prospectus-2026",
+      "fees": {
+        "gross_expense_ratio": 0.0012,
+        "acquired_fund_fees": 0.0003,
+        "fee_waiver": 0.0003,
+        "net_expense_ratio": 0.0009,
+        "waiver_ends": "2027-06-30",
+        "waiver_terms": "Contractual reimbursement of acquired-fund fees and money-market advisory fees through 2027-06-30; may be terminated on 90 days' notice by the independent trustees or a shareholder vote.",
+        "as_of_date": "2026-04-30",
+        "evidence": {
+          "document": "blackrock-lpi-prospectus-2026",
+          "locator": "Class K annual fund operating expenses table",
+          "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R159.htm"
+        }
+      },
+      "allocation": {
+        "as_of_date": "2026-06-30",
+        "reported_categories": [
+          {"label": "Equity Funds", "percent_of_net_assets": 53.3, "bucket": "equity"},
+          {"label": "Fixed Income Funds", "percent_of_net_assets": 46.7, "bucket": "bond"},
+          {"label": "Money Market Funds", "percent_of_net_assets": 0.1, "bucket": "other"}
+        ],
+        "mapping_note": "Issuer categories used as reported. Other is the residual after equity and bonds.",
+        "evidence": {
+          "document": "blackrock-lpi-ncsrs-2026h1",
+          "locator": "Class K holdings by category, percent of net assets",
+          "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526381511/R3.htm"
+        }
+      },
+      "glide_path": {
+        "summary": "Prospectus target mix: 99% equity funds (including REITs) 30 or more years before the target date, 65% at 10 years, 53% at 5 years, and 40% at the target date.",
+        "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Principal investment strategies, glide path table"}
+      },
+      "historical_returns": [
+        {"period_years": 1, "annualized_return_rate": 0.1419, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R162.htm"}},
+        {"period_years": 5, "annualized_return_rate": 0.0589, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R162.htm"}},
+        {"period_years": 10, "annualized_return_rate": 0.0795, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R162.htm"}}
+      ],
+      "caveats": [
+        "The issuer's Equity Funds category can include commodity and infrastructure funds.",
+        "The fee waiver can end early on 90 days' notice."
+      ]
+    },
+    {
+      "fund_id": "blackrock-lifepath-index-2035-k",
+      "name": "BlackRock LifePath Index 2035 Fund, Class K",
+      "issuer": "BlackRock",
+      "registrant": "BlackRock Funds III",
+      "registrant_cik": "0000893818",
+      "series_id": "S000032779",
+      "share_class_id": "C000101148",
+      "class_name": "Class K Shares",
+      "ticker": null,
+      "target_year": 2035,
+      "currency": "USD",
+      "catalog_status": "listed",
+      "identity_evidence": {
+        "document": "blackrock-lpi-prospectus-2026",
+        "locator": "Filing header, series and classes",
+        "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/0001193125-26-197798-index-headers.html"
+      },
+      "prospectus_document": "blackrock-lpi-prospectus-2026",
+      "fees": {
+        "gross_expense_ratio": 0.0012,
+        "acquired_fund_fees": 0.0003,
+        "fee_waiver": 0.0003,
+        "net_expense_ratio": 0.0009,
+        "waiver_ends": "2027-06-30",
+        "waiver_terms": "Contractual reimbursement of acquired-fund fees and money-market advisory fees through 2027-06-30; may be terminated on 90 days' notice by the independent trustees or a shareholder vote.",
+        "as_of_date": "2026-04-30",
+        "evidence": {
+          "document": "blackrock-lpi-prospectus-2026",
+          "locator": "Class K annual fund operating expenses table",
+          "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R169.htm"
+        }
+      },
+      "allocation": {
+        "as_of_date": "2026-06-30",
+        "reported_categories": [
+          {"label": "Equity Funds", "percent_of_net_assets": 66.0, "bucket": "equity"},
+          {"label": "Fixed Income Funds", "percent_of_net_assets": 33.8, "bucket": "bond"},
+          {"label": "Other Assets Less Liabilities", "percent_of_net_assets": 0.2, "bucket": "other"}
+        ],
+        "mapping_note": "Issuer categories used as reported. Other is the residual after equity and bonds.",
+        "evidence": {
+          "document": "blackrock-lpi-ncsrs-2026h1",
+          "locator": "Class K holdings by category, percent of net assets",
+          "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526381511/R3.htm"
+        }
+      },
+      "glide_path": {
+        "summary": "Prospectus target mix: 99% equity funds (including REITs) 30 or more years before the target date, 65% at 10 years, 53% at 5 years, and 40% at the target date.",
+        "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Principal investment strategies, glide path table"}
+      },
+      "historical_returns": [
+        {"period_years": 1, "annualized_return_rate": 0.1609, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R172.htm"}},
+        {"period_years": 5, "annualized_return_rate": 0.0723, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R172.htm"}},
+        {"period_years": 10, "annualized_return_rate": 0.0901, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R172.htm"}}
+      ],
+      "caveats": [
+        "The issuer's Equity Funds category can include commodity and infrastructure funds.",
+        "The fee waiver can end early on 90 days' notice."
+      ]
+    },
+    {
+      "fund_id": "blackrock-lifepath-index-2055-k",
+      "name": "BlackRock LifePath Index 2055 Fund, Class K",
+      "issuer": "BlackRock",
+      "registrant": "BlackRock Funds III",
+      "registrant_cik": "0000893818",
+      "series_id": "S000032783",
+      "share_class_id": "C000101160",
+      "class_name": "Class K Shares",
+      "ticker": null,
+      "target_year": 2055,
+      "currency": "USD",
+      "catalog_status": "listed",
+      "identity_evidence": {
+        "document": "blackrock-lpi-prospectus-2026",
+        "locator": "Filing header, series and classes",
+        "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/0001193125-26-197798-index-headers.html"
+      },
+      "prospectus_document": "blackrock-lpi-prospectus-2026",
+      "fees": {
+        "gross_expense_ratio": 0.0013,
+        "acquired_fund_fees": 0.0004,
+        "fee_waiver": 0.0004,
+        "net_expense_ratio": 0.0009,
+        "waiver_ends": "2027-06-30",
+        "waiver_terms": "Contractual reimbursement of acquired-fund fees and money-market advisory fees through 2027-06-30; may be terminated on 90 days' notice by the independent trustees or a shareholder vote.",
+        "as_of_date": "2026-04-30",
+        "evidence": {
+          "document": "blackrock-lpi-prospectus-2026",
+          "locator": "Class K annual fund operating expenses table",
+          "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R209.htm"
+        }
+      },
+      "allocation": {
+        "as_of_date": "2026-06-30",
+        "reported_categories": [
+          {"label": "Equity Funds", "percent_of_net_assets": 97.9, "bucket": "equity"},
+          {"label": "Fixed Income Funds", "percent_of_net_assets": 2.0, "bucket": "bond"},
+          {"label": "Money Market Funds", "percent_of_net_assets": 0.1, "bucket": "other"}
+        ],
+        "mapping_note": "Issuer categories used as reported. Other is the residual after equity and bonds.",
+        "evidence": {
+          "document": "blackrock-lpi-ncsrs-2026h1",
+          "locator": "Class K holdings by category, percent of net assets",
+          "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526381511/R3.htm"
+        }
+      },
+      "glide_path": {
+        "summary": "Prospectus target mix: 99% equity funds (including REITs) 30 or more years before the target date, 65% at 10 years, 53% at 5 years, and 40% at the target date.",
+        "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Principal investment strategies, glide path table"}
+      },
+      "historical_returns": [
+        {"period_years": 1, "annualized_return_rate": 0.2159, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R212.htm"}},
+        {"period_years": 5, "annualized_return_rate": 0.1079, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R212.htm"}},
+        {"period_years": 10, "annualized_return_rate": 0.1145, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R212.htm"}}
+      ],
+      "caveats": [
+        "The issuer's Equity Funds category can include commodity and infrastructure funds.",
+        "The fee waiver can end early on 90 days' notice."
+      ]
+    },
+    {
+      "fund_id": "blackrock-lifepath-index-2060-k",
+      "name": "BlackRock LifePath Index 2060 Fund, Class K",
+      "issuer": "BlackRock",
+      "registrant": "BlackRock Funds III",
+      "registrant_cik": "0000893818",
+      "series_id": "S000052849",
+      "share_class_id": "C000166219",
+      "class_name": "Class K",
+      "ticker": null,
+      "target_year": 2060,
+      "currency": "USD",
+      "catalog_status": "listed",
+      "identity_evidence": {
+        "document": "blackrock-lpi-prospectus-2026",
+        "locator": "Filing header, series and classes",
+        "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/0001193125-26-197798-index-headers.html"
+      },
+      "prospectus_document": "blackrock-lpi-prospectus-2026",
+      "fees": {
+        "gross_expense_ratio": 0.0013,
+        "acquired_fund_fees": 0.0004,
+        "fee_waiver": 0.0004,
+        "net_expense_ratio": 0.0009,
+        "waiver_ends": "2027-06-30",
+        "waiver_terms": "Contractual reimbursement of acquired-fund fees and money-market advisory fees through 2027-06-30; may be terminated on 90 days' notice by the independent trustees or a shareholder vote.",
+        "as_of_date": "2026-04-30",
+        "evidence": {
+          "document": "blackrock-lpi-prospectus-2026",
+          "locator": "Class K annual fund operating expenses table",
+          "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R219.htm"
+        }
+      },
+      "allocation": {
+        "as_of_date": "2026-06-30",
+        "reported_categories": [
+          {"label": "Equity Funds", "percent_of_net_assets": 98.8, "bucket": "equity"},
+          {"label": "Fixed Income Funds", "percent_of_net_assets": 1.0, "bucket": "bond"},
+          {"label": "Money Market Funds", "percent_of_net_assets": 0.3, "bucket": "other"}
+        ],
+        "mapping_note": "Issuer categories used as reported. Other is the residual after equity and bonds.",
+        "evidence": {
+          "document": "blackrock-lpi-ncsrs-2026h1",
+          "locator": "Class K holdings by category, percent of net assets",
+          "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526381511/R3.htm"
+        }
+      },
+      "glide_path": {
+        "summary": "Prospectus target mix: 99% equity funds (including REITs) 30 or more years before the target date, 65% at 10 years, 53% at 5 years, and 40% at the target date.",
+        "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Principal investment strategies, glide path table"}
+      },
+      "historical_returns": [
+        {"period_years": 1, "annualized_return_rate": 0.2171, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R222.htm"}},
+        {"period_years": 5, "annualized_return_rate": 0.1081, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R222.htm"}}
+      ],
+      "caveats": [
+        "No 10-year return: the class began on 2016-02-29, so the prospectus shows a since-inception figure instead.",
+        "The issuer's Equity Funds category can include commodity and infrastructure funds.",
+        "The fee waiver can end early on 90 days' notice."
+      ]
+    },
+    {
+      "fund_id": "state-street-target-retirement-2030-k",
+      "name": "State Street Target Retirement 2030 Fund, Class K",
+      "issuer": "State Street",
+      "registrant": "State Street Institutional Investment Trust",
+      "registrant_cik": "0001107414",
+      "series_id": "S000046037",
+      "share_class_id": "C000143873",
+      "class_name": "Class K",
+      "ticker": "SSBYX",
+      "target_year": 2030,
+      "currency": "USD",
+      "catalog_status": "listed",
+      "identity_evidence": {
+        "document": "ssga-tr-prospectus-2026",
+        "locator": "Filing header, series and classes",
+        "url": "https://www.sec.gov/Archives/edgar/data/1107414/000119312526177471/0001193125-26-177471-index-headers.html"
+      },
+      "prospectus_document": "ssga-tr-prospectus-2026",
+      "fees": {
+        "gross_expense_ratio": 0.0020,
+        "acquired_fund_fees": 0.0008,
+        "fee_waiver": 0.0011,
+        "net_expense_ratio": 0.0009,
+        "waiver_ends": "2027-04-30",
+        "waiver_terms": "Adviser caps total operating expenses at 0.09% (excluding distribution, servicing, and certain other costs) until 2027-04-30; only the Board can end it earlier.",
+        "as_of_date": "2026-04-30",
+        "evidence": {"document": "ssga-tr2030-summary-2026", "locator": "Annual fund operating expenses table, Class K column"}
+      },
+      "allocation": {
+        "as_of_date": "2026-06-30",
+        "reported_categories": [
+          {"label": "Domestic Equity", "percent_of_net_assets": 31.4, "bucket": "equity"},
+          {"label": "International Equity", "percent_of_net_assets": 21.0, "bucket": "equity"},
+          {"label": "Real Estate", "percent_of_net_assets": 3.2, "bucket": "equity"},
+          {"label": "Domestic Fixed Income", "percent_of_net_assets": 32.2, "bucket": "bond"},
+          {"label": "Inflation Linked", "percent_of_net_assets": 12.1, "bucket": "bond"},
+          {"label": "Short-Term Investments", "percent_of_net_assets": 2.9, "bucket": "other"}
+        ],
+        "mapping_note": "Real Estate counted as equity, matching BlackRock's equity-funds-include-REITs convention. Other is the residual after equity and bonds; short-term investments include securities-lending collateral that nets against liabilities.",
+        "evidence": {
+          "document": "ssga-tr-ncsrs-2026h1",
+          "locator": "Class K holdings by industry, percent of net assets",
+          "url": "https://www.sec.gov/Archives/edgar/data/1107414/000119312526381731/R3.htm"
+        }
+      },
+      "glide_path": {
+        "summary": "Strategic mix shifts from equities toward fixed income as 2030 approaches and keeps adjusting in the years immediately before and after it, for investors who withdraw gradually after retiring. Actual allocations may differ.",
+        "evidence": {"document": "ssga-tr2030-summary-2026", "locator": "Principal investment strategies, glide path"}
+      },
+      "historical_returns": [
+        {"period_years": 1, "annualized_return_rate": 0.1615, "as_of_date": "2025-12-31", "evidence": {"document": "ssga-tr2030-summary-2026", "locator": "Average annual total returns, Class K before taxes"}},
+        {"period_years": 5, "annualized_return_rate": 0.0646, "as_of_date": "2025-12-31", "evidence": {"document": "ssga-tr2030-summary-2026", "locator": "Average annual total returns, Class K before taxes"}},
+        {"period_years": 10, "annualized_return_rate": 0.0896, "as_of_date": "2025-12-31", "evidence": {"document": "ssga-tr2030-summary-2026", "locator": "Average annual total returns, Class K before taxes"}}
+      ],
+      "caveats": [
+        "The issuer's Domestic Fixed Income category includes a commodity strategy ETF (about 1% of net assets)."
+      ]
+    },
+    {
+      "fund_id": "state-street-target-retirement-2055-k",
+      "name": "State Street Target Retirement 2055 Fund, Class K",
+      "issuer": "State Street",
+      "registrant": "State Street Institutional Investment Trust",
+      "registrant_cik": "0001107414",
+      "series_id": "S000046024",
+      "share_class_id": "C000143833",
+      "class_name": "Class K",
+      "ticker": "SSDQX",
+      "target_year": 2055,
+      "currency": "USD",
+      "catalog_status": "listed",
+      "identity_evidence": {
+        "document": "ssga-tr-prospectus-2026",
+        "locator": "Filing header, series and classes",
+        "url": "https://www.sec.gov/Archives/edgar/data/1107414/000119312526177471/0001193125-26-177471-index-headers.html"
+      },
+      "prospectus_document": "ssga-tr-prospectus-2026",
+      "fees": {
+        "gross_expense_ratio": 0.0016,
+        "acquired_fund_fees": 0.0003,
+        "fee_waiver": 0.0007,
+        "net_expense_ratio": 0.0009,
+        "waiver_ends": "2027-04-30",
+        "waiver_terms": "Adviser caps total operating expenses at 0.09% (excluding distribution, servicing, and certain other costs) until 2027-04-30; only the Board can end it earlier.",
+        "as_of_date": "2026-04-30",
+        "evidence": {"document": "ssga-tr2055-summary-2026", "locator": "Annual fund operating expenses table, Class K column"}
+      },
+      "allocation": {
+        "as_of_date": "2026-06-30",
+        "reported_categories": [
+          {"label": "Domestic Equity", "percent_of_net_assets": 52.1, "bucket": "equity"},
+          {"label": "International Equity", "percent_of_net_assets": 38.1, "bucket": "equity"},
+          {"label": "Domestic Fixed Income", "percent_of_net_assets": 9.6, "bucket": "bond"},
+          {"label": "Short-Term Investments", "percent_of_net_assets": 0.2, "bucket": "other"}
+        ],
+        "mapping_note": "Issuer categories used as reported. Other is the residual after equity and bonds.",
+        "evidence": {
+          "document": "ssga-tr-ncsrs-2026h1",
+          "locator": "Class K holdings by industry, percent of net assets",
+          "url": "https://www.sec.gov/Archives/edgar/data/1107414/000119312526381731/R3.htm"
+        }
+      },
+      "glide_path": {
+        "summary": "Strategic mix shifts from equities toward fixed income as 2055 approaches and keeps adjusting in the years immediately before and after it, for investors who withdraw gradually after retiring. Actual allocations may differ.",
+        "evidence": {"document": "ssga-tr2055-summary-2026", "locator": "Principal investment strategies, glide path"}
+      },
+      "historical_returns": [
+        {"period_years": 1, "annualized_return_rate": 0.2130, "as_of_date": "2025-12-31", "evidence": {"document": "ssga-tr2055-summary-2026", "locator": "Average annual total returns, Class K before taxes"}},
+        {"period_years": 5, "annualized_return_rate": 0.0858, "as_of_date": "2025-12-31", "evidence": {"document": "ssga-tr2055-summary-2026", "locator": "Average annual total returns, Class K before taxes"}},
+        {"period_years": 10, "annualized_return_rate": 0.1075, "as_of_date": "2025-12-31", "evidence": {"document": "ssga-tr2055-summary-2026", "locator": "Average annual total returns, Class K before taxes"}}
+      ],
+      "caveats": [
+        "The issuer's Domestic Fixed Income category may include a small commodity strategy position."
+      ]
+    }
+  ]
+}
