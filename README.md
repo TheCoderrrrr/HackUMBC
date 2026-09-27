@@ -2,7 +2,7 @@
 
 <img src="./assets/logo.svg" width="128" alt="ARM logo" />
 
-(ARM)
+# (ARM)
 # Adaptive Retirement Management
 
 **Retirement plans built from your real finances, not just your birth year.**
