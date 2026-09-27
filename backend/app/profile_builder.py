@@ -1,11 +1,9 @@
 """Build a full, validated FinancialProfile from a short form of the user's own numbers.
 
-The desktop app's "Your numbers" profile uses this. The form asks only for what a person knows
-(age, pay, spending, savings, match, debts); this module fills in the rest, marks each entered
-field `user_confirmed` in provenance, and returns an engine-computed preview so the form can
-show real numbers (budget after essentials, emergency months, rate for the full match) while
-the user types. Nothing here is stored: the profile lives in the user's browser, and scenario
-history only accepts demo profiles, so personal numbers never reach the cloud database.
+The web and iOS personal-profile forms use this. The form asks for financial inputs
+and, when known, one confirmed target-date fund. It fills defaults, marks entered
+fields `user_confirmed`, and returns an engine preview. `/build` does not store data;
+`/me` stores it under a hash of the caller's anonymous key when history is available.
 """
 from __future__ import annotations
 
@@ -22,6 +20,7 @@ from app.analytics.owner import owner_from
 from app.analytics.router import _store, _unavailable
 from app.analytics.store import HistoryUnavailable
 from app.errors import ApiError
+from app.fund_model import resolve as resolve_fund_assumptions
 from app.limits import client_key
 from app.schemas import Cents, ErrorEnvelope, FinancialProfile, FinancialState, PlanningPreference, Rate, Strict
 
@@ -70,6 +69,10 @@ class ProfileInput(Strict):
     contribution_tax_treatment: Literal["traditional", "roth"] = "traditional"
     estimated_marginal_income_tax_rate: Rate = Field(default=DEFAULT_MARGINAL_TAX_RATE, ge=0, le=0.5)
     planning_preference: PlanningPreference = "balanced"
+    fund_id: str | None = None
+    fund_balance_confirmed: bool = False
+    fund_account_type: Literal["401k", "ira"] | None = None
+    plan_menu_fund_ids: list[str] | None = Field(default=None, max_length=50)
 
 
 class ProfileBuild(Strict):
@@ -90,6 +93,7 @@ _ENTERED = (
     "monthly_living_expenses_cents", "employee_contribution_rate", "retirement_balance_cents",
     "emergency_cash_cents", "employer_match", "debts", "contribution_tax_treatment",
     "estimated_marginal_income_tax_rate", "planning_preference",
+    "fund_id", "fund_balance_confirmed", "fund_account_type", "plan_menu_fund_ids",
 )
 _DEFAULTED = ("schema_version", "id", "as_of_date", "currency", "source", "annual_employee_limit_cents")
 # Profile field paths back to the form's field names, for error messages.
@@ -127,13 +131,19 @@ def build_profile(body: ProfileInput, today: date | None = None, profile_id: str
         "employer_match": match,
         "debts": [{"id": f"debt-{i + 1}", **d.model_dump()} for i, d in enumerate(body.debts)],
         "planning_preference": body.planning_preference,
+        "fund_id": body.fund_id,
+        "fund_balance_confirmed": body.fund_balance_confirmed,
+        "fund_account_type": body.fund_account_type,
+        "plan_menu_fund_ids": body.plan_menu_fund_ids,
         "provenance": {
             **{f: {"source": "user_confirmed", "as_of_date": stamp} for f in _ENTERED},
             **{f: {"source": "fixture", "as_of_date": stamp} for f in _DEFAULTED},
         },
     }
     try:
-        return FinancialProfile.model_validate(raw)
+        profile = FinancialProfile.model_validate(raw)
+        resolve_fund_assumptions(profile)
+        return profile
     except ValidationError as exc:
         err = exc.errors()[0]
         path = ".".join(str(p) for p in err.get("loc", ()))

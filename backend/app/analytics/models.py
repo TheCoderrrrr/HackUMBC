@@ -44,6 +44,10 @@ class RunSummary(Strict):
     model_version: str
     policy_version: str
     input_hash: str
+    fund_id: str | None = None
+    fund_name: str | None = None
+    catalog_version: str | None = None
+    glide_path_mode: str | None = None
     # The plan style the run was calculated with, so the app can restore it; None for runs saved
     # before the style was recorded.
     planning_preference: PlanningPreference | None = None

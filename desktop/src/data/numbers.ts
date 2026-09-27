@@ -10,6 +10,10 @@ export interface NumbersForm {
   living: string;        // $ per month
   contribution: string;  // % of pay
   retirementBalance: string;
+  fundID: string;
+  fundAccountType: "401k" | "ira";
+  fundBalanceConfirmed: boolean;
+  fundInPlanMenu: boolean;
   emergencyCash: string;
   matchKind: "match" | "none" | "unknown";
   matchUpTo: string;     // % of pay the employer matches up to
@@ -20,6 +24,7 @@ export interface NumbersForm {
 export const EMPTY_FORM: NumbersForm = {
   name: "", age: "", retirementAge: "67", salary: "", takeHome: "", living: "", contribution: "", retirementBalance: "",
   emergencyCash: "", matchKind: "match", matchUpTo: "", matchRate: "100", debts: [],
+  fundID: "", fundAccountType: "401k", fundBalanceConfirmed: false, fundInPlanMenu: false,
 };
 
 /** Typed amounts: "$84,000", "84000", "4.8k" → a number; blank or invalid → null. */
@@ -73,6 +78,10 @@ export function formToInput(form: NumbersForm): { input: ProfileInput | null; mi
       monthly_living_expenses_cents: cents(living),
       employee_contribution_rate: rate(contribution),
       retirement_balance_cents: cents(retirementBalance),
+      fund_id: form.fundID || null,
+      fund_account_type: form.fundID ? form.fundAccountType : null,
+      fund_balance_confirmed: Boolean(form.fundID && form.fundBalanceConfirmed),
+      plan_menu_fund_ids: form.fundID && form.fundAccountType === "401k" && form.fundInPlanMenu ? [form.fundID] : null,
       emergency_cash_cents: cents(emergencyCash),
       match: form.matchKind === "match"
         ? { kind: "match", up_to_rate: rate(upTo), match_per_dollar: matchRate / 100 }
@@ -96,6 +105,10 @@ export function inputToForm(input: ProfileInput): NumbersForm {
     living: dollars(input.monthly_living_expenses_cents),
     contribution: percent(input.employee_contribution_rate),
     retirementBalance: dollars(input.retirement_balance_cents),
+    fundID: input.fund_id ?? "",
+    fundAccountType: input.fund_account_type ?? "401k",
+    fundBalanceConfirmed: input.fund_balance_confirmed ?? false,
+    fundInPlanMenu: Boolean(input.plan_menu_fund_ids?.includes(input.fund_id ?? "")),
     emergencyCash: dollars(input.emergency_cash_cents),
     matchKind: input.match.kind,
     matchUpTo: input.match.up_to_rate ? percent(input.match.up_to_rate) : "",
@@ -112,6 +125,8 @@ export function profileToForm(p: FinancialProfile): NumbersForm {
     annual_gross_salary_cents: p.annual_gross_salary_cents, monthly_take_home_cents: p.monthly_take_home_cents,
     monthly_living_expenses_cents: p.monthly_living_expenses_cents, employee_contribution_rate: p.employee_contribution_rate,
     retirement_balance_cents: p.retirement_balance_cents, emergency_cash_cents: p.emergency_cash_cents,
+    fund_id: p.fund_id, fund_balance_confirmed: p.fund_balance_confirmed,
+    fund_account_type: p.fund_account_type, plan_menu_fund_ids: p.plan_menu_fund_ids,
     match: p.employer_match.status === "confirmed" && tier
       ? { kind: "match", up_to_rate: tier.employee_rate_to, match_per_dollar: tier.match_per_employee_dollar }
       : { kind: p.employer_match.status === "none" ? "none" : "unknown" },

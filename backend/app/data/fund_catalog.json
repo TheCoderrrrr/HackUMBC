@@ -97,9 +97,21 @@
       "allocation": {
         "as_of_date": "2026-06-30",
         "reported_categories": [
-          {"label": "Equity Funds", "percent_of_net_assets": 53.3, "bucket": "equity"},
-          {"label": "Fixed Income Funds", "percent_of_net_assets": 46.7, "bucket": "bond"},
-          {"label": "Money Market Funds", "percent_of_net_assets": 0.1, "bucket": "other"}
+          {
+            "label": "Equity Funds",
+            "percent_of_net_assets": 53.3,
+            "bucket": "equity"
+          },
+          {
+            "label": "Fixed Income Funds",
+            "percent_of_net_assets": 46.7,
+            "bucket": "bond"
+          },
+          {
+            "label": "Money Market Funds",
+            "percent_of_net_assets": 0.1,
+            "bucket": "other"
+          }
         ],
         "mapping_note": "Issuer categories used as reported. Other is the residual after equity and bonds.",
         "evidence": {
@@ -110,12 +122,60 @@
       },
       "glide_path": {
         "summary": "Prospectus target mix: 99% equity funds (including REITs) 30 or more years before the target date, 65% at 10 years, 53% at 5 years, and 40% at the target date.",
-        "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Principal investment strategies, glide path table"}
+        "evidence": {
+          "document": "blackrock-lpi-prospectus-2026",
+          "locator": "Principal investment strategies, glide path table"
+        },
+        "anchors": [
+          [
+            0,
+            0.4
+          ],
+          [
+            5,
+            0.53
+          ],
+          [
+            10,
+            0.65
+          ],
+          [
+            30,
+            0.99
+          ]
+        ]
       },
       "historical_returns": [
-        {"period_years": 1, "annualized_return_rate": 0.1419, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R162.htm"}},
-        {"period_years": 5, "annualized_return_rate": 0.0589, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R162.htm"}},
-        {"period_years": 10, "annualized_return_rate": 0.0795, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R162.htm"}}
+        {
+          "period_years": 1,
+          "annualized_return_rate": 0.1419,
+          "as_of_date": "2025-12-31",
+          "evidence": {
+            "document": "blackrock-lpi-prospectus-2026",
+            "locator": "Class K average annual total returns, before taxes",
+            "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R162.htm"
+          }
+        },
+        {
+          "period_years": 5,
+          "annualized_return_rate": 0.0589,
+          "as_of_date": "2025-12-31",
+          "evidence": {
+            "document": "blackrock-lpi-prospectus-2026",
+            "locator": "Class K average annual total returns, before taxes",
+            "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R162.htm"
+          }
+        },
+        {
+          "period_years": 10,
+          "annualized_return_rate": 0.0795,
+          "as_of_date": "2025-12-31",
+          "evidence": {
+            "document": "blackrock-lpi-prospectus-2026",
+            "locator": "Class K average annual total returns, before taxes",
+            "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R162.htm"
+          }
+        }
       ],
       "caveats": [
         "The issuer's Equity Funds category can include commodity and infrastructure funds.",
@@ -158,9 +218,21 @@
       "allocation": {
         "as_of_date": "2026-06-30",
         "reported_categories": [
-          {"label": "Equity Funds", "percent_of_net_assets": 66.0, "bucket": "equity"},
-          {"label": "Fixed Income Funds", "percent_of_net_assets": 33.8, "bucket": "bond"},
-          {"label": "Other Assets Less Liabilities", "percent_of_net_assets": 0.2, "bucket": "other"}
+          {
+            "label": "Equity Funds",
+            "percent_of_net_assets": 66.0,
+            "bucket": "equity"
+          },
+          {
+            "label": "Fixed Income Funds",
+            "percent_of_net_assets": 33.8,
+            "bucket": "bond"
+          },
+          {
+            "label": "Other Assets Less Liabilities",
+            "percent_of_net_assets": 0.2,
+            "bucket": "other"
+          }
         ],
         "mapping_note": "Issuer categories used as reported. Other is the residual after equity and bonds.",
         "evidence": {
@@ -171,12 +243,60 @@
       },
       "glide_path": {
         "summary": "Prospectus target mix: 99% equity funds (including REITs) 30 or more years before the target date, 65% at 10 years, 53% at 5 years, and 40% at the target date.",
-        "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Principal investment strategies, glide path table"}
+        "evidence": {
+          "document": "blackrock-lpi-prospectus-2026",
+          "locator": "Principal investment strategies, glide path table"
+        },
+        "anchors": [
+          [
+            0,
+            0.4
+          ],
+          [
+            5,
+            0.53
+          ],
+          [
+            10,
+            0.65
+          ],
+          [
+            30,
+            0.99
+          ]
+        ]
       },
       "historical_returns": [
-        {"period_years": 1, "annualized_return_rate": 0.1609, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R172.htm"}},
-        {"period_years": 5, "annualized_return_rate": 0.0723, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R172.htm"}},
-        {"period_years": 10, "annualized_return_rate": 0.0901, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R172.htm"}}
+        {
+          "period_years": 1,
+          "annualized_return_rate": 0.1609,
+          "as_of_date": "2025-12-31",
+          "evidence": {
+            "document": "blackrock-lpi-prospectus-2026",
+            "locator": "Class K average annual total returns, before taxes",
+            "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R172.htm"
+          }
+        },
+        {
+          "period_years": 5,
+          "annualized_return_rate": 0.0723,
+          "as_of_date": "2025-12-31",
+          "evidence": {
+            "document": "blackrock-lpi-prospectus-2026",
+            "locator": "Class K average annual total returns, before taxes",
+            "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R172.htm"
+          }
+        },
+        {
+          "period_years": 10,
+          "annualized_return_rate": 0.0901,
+          "as_of_date": "2025-12-31",
+          "evidence": {
+            "document": "blackrock-lpi-prospectus-2026",
+            "locator": "Class K average annual total returns, before taxes",
+            "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R172.htm"
+          }
+        }
       ],
       "caveats": [
         "The issuer's Equity Funds category can include commodity and infrastructure funds.",
@@ -219,9 +339,21 @@
       "allocation": {
         "as_of_date": "2026-06-30",
         "reported_categories": [
-          {"label": "Equity Funds", "percent_of_net_assets": 97.9, "bucket": "equity"},
-          {"label": "Fixed Income Funds", "percent_of_net_assets": 2.0, "bucket": "bond"},
-          {"label": "Money Market Funds", "percent_of_net_assets": 0.1, "bucket": "other"}
+          {
+            "label": "Equity Funds",
+            "percent_of_net_assets": 97.9,
+            "bucket": "equity"
+          },
+          {
+            "label": "Fixed Income Funds",
+            "percent_of_net_assets": 2.0,
+            "bucket": "bond"
+          },
+          {
+            "label": "Money Market Funds",
+            "percent_of_net_assets": 0.1,
+            "bucket": "other"
+          }
         ],
         "mapping_note": "Issuer categories used as reported. Other is the residual after equity and bonds.",
         "evidence": {
@@ -232,12 +364,60 @@
       },
       "glide_path": {
         "summary": "Prospectus target mix: 99% equity funds (including REITs) 30 or more years before the target date, 65% at 10 years, 53% at 5 years, and 40% at the target date.",
-        "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Principal investment strategies, glide path table"}
+        "evidence": {
+          "document": "blackrock-lpi-prospectus-2026",
+          "locator": "Principal investment strategies, glide path table"
+        },
+        "anchors": [
+          [
+            0,
+            0.4
+          ],
+          [
+            5,
+            0.53
+          ],
+          [
+            10,
+            0.65
+          ],
+          [
+            30,
+            0.99
+          ]
+        ]
       },
       "historical_returns": [
-        {"period_years": 1, "annualized_return_rate": 0.2159, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R212.htm"}},
-        {"period_years": 5, "annualized_return_rate": 0.1079, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R212.htm"}},
-        {"period_years": 10, "annualized_return_rate": 0.1145, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R212.htm"}}
+        {
+          "period_years": 1,
+          "annualized_return_rate": 0.2159,
+          "as_of_date": "2025-12-31",
+          "evidence": {
+            "document": "blackrock-lpi-prospectus-2026",
+            "locator": "Class K average annual total returns, before taxes",
+            "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R212.htm"
+          }
+        },
+        {
+          "period_years": 5,
+          "annualized_return_rate": 0.1079,
+          "as_of_date": "2025-12-31",
+          "evidence": {
+            "document": "blackrock-lpi-prospectus-2026",
+            "locator": "Class K average annual total returns, before taxes",
+            "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R212.htm"
+          }
+        },
+        {
+          "period_years": 10,
+          "annualized_return_rate": 0.1145,
+          "as_of_date": "2025-12-31",
+          "evidence": {
+            "document": "blackrock-lpi-prospectus-2026",
+            "locator": "Class K average annual total returns, before taxes",
+            "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R212.htm"
+          }
+        }
       ],
       "caveats": [
         "The issuer's Equity Funds category can include commodity and infrastructure funds.",
@@ -280,9 +460,21 @@
       "allocation": {
         "as_of_date": "2026-06-30",
         "reported_categories": [
-          {"label": "Equity Funds", "percent_of_net_assets": 98.8, "bucket": "equity"},
-          {"label": "Fixed Income Funds", "percent_of_net_assets": 1.0, "bucket": "bond"},
-          {"label": "Money Market Funds", "percent_of_net_assets": 0.3, "bucket": "other"}
+          {
+            "label": "Equity Funds",
+            "percent_of_net_assets": 98.8,
+            "bucket": "equity"
+          },
+          {
+            "label": "Fixed Income Funds",
+            "percent_of_net_assets": 1.0,
+            "bucket": "bond"
+          },
+          {
+            "label": "Money Market Funds",
+            "percent_of_net_assets": 0.3,
+            "bucket": "other"
+          }
         ],
         "mapping_note": "Issuer categories used as reported. Other is the residual after equity and bonds.",
         "evidence": {
@@ -293,11 +485,50 @@
       },
       "glide_path": {
         "summary": "Prospectus target mix: 99% equity funds (including REITs) 30 or more years before the target date, 65% at 10 years, 53% at 5 years, and 40% at the target date.",
-        "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Principal investment strategies, glide path table"}
+        "evidence": {
+          "document": "blackrock-lpi-prospectus-2026",
+          "locator": "Principal investment strategies, glide path table"
+        },
+        "anchors": [
+          [
+            0,
+            0.4
+          ],
+          [
+            5,
+            0.53
+          ],
+          [
+            10,
+            0.65
+          ],
+          [
+            30,
+            0.99
+          ]
+        ]
       },
       "historical_returns": [
-        {"period_years": 1, "annualized_return_rate": 0.2171, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R222.htm"}},
-        {"period_years": 5, "annualized_return_rate": 0.1081, "as_of_date": "2025-12-31", "evidence": {"document": "blackrock-lpi-prospectus-2026", "locator": "Class K average annual total returns, before taxes", "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R222.htm"}}
+        {
+          "period_years": 1,
+          "annualized_return_rate": 0.2171,
+          "as_of_date": "2025-12-31",
+          "evidence": {
+            "document": "blackrock-lpi-prospectus-2026",
+            "locator": "Class K average annual total returns, before taxes",
+            "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R222.htm"
+          }
+        },
+        {
+          "period_years": 5,
+          "annualized_return_rate": 0.1081,
+          "as_of_date": "2025-12-31",
+          "evidence": {
+            "document": "blackrock-lpi-prospectus-2026",
+            "locator": "Class K average annual total returns, before taxes",
+            "url": "https://www.sec.gov/Archives/edgar/data/893818/000119312526197798/R222.htm"
+          }
+        }
       ],
       "caveats": [
         "No 10-year return: the class began on 2016-02-29, so the prospectus shows a since-inception figure instead.",
@@ -325,24 +556,51 @@
       },
       "prospectus_document": "ssga-tr-prospectus-2026",
       "fees": {
-        "gross_expense_ratio": 0.0020,
+        "gross_expense_ratio": 0.002,
         "acquired_fund_fees": 0.0008,
         "fee_waiver": 0.0011,
         "net_expense_ratio": 0.0009,
         "waiver_ends": "2027-04-30",
         "waiver_terms": "Adviser caps total operating expenses at 0.09% (excluding distribution, servicing, and certain other costs) until 2027-04-30; only the Board can end it earlier.",
         "as_of_date": "2026-04-30",
-        "evidence": {"document": "ssga-tr2030-summary-2026", "locator": "Annual fund operating expenses table, Class K column"}
+        "evidence": {
+          "document": "ssga-tr2030-summary-2026",
+          "locator": "Annual fund operating expenses table, Class K column"
+        }
       },
       "allocation": {
         "as_of_date": "2026-06-30",
         "reported_categories": [
-          {"label": "Domestic Equity", "percent_of_net_assets": 31.4, "bucket": "equity"},
-          {"label": "International Equity", "percent_of_net_assets": 21.0, "bucket": "equity"},
-          {"label": "Real Estate", "percent_of_net_assets": 3.2, "bucket": "equity"},
-          {"label": "Domestic Fixed Income", "percent_of_net_assets": 32.2, "bucket": "bond"},
-          {"label": "Inflation Linked", "percent_of_net_assets": 12.1, "bucket": "bond"},
-          {"label": "Short-Term Investments", "percent_of_net_assets": 2.9, "bucket": "other"}
+          {
+            "label": "Domestic Equity",
+            "percent_of_net_assets": 31.4,
+            "bucket": "equity"
+          },
+          {
+            "label": "International Equity",
+            "percent_of_net_assets": 21.0,
+            "bucket": "equity"
+          },
+          {
+            "label": "Real Estate",
+            "percent_of_net_assets": 3.2,
+            "bucket": "equity"
+          },
+          {
+            "label": "Domestic Fixed Income",
+            "percent_of_net_assets": 32.2,
+            "bucket": "bond"
+          },
+          {
+            "label": "Inflation Linked",
+            "percent_of_net_assets": 12.1,
+            "bucket": "bond"
+          },
+          {
+            "label": "Short-Term Investments",
+            "percent_of_net_assets": 2.9,
+            "bucket": "other"
+          }
         ],
         "mapping_note": "Real Estate counted as equity, matching BlackRock's equity-funds-include-REITs convention. Other is the residual after equity and bonds; short-term investments include securities-lending collateral that nets against liabilities.",
         "evidence": {
@@ -353,12 +611,39 @@
       },
       "glide_path": {
         "summary": "Strategic mix shifts from equities toward fixed income as 2030 approaches and keeps adjusting in the years immediately before and after it, for investors who withdraw gradually after retiring. Actual allocations may differ.",
-        "evidence": {"document": "ssga-tr2030-summary-2026", "locator": "Principal investment strategies, glide path"}
+        "evidence": {
+          "document": "ssga-tr2030-summary-2026",
+          "locator": "Principal investment strategies, glide path"
+        }
       },
       "historical_returns": [
-        {"period_years": 1, "annualized_return_rate": 0.1615, "as_of_date": "2025-12-31", "evidence": {"document": "ssga-tr2030-summary-2026", "locator": "Average annual total returns, Class K before taxes"}},
-        {"period_years": 5, "annualized_return_rate": 0.0646, "as_of_date": "2025-12-31", "evidence": {"document": "ssga-tr2030-summary-2026", "locator": "Average annual total returns, Class K before taxes"}},
-        {"period_years": 10, "annualized_return_rate": 0.0896, "as_of_date": "2025-12-31", "evidence": {"document": "ssga-tr2030-summary-2026", "locator": "Average annual total returns, Class K before taxes"}}
+        {
+          "period_years": 1,
+          "annualized_return_rate": 0.1615,
+          "as_of_date": "2025-12-31",
+          "evidence": {
+            "document": "ssga-tr2030-summary-2026",
+            "locator": "Average annual total returns, Class K before taxes"
+          }
+        },
+        {
+          "period_years": 5,
+          "annualized_return_rate": 0.0646,
+          "as_of_date": "2025-12-31",
+          "evidence": {
+            "document": "ssga-tr2030-summary-2026",
+            "locator": "Average annual total returns, Class K before taxes"
+          }
+        },
+        {
+          "period_years": 10,
+          "annualized_return_rate": 0.0896,
+          "as_of_date": "2025-12-31",
+          "evidence": {
+            "document": "ssga-tr2030-summary-2026",
+            "locator": "Average annual total returns, Class K before taxes"
+          }
+        }
       ],
       "caveats": [
         "The issuer's Domestic Fixed Income category includes a commodity strategy ETF (about 1% of net assets)."
@@ -391,15 +676,34 @@
         "waiver_ends": "2027-04-30",
         "waiver_terms": "Adviser caps total operating expenses at 0.09% (excluding distribution, servicing, and certain other costs) until 2027-04-30; only the Board can end it earlier.",
         "as_of_date": "2026-04-30",
-        "evidence": {"document": "ssga-tr2055-summary-2026", "locator": "Annual fund operating expenses table, Class K column"}
+        "evidence": {
+          "document": "ssga-tr2055-summary-2026",
+          "locator": "Annual fund operating expenses table, Class K column"
+        }
       },
       "allocation": {
         "as_of_date": "2026-06-30",
         "reported_categories": [
-          {"label": "Domestic Equity", "percent_of_net_assets": 52.1, "bucket": "equity"},
-          {"label": "International Equity", "percent_of_net_assets": 38.1, "bucket": "equity"},
-          {"label": "Domestic Fixed Income", "percent_of_net_assets": 9.6, "bucket": "bond"},
-          {"label": "Short-Term Investments", "percent_of_net_assets": 0.2, "bucket": "other"}
+          {
+            "label": "Domestic Equity",
+            "percent_of_net_assets": 52.1,
+            "bucket": "equity"
+          },
+          {
+            "label": "International Equity",
+            "percent_of_net_assets": 38.1,
+            "bucket": "equity"
+          },
+          {
+            "label": "Domestic Fixed Income",
+            "percent_of_net_assets": 9.6,
+            "bucket": "bond"
+          },
+          {
+            "label": "Short-Term Investments",
+            "percent_of_net_assets": 0.2,
+            "bucket": "other"
+          }
         ],
         "mapping_note": "Issuer categories used as reported. Other is the residual after equity and bonds.",
         "evidence": {
@@ -410,12 +714,39 @@
       },
       "glide_path": {
         "summary": "Strategic mix shifts from equities toward fixed income as 2055 approaches and keeps adjusting in the years immediately before and after it, for investors who withdraw gradually after retiring. Actual allocations may differ.",
-        "evidence": {"document": "ssga-tr2055-summary-2026", "locator": "Principal investment strategies, glide path"}
+        "evidence": {
+          "document": "ssga-tr2055-summary-2026",
+          "locator": "Principal investment strategies, glide path"
+        }
       },
       "historical_returns": [
-        {"period_years": 1, "annualized_return_rate": 0.2130, "as_of_date": "2025-12-31", "evidence": {"document": "ssga-tr2055-summary-2026", "locator": "Average annual total returns, Class K before taxes"}},
-        {"period_years": 5, "annualized_return_rate": 0.0858, "as_of_date": "2025-12-31", "evidence": {"document": "ssga-tr2055-summary-2026", "locator": "Average annual total returns, Class K before taxes"}},
-        {"period_years": 10, "annualized_return_rate": 0.1075, "as_of_date": "2025-12-31", "evidence": {"document": "ssga-tr2055-summary-2026", "locator": "Average annual total returns, Class K before taxes"}}
+        {
+          "period_years": 1,
+          "annualized_return_rate": 0.213,
+          "as_of_date": "2025-12-31",
+          "evidence": {
+            "document": "ssga-tr2055-summary-2026",
+            "locator": "Average annual total returns, Class K before taxes"
+          }
+        },
+        {
+          "period_years": 5,
+          "annualized_return_rate": 0.0858,
+          "as_of_date": "2025-12-31",
+          "evidence": {
+            "document": "ssga-tr2055-summary-2026",
+            "locator": "Average annual total returns, Class K before taxes"
+          }
+        },
+        {
+          "period_years": 10,
+          "annualized_return_rate": 0.1075,
+          "as_of_date": "2025-12-31",
+          "evidence": {
+            "document": "ssga-tr2055-summary-2026",
+            "locator": "Average annual total returns, Class K before taxes"
+          }
+        }
       ],
       "caveats": [
         "The issuer's Domestic Fixed Income category may include a small commodity strategy position."

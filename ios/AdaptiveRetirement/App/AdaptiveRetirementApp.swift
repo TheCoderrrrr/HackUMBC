@@ -54,6 +54,7 @@ struct MainTabView: View {
         case .plan: screen = "plan"
         case .explore: screen = "explore"
         case .funds: screen = "funds"
+        case .learn: screen = "learn"
         }
         let mode: String
         switch store.dataMode {
@@ -127,6 +128,9 @@ struct MainTabView: View {
             FundsView()
                 .tabItem { Label("Funds", systemImage: "chart.pie") }
                 .tag(MainTab.funds)
+            LearnView()
+                .tabItem { Label("Learn", systemImage: "book.closed") }
+                .tag(MainTab.learn)
         }
         .overlay(alignment: .bottomTrailing) {
             Button {
@@ -150,8 +154,10 @@ struct MainTabView: View {
         .onChange(of: store.profile.id) { _, _ in
             chatMessages = []
             chatDraft = ""
+            store.presentGuideIfNeeded()
         }
-        .sheet(item: $store.sheet) { sheet in
+        .onAppear { store.presentGuideIfNeeded() }
+        .sheet(item: $store.sheet, onDismiss: { store.presentGuideIfNeeded() }) { sheet in
             switch sheet {
             case .profilePicker: ProfilePickerSheet().presentationDetents([.large])
             case .snapshot: SnapshotSheet().presentationDetents([.large])
@@ -159,6 +165,8 @@ struct MainTabView: View {
             case .assumptions: AssumptionsSheet().presentationDetents([.medium, .large])
             case .accountPreview: AccountPreviewSheet().presentationDetents([.large])
             case .educationChat: EducationChatView(messages: $chatMessages, draft: $chatDraft, context: chatContext).presentationDetents([.large])
+            case .gettingStarted: GettingStartedView().presentationDetents([.large])
+            case .manualProfile: ManualProfileView().presentationDetents([.large])
             }
         }
     }

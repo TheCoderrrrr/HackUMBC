@@ -2244,6 +2244,18 @@
               }
             ],
             "title": "Previous Decision Id"
+          },
+          "base_decision_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Decision Id"
           }
         },
         "additionalProperties": false,
@@ -2299,6 +2311,16 @@
           },
           "explanation": {
             "$ref": "#/components/schemas/AIExplanation"
+          },
+          "rules_comparison": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RulesComparison"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -2545,6 +2567,52 @@
             ],
             "title": "Planning Preference",
             "default": "balanced"
+          },
+          "fund_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fund Id"
+          },
+          "fund_balance_confirmed": {
+            "type": "boolean",
+            "title": "Fund Balance Confirmed",
+            "default": false
+          },
+          "fund_account_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "401k",
+                  "ira"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fund Account Type"
+          },
+          "plan_menu_fund_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Menu Fund Ids"
           },
           "provenance": {
             "additionalProperties": {
@@ -2835,6 +2903,89 @@
           "caveats"
         ],
         "title": "FundDetail"
+      },
+      "FundModel": {
+        "properties": {
+          "fund_id": {
+            "type": "string",
+            "title": "Fund Id"
+          },
+          "fund_name": {
+            "type": "string",
+            "title": "Fund Name"
+          },
+          "catalog_version": {
+            "type": "string",
+            "title": "Catalog Version"
+          },
+          "share_class_id": {
+            "type": "string",
+            "title": "Share Class Id"
+          },
+          "target_year": {
+            "type": "integer",
+            "title": "Target Year"
+          },
+          "applied_expense_ratio": {
+            "type": "number",
+            "title": "Applied Expense Ratio"
+          },
+          "fee_as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Fee As Of Date"
+          },
+          "fee_source_url": {
+            "type": "string",
+            "title": "Fee Source Url"
+          },
+          "glide_path_source_url": {
+            "type": "string",
+            "title": "Glide Path Source Url"
+          },
+          "glide_path_mode": {
+            "type": "string",
+            "enum": [
+              "documented",
+              "generic_fallback"
+            ],
+            "title": "Glide Path Mode"
+          },
+          "glide_path": {
+            "items": {
+              "$ref": "#/components/schemas/GlidePathAnchor"
+            },
+            "type": "array",
+            "title": "Glide Path"
+          },
+          "limitation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limitation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "fund_id",
+          "fund_name",
+          "catalog_version",
+          "share_class_id",
+          "target_year",
+          "applied_expense_ratio",
+          "fee_as_of_date",
+          "fee_source_url",
+          "glide_path_source_url",
+          "glide_path_mode",
+          "glide_path"
+        ],
+        "title": "FundModel"
       },
       "FundRecommendation": {
         "properties": {
@@ -3543,6 +3694,16 @@
             },
             "type": "array",
             "title": "Limitations"
+          },
+          "fund_model": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FundModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -3779,6 +3940,52 @@
             ],
             "title": "Planning Preference",
             "default": "balanced"
+          },
+          "fund_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fund Id"
+          },
+          "fund_balance_confirmed": {
+            "type": "boolean",
+            "title": "Fund Balance Confirmed",
+            "default": false
+          },
+          "fund_account_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "401k",
+                  "ira"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fund Account Type"
+          },
+          "plan_menu_fund_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Menu Fund Ids"
           }
         },
         "additionalProperties": false,
@@ -4272,6 +4479,103 @@
         ],
         "title": "ReportedCategory"
       },
+      "RulesComparison": {
+        "properties": {
+          "basis": {
+            "type": "string",
+            "enum": [
+              "adaptive",
+              "custom"
+            ],
+            "title": "Basis"
+          },
+          "rules_priorities": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "starter_reserve",
+                "high_apr_debt",
+                "full_reserve"
+              ]
+            },
+            "type": "array",
+            "title": "Rules Priorities"
+          },
+          "ai_priorities": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "starter_reserve",
+                "high_apr_debt",
+                "full_reserve"
+              ]
+            },
+            "type": "array",
+            "title": "Ai Priorities"
+          },
+          "rules_retirement_balance_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": -10000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rules Retirement Balance Cents"
+          },
+          "ai_retirement_balance_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": -10000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Retirement Balance Cents"
+          },
+          "difference_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": -10000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difference Cents"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "higher",
+              "equal",
+              "lower",
+              "unavailable"
+            ],
+            "title": "Outcome"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "basis",
+          "rules_priorities",
+          "ai_priorities",
+          "rules_retirement_balance_cents",
+          "ai_retirement_balance_cents",
+          "difference_cents",
+          "outcome"
+        ],
+        "title": "RulesComparison"
+      },
       "RunList": {
         "properties": {
           "runs": {
@@ -4383,6 +4687,50 @@
           "input_hash": {
             "type": "string",
             "title": "Input Hash"
+          },
+          "fund_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fund Id"
+          },
+          "fund_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fund Name"
+          },
+          "catalog_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalog Version"
+          },
+          "glide_path_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Glide Path Mode"
           },
           "planning_preference": {
             "anyOf": [
@@ -4513,6 +4861,35 @@
               }
             ],
             "title": "Employee Contribution Rate"
+          },
+          "extra_monthly_debt_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra Monthly Debt Cents"
+          },
+          "priority_style": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "balanced",
+                  "cash_security",
+                  "debt_reduction"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority Style"
           }
         },
         "additionalProperties": false,

@@ -1,4 +1,5 @@
 import Foundation
+import Security
 
 /// Failures the UI can distinguish (FRONTEND.md §5 APIClient, §6 error envelope).
 enum APIError: Error, Equatable {
@@ -23,6 +24,12 @@ enum APIError: Error, Equatable {
         case .unexpectedStatus(let status): return status >= 500
         case .invalidBaseURL, .cancelled, .invalidResponse: return false
         }
+    }
+
+    /// The pinned `base_decision_id` is gone or from another server; refresh the plan first.
+    var isStaleBaseDecision: Bool {
+        if case .server(_, let body) = self { return body.code == "BASE_DECISION_NOT_FOUND" }
+        return false
     }
 }
 
@@ -50,6 +57,11 @@ protocol APIClient: Sendable {
     func health() async throws -> API.Health
     func demoProfiles() async throws -> API.DemoProfiles
     func evaluate(_ request: API.EvaluateRequest) async throws -> API.Evaluation
+    func planStyles(_ profile: API.FinancialProfile) async throws -> API.PlanStyles
+    func buildProfile(_ input: API.ManualProfileInput) async throws -> API.ProfileBuild
+    func saveProfile(_ input: API.ManualProfileInput) async throws -> API.ProfileBuild
+    func loadProfile() async throws -> API.StoredProfile
+    func deleteProfile() async throws
 
     // Fund shortlist (`backend/app/fund_api.py`)
     func fundCatalog() async throws -> API.Funds.CatalogSummary
@@ -62,6 +74,79 @@ protocol APIClient: Sendable {
     func compare(base: String, other: String) async throws -> API.History.Comparison
 }
 
+extension APIClient {
+    func buildProfile(_ input: API.ManualProfileInput) async throws -> API.ProfileBuild { throw APIError.unreachable }
+    func saveProfile(_ input: API.ManualProfileInput) async throws -> API.ProfileBuild { try await buildProfile(input) }
+    func loadProfile() async throws -> API.StoredProfile { throw APIError.unreachable }
+    func deleteProfile() async throws { throw APIError.unreachable }
+}
+
+/// The anonymous credential that owns a manual profile and its history. It is an opaque,
+/// random identifier—not an account login—and belongs in Keychain rather than UserDefaults.
+/// A one-time migration preserves existing local profiles created before this storage change.
+private enum ProfileCredential {
+    private static let service = "com.hackumbc.adaptiveretirement"
+    private static let account = "anonymous-profile-key"
+    private static let legacyDefaultsKey = "arm:profileKey"
+
+    static func loadOrCreate() -> String {
+        if let key = read() { return key }
+        if let legacy = UserDefaults.standard.string(forKey: legacyDefaultsKey), !legacy.isEmpty {
+            if save(legacy) {
+                UserDefaults.standard.removeObject(forKey: legacyDefaultsKey)
+            }
+            return legacy
+        }
+        let key = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+            + UUID().uuidString.replacingOccurrences(of: "-", with: "")
+        // Keychain is available on supported iOS versions; if it transiently rejects an
+        // item, keep the credential in memory rather than downgrading it into UserDefaults.
+        _ = save(key)
+        return key
+    }
+
+    private static func read() -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var result: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let data = result as? Data,
+              let key = String(data: data, encoding: .utf8),
+              !key.isEmpty else { return nil }
+        return key
+    }
+
+    @discardableResult
+    private static func save(_ key: String) -> Bool {
+        let data = Data(key.utf8)
+        let item: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+        ]
+        let status = SecItemAdd(item as CFDictionary, nil)
+        if status == errSecDuplicateItem {
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: account,
+            ]
+            return SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary) == errSecSuccess
+        }
+        return status == errSecSuccess
+    }
+}
+
+/// Marker for an HTTP response that intentionally has no body (for example DELETE 204).
+private struct EmptyResponse: Decodable {}
+
 /// URLSession client for the FastAPI backend. Never logs request bodies or tokens.
 final class LiveAPIClient: APIClient {
     static let evaluationTimeout: TimeInterval = 8
@@ -71,6 +156,7 @@ final class LiveAPIClient: APIClient {
     /// Shared demo key sent as X-Demo-Key when the server sets DEMO_KEY (REPORT C2).
     private let demoKey: String
     private let session: URLSession
+    private let profileKey: String
 
     /// Returns nil unless `baseURLString` is an absolute HTTPS URL with a host.
     init?(baseURLString: String, demoKey: String = "", session: URLSession = .shared) {
@@ -81,6 +167,7 @@ final class LiveAPIClient: APIClient {
         self.baseURL = url
         self.demoKey = demoKey
         self.session = session
+        self.profileKey = ProfileCredential.loadOrCreate()
     }
 
     func health() async throws -> API.Health {
@@ -95,6 +182,29 @@ final class LiveAPIClient: APIClient {
         let body: Data
         do { body = try JSONEncoder().encode(request) } catch { throw APIError.invalidResponse }
         return try await send(path: "v1/evaluate", method: "POST", body: body, timeout: Self.evaluationTimeout)
+    }
+
+    func planStyles(_ profile: API.FinancialProfile) async throws -> API.PlanStyles {
+        struct Request: Encodable { let profile: API.FinancialProfile }
+        return try await send(path: "v1/plan-styles", method: "POST", body: try encoded(Request(profile: profile)),
+                              timeout: Self.evaluationTimeout)
+    }
+
+    func buildProfile(_ input: API.ManualProfileInput) async throws -> API.ProfileBuild {
+        try await send(path: "v1/profiles/build", method: "POST", body: try encoded(input), timeout: Self.requestTimeout)
+    }
+
+    func saveProfile(_ input: API.ManualProfileInput) async throws -> API.ProfileBuild {
+        try await send(path: "v1/profiles/me", method: "PUT", body: try encoded(input), timeout: Self.requestTimeout)
+    }
+
+    func loadProfile() async throws -> API.StoredProfile {
+        try await send(path: "v1/profiles/me", method: "GET", body: nil, timeout: Self.requestTimeout)
+    }
+
+    func deleteProfile() async throws {
+        let _: EmptyResponse = try await send(path: "v1/profiles/me", method: "DELETE",
+                                               body: nil, timeout: Self.requestTimeout)
     }
 
     func fundCatalog() async throws -> API.Funds.CatalogSummary {
@@ -146,6 +256,7 @@ final class LiveAPIClient: APIClient {
         if !demoKey.isEmpty {
             request.setValue(demoKey, forHTTPHeaderField: "X-Demo-Key")
         }
+        request.setValue(profileKey, forHTTPHeaderField: "X-Profile-Key")
         if let body {
             request.httpBody = body
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -184,6 +295,9 @@ final class LiveAPIClient: APIClient {
             throw APIError.unexpectedStatus(http.statusCode)
         }
         do {
+            if data.isEmpty, Response.self == EmptyResponse.self {
+                return EmptyResponse() as! Response
+            }
             return try JSONDecoder().decode(Response.self, from: data)
         } catch {
             debugLogUndecodable(status: http.statusCode, data: data)
@@ -207,6 +321,7 @@ final class FakeAPIClient: APIClient, @unchecked Sendable {
     var healthResult: Result<API.Health, APIError> = .failure(.unreachable)
     var profilesResult: Result<API.DemoProfiles, APIError> = .failure(.unreachable)
     var evaluationResult: Result<API.Evaluation, APIError> = .failure(.unreachable)
+    var planStylesResult: Result<API.PlanStyles, APIError> = .failure(.unreachable)
     private(set) var evaluateRequests: [API.EvaluateRequest] = []
 
     func health() async throws -> API.Health { try healthResult.get() }
@@ -215,6 +330,7 @@ final class FakeAPIClient: APIClient, @unchecked Sendable {
         evaluateRequests.append(request)
         return try evaluationResult.get()
     }
+    func planStyles(_ profile: API.FinancialProfile) async throws -> API.PlanStyles { try planStylesResult.get() }
 
     var catalogResult: Result<API.Funds.CatalogSummary, APIError> = .failure(.unreachable)
     var shortlistResult: Result<API.Funds.Envelope, APIError> = .failure(.unreachable)

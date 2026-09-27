@@ -36,7 +36,9 @@ from app.schemas import (
     FinancialProfile,
     Rationale,
     RecommendationProposal,
+    RulesComparison,
 )
+from app.errors import ApiError
 
 log = logging.getLogger("adaptive_retirement")
 
@@ -143,16 +145,39 @@ class EvaluationPipeline:
             deadline=self.clock() + self.settings.ai_total_timeout_seconds,
             warnings=[],
         )
-        decision = self._decide(req)
+        if request.base_decision_id:
+            pinned = self.store.get(request.base_decision_id, req.profile.id)
+            if pinned is None or pinned.profile_hash != profile_hash(req.profile) or pinned.decision is None:
+                raise ApiError(422, "BASE_DECISION_NOT_FOUND", "Refresh the plan before comparing this scenario.",
+                               ["base_decision_id"])
+            decision = pinned.decision
+        else:
+            decision = self._decide(req)
         core = engine.evaluate(req.profile, request.scenario, decision)  # C's evaluator; 422 if infeasible
+        rules = engine.validate_decision(req.profile, req.state, None,
+                                         prompt_version=self.settings.ai_prompt_version,
+                                         fallback_reason="RULES_BASELINE")
+        rules_core = core if decision.source == "rules_fallback" and decision.ordered_priorities == rules.ordered_priorities else engine.evaluate(req.profile, request.scenario, rules)
+        basis = "custom" if request.scenario else "adaptive"
+        ai_projection = getattr(core.projections, basis)
+        rules_projection = getattr(rules_core.projections, basis)
+        ai_value = ai_projection.retirement_balance_nominal_cents
+        rules_value = rules_projection.retirement_balance_nominal_cents
+        difference = ai_value - rules_value if ai_value is not None and rules_value is not None else None
+        comparison = RulesComparison(
+            basis=basis, rules_priorities=rules.ordered_priorities, ai_priorities=decision.ordered_priorities,
+            rules_retirement_balance_cents=rules_value, ai_retirement_balance_cents=ai_value,
+            difference_cents=difference,
+            outcome="unavailable" if difference is None else "higher" if difference > 0 else "lower" if difference < 0 else "equal",
+        )
         previous = self._previous(req, request.previous_decision_id)
         current_fields = snapshot_fields(req.profile, core, decision)
         changes = diff(previous.fields, current_fields) if previous else []
         explanation = self._explanation(req, core, decision, changes, initial=previous is None)
-        self.store.put(decision.decision_id, DecisionSnapshot(req.profile.id, profile_hash(req.profile), current_fields))
+        self.store.put(decision.decision_id, DecisionSnapshot(req.profile.id, profile_hash(req.profile), current_fields, decision))
         return Evaluation(
             **core.model_dump(exclude={"warnings"}), warnings=core.warnings + req.warnings,
-            decision_summary=decision, explanation=explanation,
+            decision_summary=decision, explanation=explanation, rules_comparison=comparison,
         )
 
     # --- steps -----------------------------------------------------------------------

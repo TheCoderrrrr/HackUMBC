@@ -12,11 +12,11 @@ enum OnboardingStep: Int, CaseIterable, Comparable {
 }
 
 enum MainTab: Hashable {
-    case overview, plan, explore, funds
+    case overview, plan, explore, funds, learn
 }
 
 enum ActiveSheet: String, Identifiable {
-    case profilePicker, snapshot, explanation, assumptions, accountPreview, educationChat
+    case profilePicker, snapshot, explanation, assumptions, accountPreview, educationChat, gettingStarted, manualProfile
     var id: String { rawValue }
 }
 
@@ -69,9 +69,15 @@ final class AppStore: ObservableObject {
     @Published var onboardingStep: OnboardingStep = .profile
     @Published var focus: Focus = .debt
     @Published var profile: Profile = .morgan
+    @Published private(set) var manualProfile: API.FinancialProfile?
     @Published var tab: MainTab = .overview
     @Published var chatScreenFacts: [MainTab: [EducationScreenFact]] = [:]
     @Published var sheet: ActiveSheet?
+    @Published var pendingLearnScenario: ScenarioDraft?
+    @Published private(set) var planStyle: API.PlanningPreference = .balanced
+    @Published var guideStartsAtStyle = false
+    @Published private(set) var planStyles: API.PlanStyles?
+    @Published private(set) var planStylesMessage: String?
     /// Explore's "Drag to a date" hint shows once after onboarding.
     @Published var showsPlayheadHint = true
 
@@ -107,16 +113,24 @@ final class AppStore: ObservableObject {
     private var lastLive: [String: LoadedEvaluation] = [:]
     private var lastLiveDecision: (profileID: String, decisionID: String)?
     private var serverProfiles: [String: API.FinancialProfile] = [:]
+    private let defaults: UserDefaults
 
     /// `client` overrides the URL-based client (previews and tests).
     init(demo: DemoRepository = DemoRepository(), client: APIClient? = nil, defaults: UserDefaults = .standard) {
         self.demo = demo
+        self.defaults = defaults
+        if let data = defaults.data(forKey: "manualProfile"),
+           let saved = try? JSONDecoder().decode(API.FinancialProfile.self, from: data) {
+            self.manualProfile = saved
+            self.profile = .personal(saved)
+        }
         let url = defaults.string(forKey: Self.serverBaseURLKey) ?? Self.defaultServerBaseURL
         self.serverBaseURL = url
         self.client = client ?? LiveAPIClient(baseURLString: url, demoKey: Self.defaultDemoKey)
         #if DEBUG
         applyDebugLaunchArguments()
         #endif
+        planStyle = savedStyle(for: profile.id)
         refreshEvaluation()
     }
 
@@ -153,6 +167,8 @@ final class AppStore: ObservableObject {
         case "plan": phase = .main; tab = .plan
         case "explore": phase = .main; tab = .explore
         case "funds": phase = .main; tab = .funds
+        case "learn": phase = .main; tab = .learn
+        case "gettingStarted": phase = .main; tab = .learn; sheet = .gettingStarted
         case "picker": phase = .main; sheet = .profilePicker
         case "snapshot": phase = .main; sheet = .snapshot
         case "explanation": phase = .main; sheet = .explanation
@@ -199,9 +215,120 @@ final class AppStore: ObservableObject {
     func select(_ profile: Profile) {
         guard profile.id != self.profile.id else { return }
         self.profile = profile
+        planStyle = savedStyle(for: profile.id)
+        pendingLearnScenario = nil
+        planStyles = nil
+        planStylesMessage = nil
         chatScreenFacts = [:]
         lastLiveDecision = nil
         refreshEvaluation()
+    }
+
+    func useManualProfile(_ input: API.FinancialProfile) {
+        manualProfile = input
+        defaults.set(try? JSONEncoder().encode(input), forKey: "manualProfile")
+        profile = .personal(input)
+        planStyle = input.planningPreference
+        lastLive[profile.id] = nil
+        lastLiveDecision = nil
+        refreshEvaluation()
+    }
+
+    /// Loads the anonymous, server-saved manual profile when Tiger Data is available.
+    /// A missing profile is normal on a fresh device; callers can show other errors.
+    func loadManualProfileFromServer() async -> String? {
+        guard let client else { return nil }
+        do {
+            let stored = try await client.loadProfile()
+            useManualProfile(stored.profile)
+            return nil
+        } catch let APIError.server(status, _) where status == 404 {
+            return nil
+        } catch {
+            return APIError.userMessage(for: error)
+        }
+    }
+
+    /// Removes the remote anonymous profile and its local cached copy. The backend's
+    /// delete endpoint also removes the profile owner's saved runs.
+    func deleteManualProfile() async throws {
+        guard let client else { throw APIError.unreachable }
+        try await client.deleteProfile()
+        manualProfile = nil
+        defaults.removeObject(forKey: "manualProfile")
+        if profile.id == "me" {
+            select(.morgan)
+        }
+    }
+
+    private func savedStyle(for id: String) -> API.PlanningPreference {
+        if let raw = defaults.string(forKey: "planStyle.\(id)"), let style = API.PlanningPreference(rawValue: raw) {
+            return style
+        }
+        return (try? demo.profiles()[id]?.planningPreference) ?? .balanced
+    }
+
+    var savedPlanStyle: API.PlanningPreference {
+        evaluationLoad.current?.apiProfile?.planningPreference ?? .balanced
+    }
+
+    func setPlanStyle(_ style: API.PlanningPreference) {
+        guard style != planStyle else { return }
+        planStyle = style
+        defaults.set(style.rawValue, forKey: "planStyle.\(profile.id)")
+        lastLive[profile.id] = nil
+        lastLiveDecision = nil
+        refreshEvaluation()
+    }
+
+    func openStyleGuide() {
+        guideStartsAtStyle = true
+        sheet = .gettingStarted
+    }
+
+    func presentGuideIfNeeded() {
+        guard !defaults.bool(forKey: "gettingStartedSeen.\(profile.id)"), sheet == nil else { return }
+        sheet = .gettingStarted
+    }
+
+    func finishGuide() {
+        defaults.set(true, forKey: "gettingStartedSeen.\(profile.id)")
+        guideStartsAtStyle = false
+        sheet = nil
+    }
+
+    func tryLearnScenario(retirementAge: Int, rate: Double?) {
+        var next = ScenarioDraft.original(for: displayProfile)
+        next.retirementAge = retirementAge
+        if let rate {
+            next.policy = .fixed
+            next.fixedRate = rate * 100
+        }
+        next.preset = nil
+        pendingLearnScenario = next
+        showsPlayheadHint = false
+        tab = .explore
+    }
+
+    func loadPlanStyles() async {
+        guard let client else {
+            planStyles = nil
+            planStylesMessage = "Turn on live calculation to compare your styles."
+            return
+        }
+        let id = profile.id
+        let generation = serverGeneration
+        do {
+            let base = try await apiProfile(for: id, client: client)
+            let response = try await client.planStyles(base)
+            guard id == profile.id, generation == serverGeneration else { return }
+            planStyles = response
+            planStylesMessage = nil
+        } catch {
+            guard id == profile.id, generation == serverGeneration else { return }
+            planStyles = nil
+            planStylesMessage = APIError.userMessage(for: error)
+        }
     }
 
     // MARK: Backend evaluation
@@ -225,6 +352,8 @@ final class AppStore: ObservableObject {
         lastLive = [:]
         lastLiveDecision = nil
         serverProfiles = [:]
+        planStyles = nil
+        planStylesMessage = nil
         refreshEvaluation()
         return true
     }
@@ -248,12 +377,14 @@ final class AppStore: ObservableObject {
             guard let self else { return }
             do {
                 let apiProfile = try await self.apiProfile(for: profileID, client: client)
+                var styledProfile = apiProfile
+                styledProfile.planningPreference = self.planStyle
                 let previousID = self.lastLiveDecision?.profileID == profileID ? self.lastLiveDecision?.decisionID : nil
                 let evaluation = try await client.evaluate(
-                    API.EvaluateRequest(profile: apiProfile, scenario: nil, previousDecisionID: previousID)
+                    API.EvaluateRequest(profile: styledProfile, scenario: nil, previousDecisionID: previousID)
                 )
                 guard generation == self.selectionGeneration, evaluation.profileID == profileID else { return }
-                let loaded = LoadedEvaluation(evaluation: evaluation, mode: .live, apiProfile: apiProfile)
+                let loaded = LoadedEvaluation(evaluation: evaluation, mode: .live, apiProfile: styledProfile)
                 self.lastLive[profileID] = loaded
                 self.lastLiveDecision = (profileID, evaluation.decisionSummary.decisionID)
                 self.evaluationLoad = .loaded(loaded)
@@ -270,13 +401,38 @@ final class AppStore: ObservableObject {
         guard let client else { throw APIError.unreachable }
         let profileID = profile.id
         let apiProfile = try await apiProfile(for: profileID, client: client)
+        var styledProfile = apiProfile
+        styledProfile.planningPreference = planStyle
         let previousID = lastLiveDecision?.profileID == profileID ? lastLiveDecision?.decisionID : nil
         let evaluation = try await client.evaluate(
-            API.EvaluateRequest(profile: apiProfile, scenario: scenario, previousDecisionID: previousID)
+            API.EvaluateRequest(profile: styledProfile, scenario: scenario, previousDecisionID: previousID,
+                                baseDecisionID: lastLive[profileID]?.evaluation.decisionSummary.decisionID)
         )
         // Scenario decisions deliberately stay out of lastLiveDecision: the next base
         // refresh must diff against the base plan's decision, not a scenario's (REPORT E1).
-        return LoadedEvaluation(evaluation: evaluation, mode: .live, apiProfile: apiProfile)
+        return LoadedEvaluation(evaluation: evaluation, mode: .live, apiProfile: styledProfile)
+    }
+
+    /// Reloads the live base plan so a later scenario can pin a current `base_decision_id`.
+    /// Explore calls this when the server rejects a stale pin (`BASE_DECISION_NOT_FOUND`).
+    func refreshLiveBase() async throws {
+        guard let client else { throw APIError.unreachable }
+        let profileID = profile.id
+        let generation = selectionGeneration
+        let apiProfile = try await apiProfile(for: profileID, client: client)
+        var styledProfile = apiProfile
+        styledProfile.planningPreference = planStyle
+        let previousID = lastLiveDecision?.profileID == profileID ? lastLiveDecision?.decisionID : nil
+        let evaluation = try await client.evaluate(
+            API.EvaluateRequest(profile: styledProfile, scenario: nil, previousDecisionID: previousID)
+        )
+        guard generation == selectionGeneration, evaluation.profileID == profileID else {
+            throw APIError.cancelled
+        }
+        let loaded = LoadedEvaluation(evaluation: evaluation, mode: .live, apiProfile: styledProfile)
+        lastLive[profileID] = loaded
+        lastLiveDecision = (profileID, evaluation.decisionSummary.decisionID)
+        evaluationLoad = .loaded(loaded)
     }
 
     /// Exact saved artifact, or nil until Eric's bundle is in `Resources/Demo/`.
@@ -295,6 +451,7 @@ final class AppStore: ObservableObject {
     }
 
     private func apiProfile(for id: String, client: APIClient) async throws -> API.FinancialProfile {
+        if id == manualProfile?.id, let manualProfile { return manualProfile }
         if let bundled = try? demo.profiles()[id] { return bundled }
         if serverProfiles.isEmpty {
             let response = try await client.demoProfiles()

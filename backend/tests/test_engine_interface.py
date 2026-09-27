@@ -66,4 +66,5 @@ def test_signatures_used_by_a_and_c():
     assert _params(policy.build_plan) == [("profile", False), ("state", False), ("decision", False)]
     assert _params(policy.allocate_month) == [
         ("profile", False), ("state", False), ("decision", False),
-        ("month", True), ("strategy", True), ("employee_contribution_rate", True)]
+        ("month", True), ("strategy", True), ("employee_contribution_rate", True),
+        ("extra_monthly_debt_cents", True)]

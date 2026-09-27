@@ -20,6 +20,7 @@ from app.engine.evaluate import evaluate as _evaluate
 from app.engine.monthly import InfeasibleScenario
 from app.engine.validation import ProfileValidationError  # noqa: F401  (re-exported for the API)
 from app.errors import ApiError
+from app.fund_model import resolve as resolve_fund_assumptions
 from app.schemas import (
     AIExplanation,
     Change,
@@ -111,6 +112,7 @@ def evaluate(profile: FinancialProfile, scenario: Scenario | None, decision: Dec
     try:
         evaluation = _evaluate(
             profile, scenario, decision,
+            assumptions=resolve_fund_assumptions(profile),
             schema_version=_assumptions.SCHEMA_VERSION,
             model_version=MODEL_VERSION,
             policy_version=POLICY_VERSION,
@@ -129,12 +131,13 @@ def evaluate(profile: FinancialProfile, scenario: Scenario | None, decision: Dec
         raise ApiError(
             422, "INFEASIBLE_SCENARIO",
             f"This scenario is short ${exc.shortfall_cents / 100:,.2f} in month {exc.month}. "
-            "Choose a lower contribution rate or a different retirement age.",
+            "Lower the entered contribution or extra debt budget.",
             ["scenario.employee_contribution_rate" if exc.rate is not None
+             else "scenario.extra_monthly_debt_cents" if scenario and scenario.extra_monthly_debt_cents is not None
              else "scenario.retirement_age"],
         ) from exc
     return EvaluationCore.model_validate(
-        evaluation.model_dump(exclude={"decision_summary", "explanation"})
+        evaluation.model_dump(exclude={"decision_summary", "explanation", "rules_comparison"})
     )
 
 

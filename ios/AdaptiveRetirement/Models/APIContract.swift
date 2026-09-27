@@ -105,6 +105,30 @@ enum API {
         case debtReduction = "debt_reduction"
     }
 
+    struct PlanStyles: Decodable, Sendable {
+        var asOfDate: String
+        var styles: [StyleOutcome]
+
+        enum CodingKeys: String, CodingKey {
+            case asOfDate = "as_of_date"
+            case styles
+        }
+    }
+
+    struct StyleOutcome: Decodable, Sendable {
+        var style: PlanningPreference?
+        var orderedPriorities: [Priority]?
+        var debtFreeMonth: Int?
+        var fullReserveMonth: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case style
+            case orderedPriorities = "ordered_priorities"
+            case debtFreeMonth = "debt_free_month"
+            case fullReserveMonth = "full_reserve_month"
+        }
+    }
+
     enum Priority: String, Codable, Sendable {
         case starterReserve = "starter_reserve"
         case highAprDebt = "high_apr_debt"
@@ -115,6 +139,7 @@ enum API {
         enum Source: String, Codable, Sendable {
             case demo
             case plaidSandbox = "plaid_sandbox"
+            case manual
         }
         enum TaxTreatment: String, Codable, Sendable { case traditional, roth }
 
@@ -138,6 +163,10 @@ enum API {
         var employerMatch: EmployerMatch
         var debts: [Debt]
         var planningPreference: PlanningPreference
+        var fundID: String?
+        var fundBalanceConfirmed: Bool
+        var fundAccountType: Funds.AccountType?
+        var planMenuFundIDs: [String]?
         var provenance: [String: Provenance]
 
         enum CodingKeys: String, CodingKey {
@@ -156,6 +185,10 @@ enum API {
             case emergencyCashCents = "emergency_cash_cents"
             case employerMatch = "employer_match"
             case planningPreference = "planning_preference"
+            case fundID = "fund_id"
+            case fundBalanceConfirmed = "fund_balance_confirmed"
+            case fundAccountType = "fund_account_type"
+            case planMenuFundIDs = "plan_menu_fund_ids"
         }
 
         init(from decoder: Decoder) throws {
@@ -180,6 +213,10 @@ enum API {
             employerMatch = try c.decode(EmployerMatch.self, forKey: .employerMatch)
             debts = try c.decode([Debt].self, forKey: .debts)
             planningPreference = try c.decodeIfPresent(PlanningPreference.self, forKey: .planningPreference) ?? .balanced
+            fundID = try c.decodeIfPresent(String.self, forKey: .fundID)
+            fundBalanceConfirmed = try c.decodeIfPresent(Bool.self, forKey: .fundBalanceConfirmed) ?? false
+            fundAccountType = try c.decodeIfPresent(Funds.AccountType.self, forKey: .fundAccountType)
+            planMenuFundIDs = try c.decodeIfPresent([String].self, forKey: .planMenuFundIDs)
             provenance = try c.decode([String: Provenance].self, forKey: .provenance)
         }
     }
@@ -188,16 +225,38 @@ enum API {
         var retirementAge: Int
         /// nil applies the adaptive policy at that age; a value fixes the election.
         var employeeContributionRate: Double?
+        var extraMonthlyDebtCents: Int64? = nil
+        var priorityStyle: PlanningPreference? = nil
+
+        init(retirementAge: Int, employeeContributionRate: Double?, extraMonthlyDebtCents: Int64? = nil,
+             priorityStyle: PlanningPreference? = nil) {
+            self.retirementAge = retirementAge
+            self.employeeContributionRate = employeeContributionRate
+            self.extraMonthlyDebtCents = extraMonthlyDebtCents
+            self.priorityStyle = priorityStyle
+        }
 
         enum CodingKeys: String, CodingKey {
             case retirementAge = "retirement_age"
             case employeeContributionRate = "employee_contribution_rate"
+            case extraMonthlyDebtCents = "extra_monthly_debt_cents"
+            case priorityStyle = "priority_style"
         }
 
         func encode(to encoder: Encoder) throws {
             var c = encoder.container(keyedBy: CodingKeys.self)
             try c.encode(retirementAge, forKey: .retirementAge)
             try c.encode(employeeContributionRate, forKey: .employeeContributionRate)
+            try c.encode(extraMonthlyDebtCents, forKey: .extraMonthlyDebtCents)
+            try c.encode(priorityStyle, forKey: .priorityStyle)
+        }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            retirementAge = try c.decode(Int.self, forKey: .retirementAge)
+            employeeContributionRate = try c.decodeIfPresent(Double.self, forKey: .employeeContributionRate)
+            extraMonthlyDebtCents = try c.decodeIfPresent(Int64.self, forKey: .extraMonthlyDebtCents)
+            priorityStyle = try c.decodeIfPresent(PlanningPreference.self, forKey: .priorityStyle)
         }
     }
 
@@ -205,10 +264,12 @@ enum API {
         var profile: FinancialProfile
         var scenario: Scenario?
         var previousDecisionID: String?
+        var baseDecisionID: String? = nil
 
         enum CodingKeys: String, CodingKey {
             case profile, scenario
             case previousDecisionID = "previous_decision_id"
+            case baseDecisionID = "base_decision_id"
         }
 
         func encode(to encoder: Encoder) throws {
@@ -216,6 +277,7 @@ enum API {
             try c.encode(profile, forKey: .profile)
             try c.encode(scenario, forKey: .scenario)
             try c.encode(previousDecisionID, forKey: .previousDecisionID)
+            try c.encode(baseDecisionID, forKey: .baseDecisionID)
         }
     }
 
@@ -402,6 +464,7 @@ enum API {
         var returnsNetOfFees: Bool
         var glidePath: [GlidePathAnchor]
         var limitations: [String]
+        var fundModel: FundModel?
 
         enum CodingKeys: String, CodingKey {
             case annualEquityReturn = "annual_equity_return"
@@ -419,6 +482,30 @@ enum API {
             case returnsNetOfFees = "returns_net_of_fees"
             case glidePath = "glide_path"
             case limitations
+            case fundModel = "fund_model"
+        }
+    }
+
+    struct FundModel: Codable, Hashable, Sendable {
+        var fundID: String
+        var fundName: String
+        var catalogVersion: String
+        var shareClassID: String
+        var targetYear: Int
+        var appliedExpenseRatio: Double
+        var feeAsOfDate: String
+        var feeSourceURL: String
+        var glidePathSourceURL: String
+        var glidePathMode: String
+        var glidePath: [GlidePathAnchor]
+        var limitation: String?
+
+        enum CodingKeys: String, CodingKey {
+            case fundID = "fund_id", fundName = "fund_name", catalogVersion = "catalog_version"
+            case shareClassID = "share_class_id", targetYear = "target_year"
+            case appliedExpenseRatio = "applied_expense_ratio", feeAsOfDate = "fee_as_of_date"
+            case feeSourceURL = "fee_source_url", glidePathSourceURL = "glide_path_source_url"
+            case glidePathMode = "glide_path_mode", glidePath = "glide_path", limitation
         }
     }
 
@@ -505,6 +592,7 @@ enum API {
         var warnings: [String]
         var decisionSummary: DecisionSummary
         var explanation: Explanation
+        var rulesComparison: RulesComparison?
 
         enum CodingKeys: String, CodingKey {
             case plan, assumptions, projections, warnings, explanation
@@ -515,6 +603,25 @@ enum API {
             case inputHash = "input_hash"
             case financialState = "financial_state"
             case decisionSummary = "decision_summary"
+            case rulesComparison = "rules_comparison"
+        }
+    }
+
+    struct RulesComparison: Codable, Hashable, Sendable {
+        var basis: String
+        var rulesPriorities: [Priority]
+        var aiPriorities: [Priority]
+        var rulesRetirementBalanceCents: Int64?
+        var aiRetirementBalanceCents: Int64?
+        var differenceCents: Int64?
+        var outcome: String
+
+        enum CodingKeys: String, CodingKey {
+            case basis, outcome
+            case rulesPriorities = "rules_priorities", aiPriorities = "ai_priorities"
+            case rulesRetirementBalanceCents = "rules_retirement_balance_cents"
+            case aiRetirementBalanceCents = "ai_retirement_balance_cents"
+            case differenceCents = "difference_cents"
         }
     }
 

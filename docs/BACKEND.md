@@ -5,6 +5,13 @@
 **Companion:** [FRONTEND.md](FRONTEND.md).  
 **Status:** Implementation specification; creating this document does not implement or validate the application.
 
+> **Current implementation (model/policy 2.0.0):** ARM additionally supports one
+> server-resolved target-date-fund snapshot per profile, documented fees and glide
+> paths where reviewed, exact extra-debt scenario budgets, pinned base decisions, and
+> deterministic AI-versus-rules comparisons. The maintained implementation details,
+> migration/compatibility rules, and release workflow are in
+> [FUND_AWARE_PLAN.md](FUND_AWARE_PLAN.md); the generated OpenAPI contract is authoritative.
+
 ## 1. Purpose and architecture
 
 Build one Python service with bounded AI priority selection and a deterministic financial engine that converts a normalized profile into an affordable contribution/cash-priority plan, explanations, and monthly projections.

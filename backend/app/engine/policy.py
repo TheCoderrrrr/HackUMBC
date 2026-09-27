@@ -290,6 +290,7 @@ def allocate_month(
     profile: Mapping[str, object], state: Mapping[str, object], decision: Mapping[str, object],
     *, month: Mapping[str, object] | None = None, strategy: str = "adaptive",
     employee_contribution_rate: float | None = None,
+    extra_monthly_debt_cents: int | None = None,
 ) -> dict[str, object]:
     """Allocate a modeled month under adaptive, current, or custom strategy.
 
@@ -311,6 +312,10 @@ def allocate_month(
         raise ValueError("Unsupported strategy")
     if strategy != "custom" and employee_contribution_rate is not None:
         raise ValueError("Contribution override is only supported for custom strategy")
+    if strategy != "custom" and extra_monthly_debt_cents is not None:
+        raise ValueError("Debt override is only supported for custom strategy")
+    if extra_monthly_debt_cents is not None and (isinstance(extra_monthly_debt_cents, bool) or extra_monthly_debt_cents < 0):
+        raise ValueError("Extra monthly debt payment must be nonnegative cents")
     fixed_rate = None
     if strategy == "current":
         fixed_rate = decimal(profile["employee_contribution_rate"])
@@ -411,12 +416,32 @@ def allocate_month(
 
     def spend_priorities() -> None:
         nonlocal available
+        if extra_monthly_debt_cents is not None:
+            if extra_monthly_debt_cents > available and any(
+                debt["amount_due_cents"] > debt["minimum_payment_cents"] for debt in debts
+            ):
+                result["feasible"] = False
+                result["shortfall_cents"] = extra_monthly_debt_cents - available
+                result["warnings"].append("INFEASIBLE_DEBT_BUDGET")
+                return
+            budget = min(available, extra_monthly_debt_cents)
+            candidates = sorted((debt for debt in debts if debt["opening_balance_cents"] > 0),
+                                key=lambda debt: (-decimal(debt["apr"]), debt["opening_balance_cents"], debt["id"]))
+            for debt in candidates:
+                extra = min(budget, debt["amount_due_cents"] - debt["minimum_payment_cents"])
+                debt["extra_payment_cents"] += extra
+                debt["total_payment_cents"] += extra
+                debt["closing_balance_cents"] -= extra
+                budget -= extra
+                available -= extra
         for priority in decision["ordered_priorities"]:
             if priority == "starter_reserve":
                 fund_reserve(starter_target, "cash_to_starter_reserve_cents")
             elif priority == "full_reserve":
                 fund_reserve(full_target, "cash_to_full_reserve_cents")
             else:
+                if extra_monthly_debt_cents is not None:
+                    continue
                 candidates = sorted(
                     (debt for debt in debts if debt["opening_balance_cents"] > 0
                      and decimal(debt["apr"]) >= decimal(MODEL_ASSUMPTIONS["high_interest_apr_threshold"])),
@@ -450,6 +475,8 @@ def allocate_month(
         if strategy == "custom":
             fund_reserve(critical_target, "cash_to_critical_reserve_cents")
             spend_priorities()
+            if not result["feasible"]:
+                return result
             if cash_total < full_target:
                 result["warnings"].append("CUSTOM_LIQUIDITY_DELAYED")
     else:
@@ -460,6 +487,8 @@ def allocate_month(
         if full_match_cents > 0 and result["employee_contribution_cents"] < full_match_cents:
             result["warnings"].append("MATCH_PARTIALLY_AFFORDABLE")
         spend_priorities()
+        if not result["feasible"]:
+            return result
         desired = max(
             _target_employee_cents(gross, match),
             employee_contribution_cents(gross, profile["employee_contribution_rate"]),
