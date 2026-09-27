@@ -132,7 +132,11 @@ def test_primary_high_apr_narrative_follows_action_not_input_order(morgan):
     high_reason = next(item for item in plan["reasons"]
                        if item["code"] == "HIGH_APR_DEBT" and item["facts"]["debt_id"] == "high-second")
     explanation = template_explanation(morgan, state, decision, plan)
-    assert "high-second" in explanation["narrative"]
+    # Debts are named by type in prose, never by raw ID (REPORT C5); the narrative still
+    # follows the action's debt (the credit card), not the first debt in input order.
+    assert "your credit card" in explanation["narrative"]
+    assert "student loan" not in explanation["narrative"]
+    assert "high-second" not in explanation["narrative"]
     assert "low-first" not in explanation["narrative"]
     assert "25%" in explanation["narrative"]
     assert render_reason(high_reason) == explanation["narrative"]
@@ -159,7 +163,9 @@ def test_equal_apr_avalanche_prefers_balance_then_id(morgan):
     assert extras["b-small"] == extras["z-large"] == 0
     assert plan["primary_action_id"] == "debt-a-small"
     explanation = template_explanation(morgan, state, decision, plan)
-    assert "a-small" in explanation["narrative"]
+    # All three are credit cards, so the winning debt shows through its unique amounts.
+    assert "$10.80" in explanation["narrative"]
+    assert "a-small" not in explanation["narrative"]  # no raw debt IDs in prose (REPORT C5)
 
 
 def test_match_capture_uses_returned_rounded_employer_cents(morgan):

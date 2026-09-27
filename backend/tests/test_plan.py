@@ -38,7 +38,7 @@ def test_morgan_debt_headline_and_grounded_facts(morgan):
     assert debt["monthly_cash_cost_cents"] == 136380
     assert debt["status"] == "action"
     facts = next(reason["facts"] for reason in plan["reasons"] if reason["code"] == "HIGH_APR_DEBT")
-    assert facts == {"debt_id": "morgan-card", "balance_cents": 1800000,
+    assert facts == {"debt_id": "morgan-card", "debt_type": "credit_card", "balance_cents": 1800000,
                      "apr_rate": .25, "minimum_payment_cents": 40000,
                      "extra_payment_cents": 96380, "total_payment_cents": 136380}
     explanation = template_explanation(morgan, state, decision, plan)

@@ -617,7 +617,8 @@ def build_plan(
         else:
             code = "MAINTAIN_DEBT_MINIMUM"
         reason(code, {
-            "debt_id": debt["id"], "balance_cents": debt["opening_balance_cents"],
+            "debt_id": debt["id"], "debt_type": debt["type"],
+            "balance_cents": debt["opening_balance_cents"],
             "apr_rate": debt["apr"],
             "minimum_payment_cents": debt["minimum_payment_cents"],
             "extra_payment_cents": debt["extra_payment_cents"],

@@ -138,6 +138,7 @@
         "template_key": "maintain_debt_minimum",
         "facts": {
           "debt_id": "jordan-student",
+          "debt_type": "student_loan",
           "balance_cents": 1500000,
           "apr_rate": 0.04,
           "minimum_payment_cents": 20000,
