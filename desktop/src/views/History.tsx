@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, errorMessage } from "../api/client";
 import type { Comparison, Evaluation, HistoryStatus, RunSummary, Scenario, YearValues } from "../api/types";
 import { Icon } from "../components/ui";
+import { Disclosure } from "../components/Tabs";
 import { LineChart, type Series } from "../components/LineChart";
 import { money, monthLabel } from "../data/format";
 import { useStore } from "../store";
@@ -140,7 +141,18 @@ export function History({ shown }: { shown: Shown }) {
             <p className="body" style={{ marginTop: 16, fontSize: 14 }}>
               {runs.length === 0 ? "No saved runs yet." : "Save one more run to compare the two over time."}
             </p>
-          ) : (
+          ) : null}
+          {runs.length > 0 && (
+            <Disclosure title="Manage saved runs" summary={`${runs.length} saved`}>
+              <ul className="run-list">
+                {runs.map((r) => <RunRow key={r.run_id} run={r} onDeleted={async (label) => {
+                  setMessage(`Deleted “${label}”.`);
+                  await loadRuns();
+                }} onError={setMessage} />)}
+              </ul>
+            </Disclosure>
+          )}
+          {runs.length >= 2 && (
             <>
               <div className="history-pickers">
                 <RunPicker label="Compare" color={BASE_COLOR} runs={runs} value={pick.base} disabled={pick.other}
@@ -241,3 +253,47 @@ function ComparisonView({ comparison, series, startYear, age }: {
     </div>
   );
 }
+
+/** One saved run with a delete button that asks once more before deleting. */
+function RunRow({ run, onDeleted, onError }: {
+  run: RunSummary;
+  onDeleted: (label: string) => Promise<void>;
+  onError: (message: string) => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const remove = async () => {
+    setBusy(true);
+    try {
+      await api.history.remove(run.run_id);
+      await onDeleted(run.label);
+    } catch (error) {
+      onError(errorMessage(error));
+      setBusy(false);
+      setConfirming(false);
+    }
+  };
+  return (
+    <li className="run-row">
+      <span className="run-row-text">
+        <b>{run.label}</b>
+        <span className="caption">
+          Saved {new Date(run.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+          {run.final_retirement_balance_cents !== null && <> · {money(run.final_retirement_balance_cents)} at {run.retirement_age}</>}
+          {" · "}{run.decision_source === "ai" ? "AI decision" : "Rules decision"}
+        </span>
+      </span>
+      {confirming ? (
+        <span className="run-row-actions">
+          <button className="link" onClick={() => setConfirming(false)} disabled={busy}>Keep</button>
+          <button className="pill danger" onClick={remove} disabled={busy}>{busy ? <span className="spinner" /> : "Delete"}</button>
+        </span>
+      ) : (
+        <button className="pill neutral" onClick={() => setConfirming(true)} aria-label={`Delete ${run.label}`}>
+          <Icon name="close" size={12} /> Delete
+        </button>
+      )}
+    </li>
+  );
+}
+

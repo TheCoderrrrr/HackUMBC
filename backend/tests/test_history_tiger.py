@@ -37,6 +37,7 @@ def tiger():
     schema = f"arm_test_{uuid.uuid4().hex[:10]}"
     store = TigerHistoryStore(URL, schema)
     yield store
+    store.close()
     import psycopg
 
     with psycopg.connect(URL, autocommit=True) as conn:
@@ -65,6 +66,12 @@ def test_timescale_objects_exist(tiger):
         cagg = conn.execute("SELECT materialized_only FROM timescaledb_information.continuous_aggregates "
                             "WHERE view_schema = %s AND view_name = 'projection_yearly'", (tiger.schema,)).fetchone()
     assert hyper == 1 and cagg == (False,)
+    with psycopg.connect(URL) as conn:
+        compressed = conn.execute("SELECT compression_enabled FROM timescaledb_information.hypertables "
+                                  "WHERE hypertable_schema = %s AND hypertable_name = 'projection_point'", (tiger.schema,)).fetchone()
+        jobs = conn.execute("SELECT count(*) FROM timescaledb_information.jobs WHERE hypertable_schema = %s "
+                            "AND proc_name = 'policy_compression'", (tiger.schema,)).fetchone()[0]
+    assert compressed == (True,) and jobs == 1
 
 
 @needs_tiger
@@ -100,3 +107,30 @@ def test_save_query_and_compare_on_tiger(tiger):
     assert res.status_code == 200, res.text
     body = res.json()
     assert body["horizons"][1]["base"]["debt_cents"] == base_eval["projections"]["adaptive"]["points"][120]["debt_cents"]
+
+
+@needs_tiger
+def test_delete_and_compressed_reads_on_tiger(tiger):
+    record, _ = _record("casey")
+    tiger.save(record)
+    import psycopg
+
+    with psycopg.connect(URL, autocommit=True) as conn:  # compress now, as the policy would, then read through it
+        for (chunk,) in conn.execute("SELECT show_chunks(%s)", (f"{tiger.schema}.projection_point",)).fetchall():
+            conn.execute("SELECT compress_chunk(%s, if_not_compressed => TRUE)", (chunk,))
+    rows = tiger.yearly([(record.run_id, "adaptive")])[record.run_id]
+    assert rows == service.yearly_reference(record.run_id, record.points, "adaptive")
+
+    assert tiger.delete(record.run_id) is True
+    assert tiger.delete(record.run_id) is False
+    assert tiger.yearly([(record.run_id, "adaptive")])[record.run_id] == []
+    assert record.run_id not in {r.run_id for r in tiger.list_runs("casey", 20)}
+
+
+@needs_tiger
+def test_pool_reuses_connections(tiger):
+    for _ in range(5):
+        assert tiger.ping()
+    stats = tiger._get_pool().get_stats()
+    assert "connections_num" in stats and stats["connections_num"] <= 2  # five calls, not five TLS handshakes
+

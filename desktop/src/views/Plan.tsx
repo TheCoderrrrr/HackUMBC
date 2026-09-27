@@ -73,12 +73,16 @@ function Future({ display }: { display: Display }) {
   const years = display.yearsToRetirement;
   const [pinned, setPinned] = useState(years);
   const [hover, setHover] = useState<number | null>(null);
-  const [goal, setGoal] = useState<number | null>(null);
+  const [goal, setGoalState] = useState<number | null>(() => readGoal(profile.id));
+  const setGoal = (value: number | null) => {
+    setGoalState(value);
+    writeGoal(profile.id, value);
+  };
   const [custom, setCustom] = useState("");
   const [customError, setCustomError] = useState(false);
   useEffect(() => {
     setPinned(years);
-    setGoal(null);
+    setGoalState(readGoal(profile.id));
   }, [years, profile.id]);
 
   const plan = useMemo(() => yearlyBalances(adaptive, years), [adaptive, years]);
@@ -379,3 +383,23 @@ function LearnHint({ section }: { section: PlanSection }) {
     </button>
   );
 }
+
+// The goal line is a per-viewer convenience, so it lives in this browser only.
+function readGoal(profileID: string): number | null {
+  try {
+    const n = Number(localStorage.getItem(`goal:${profileID}`));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeGoal(profileID: string, cents: number | null) {
+  try {
+    if (cents === null) localStorage.removeItem(`goal:${profileID}`);
+    else localStorage.setItem(`goal:${profileID}`, String(cents));
+  } catch {
+    // Storage can be unavailable (private mode); the goal just won't be remembered.
+  }
+}
+

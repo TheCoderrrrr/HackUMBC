@@ -79,6 +79,7 @@ async function send<T>(path: string, init: RequestInit, timeoutMs: number, signa
     }
     throw new APIError("unexpectedStatus", response.status);
   }
+  if (response.status === 204) return null as T; // e.g. DELETE: success with no body
   try {
     return (await response.json()) as T;
   } catch {
@@ -126,6 +127,8 @@ export const api = {
     list: (profileID: string, signal?: AbortSignal) =>
       send<{ runs: RunSummary[] }>(`/v1/history/runs?profile_id=${encodeURIComponent(profileID)}`,
         { method: "GET" }, REQUEST_TIMEOUT_MS, signal),
+    remove: (runID: string) =>
+      send<null>(`/v1/history/runs/${encodeURIComponent(runID)}`, { method: "DELETE" }, REQUEST_TIMEOUT_MS),
     compare: (base: string, other: string, signal?: AbortSignal) =>
       send<Comparison>(`/v1/history/compare?base=${encodeURIComponent(base)}&other=${encodeURIComponent(other)}`,
         { method: "GET" }, REQUEST_TIMEOUT_MS, signal),

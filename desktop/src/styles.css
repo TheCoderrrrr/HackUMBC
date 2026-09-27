@@ -763,3 +763,14 @@ p.lesson-apply { padding-top: 16px; }
 .goal-result { font-size: 14px; color: var(--text-2); line-height: 1.5; }
 .goal-result b { color: var(--text); font-weight: 500; }
 
+/* Saved runs list */
+.run-list { list-style: none; display: grid; gap: 6px; }
+.run-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.025); }
+.run-row-text { display: grid; gap: 2px; min-width: 0; }
+.run-row-text b { font-size: 14px; font-weight: 500; }
+.run-row > .pill, .run-row-actions { margin-left: auto; flex: none; }
+.run-row-actions { display: inline-flex; align-items: center; gap: 10px; }
+.run-row .pill { height: 30px; font-size: 12.5px; }
+.pill.danger { color: #101114; background: #f0a58f; }
+.pill.danger:hover { background: #f4b8a6; }
+
