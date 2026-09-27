@@ -1,18 +1,16 @@
 <div align="center">
 
-<img src="./assets/logo.svg" width="128" alt="Adaptive Retirement logo" />
+<img src="./assets/logo.svg" width="128" alt="ARM logo" />
 
-# Adaptive Retirement
+# Adaptive Retirement Management (ARM)
 
-### Target Date Fund 2.0: same retirement date, different financial lives.
+**Retirement plans built from your real finances, not just your birth year.**
 
-**Bounded AI reads a participant's real cash flow, debt and savings. Python turns it into an affordable,<br/>explainable plan for where every next dollar should go.**
+<img src="./assets/hero.svg" width="100%" alt="A target-date fund plans from your birth year alone, so everyone that age gets the same plan. ARM uses your income, debt, savings and employer match to show how much to save, where it goes and what it builds." />
 
-![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white) ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?style=for-the-badge&logo=fastapi&logoColor=white) ![Gemini](https://img.shields.io/badge/Gemini-Flash_Lite-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white) ![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS_17+-0D96F6?style=for-the-badge&logo=swift&logoColor=white)
-<br/>
-![Tests](https://img.shields.io/badge/backend_tests-341_passing-2EA44F?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-1D4ED8?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-6366F1?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_only-6B7280?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=FFD43B) ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?style=flat-square&logo=fastapi&logoColor=white) ![OpenAI](https://img.shields.io/badge/OpenAI-GPT--6_Luna-412991?style=flat-square&logo=openai&logoColor=white) ![Gemini](https://img.shields.io/badge/Gemini-Flash_Lite-8E75B2?style=flat-square&logo=googlegemini&logoColor=white) ![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS_17+-F05138?style=flat-square&logo=swift&logoColor=white) ![Tests](https://img.shields.io/badge/tests-341_passing-22C55E?style=flat-square) ![Engine](https://img.shields.io/badge/engine-deterministic-2563EB?style=flat-square) ![AI](https://img.shields.io/badge/AI-bounded_%2B_fallback-EC4899?style=flat-square) ![Data](https://img.shields.io/badge/data-synthetic_only-0EA5E9?style=flat-square)
 
-**HackUMBC 2026** · University of Maryland, Baltimore County
+<sub><b>HackUMBC 2026</b> · University of Maryland, Baltimore County</sub>
 
 [The problem](#-the-problem) · [Results](#-the-result-same-age-different-plan) · [How it works](#%EF%B8%8F-how-it-works) · [AI guardrails](#%EF%B8%8F-ai-guardrails) · [Status](#-project-status) · [Run it](#-quick-start)
 
@@ -25,7 +23,7 @@
 > [!IMPORTANT]
 > **A target-date fund only knows your birth year.** Two 35-year-olds retiring in 2058 get the *same* plan, even if one has six months of savings and the other carries **$18,000 of credit-card debt at 25% APR**.
 
-T. Rowe Price, whose target-date lineup is its largest product line, has publicly said that personalization is the next step for target-date solutions ([research](https://www.troweprice.com/institutional/us/en/insights/articles/2024/q3/make-it-personal-the-next-chapter-for-target-date-solutions-na.html)). **Adaptive Retirement** is a working prototype of that idea:
+T. Rowe Price, whose target-date lineup is its largest product line, has publicly said that personalization is the next step for target-date solutions ([research](https://www.troweprice.com/institutional/us/en/insights/articles/2024/q3/make-it-personal-the-next-chapter-for-target-date-solutions-na.html)). **Adaptive Retirement Management (ARM)** is a working prototype of that idea:
 
 <table>
 <tr>
@@ -154,6 +152,19 @@ flowchart LR
 | 🏷️ **Honest labels** | Every response says `ai` or `rules_fallback`, with a reason such as `TIMEOUT` or `AI_COOLDOWN` |
 | 🔒 **Privacy** | Prompts contain only computed indicators: no names, IDs or account data |
 
+### ⚡ Speed
+
+Live `POST /v1/evaluate` calls for Jordan, Morgan and Casey on a laptop, 2026-09-26. "Both AI calls" is the recommendation plus the explanation.
+
+| Mode | Median | Slowest | Result within the 4-second budget |
+|---|---:|---:|---|
+| Rules only (AI off) | 0.11 s | 0.13 s | Always; this is also the fallback path |
+| Gemini 3.5 Flash-Lite, `minimal` thinking | 2.6 s | 3.1 s | Both AI calls finish ✅; free-tier rate limit hit after about 17 calls in 30 s |
+| OpenAI GPT-6 Luna, effort `none` | 4.7 s | 5.8 s | AI decision 9/9; AI explanation 2/9 (the rest use the template) |
+| OpenAI GPT-6 Luna, effort `low` | 7.6 s | 8.5 s | Recommendation times out → rules fallback, then AI cooldown |
+
+The OpenAI rows were timed with the budget raised to 20 s so every call could finish; the last column is what the real 4-second budget produces. Every response stays labeled `ai`, `template` or `rules_fallback`.
+
 ---
 
 ## 🚦 Project status
@@ -163,7 +174,7 @@ flowchart LR
 | API, contracts, AI pipeline (OpenAI or Gemini) | ✅ Done | Developer A |
 | Financial state, policy, validation | ✅ Done | Developer B |
 | Monthly simulation and evaluator | ✅ Done | Developer C |
-| Saved AI decisions and offline demo bundle | 🟡 In progress | Developer C |
+| Saved AI decisions and offline demo bundle | ✅ Done (not yet copied into the iOS app) | Developer C |
 | SwiftUI iPhone app | 🟡 In progress | Frontend |
 | Plaid Sandbox import | ⚪ Stretch goal | Developer A |
 
@@ -188,7 +199,57 @@ pytest                             # 341 backend tests
 ```
 
 > [!NOTE]
-> **No API key? It still works.** Without a key for the selected `AI_PROVIDER`, every response uses the rules fallback and is labeled that way. The phone reaches the laptop through a Cloudflare tunnel; see [`backend/RUNBOOK.md`](backend/RUNBOOK.md).
+> **No API key? It still works.** Without a key for the selected `AI_PROVIDER`, every response uses the rules fallback and is labeled that way. The phone reaches the laptop through an ngrok tunnel (below); see also [`backend/RUNBOOK.md`](backend/RUNBOOK.md).
+
+### 📱 Run the full stack on an iPhone
+
+The app only talks to an HTTPS server, so the laptop's API is published through an ngrok tunnel on a fixed free domain.
+
+**1. Backend (terminal 1)**
+
+```bash
+cd backend && source .venv/bin/activate
+uvicorn app.main:app --host 127.0.0.1 --port 8000   # log: "AI enabled (provider=openai, model=gpt-6-luna)"
+```
+
+For live AI, put `OPENAI_API_KEY=...` in `backend/.env` (git-ignored; never in `.env.example`, which is committed).
+
+**2. Tunnel (terminal 2, once per machine: `brew install ngrok`)**
+
+
+3. Start the tunnel: `ngrok http --url=unsheathe-chemicals-truth.ngrok-free.dev 8000`
+
+`scripts/serve_demo.sh unsheathe-chemicals-truth.ngrok-free.dev 8000` runs the API, the tunnel and `caffeinate` together.
+
+**3. Smoke test (terminal 3, from `backend`)**
+
+```bash
+python scripts/smoke.py https://your-name.ngrok-free.app   # expect RESULT: OK
+```
+
+Run it from `backend/`, since the path is relative. If it fails with `CERTIFICATE_VERIFY_FAILED` on a python.org Python, run `"/Applications/Python 3.12/Install Certificates.command"` once.
+
+**4. Install on the iPhone (Xcode)**
+
+1. Connect the phone by cable, tap **Trust This Computer**, and open `ios/AdaptiveRetirement.xcodeproj`.
+2. Select the phone as the run destination and press ⌘R once. Then turn on **Settings → Privacy & Security → Developer Mode** on the phone (the switch appears only after Xcode has seen the phone).
+3. Sign with your own Apple ID **without touching Xcode's Signing & Capabilities tab** (that would write your values into the shared `project.pbxproj`). Instead:
+
+   ```bash
+   cp ios/Config/Signing.local.xcconfig.example ios/Config/Signing.local.xcconfig
+   ```
+
+   Set `DEVELOPMENT_TEAM` to your Team ID (**Xcode → Settings → Accounts**) and `BUNDLE_ID_SUFFIX` to something unique like `.yourname`. The file is git-ignored, so it can't be committed. Without it, the app signs with the team defaults in `ios/Config/Signing.xcconfig`.
+4. Press ⌘R. With a free Apple ID, trust the profile under **Settings → General → VPN & Device Management**. Free installs expire after 7 days.
+
+**5. Point the app at your server (saved on the phone)**
+
+In the app: **Explore → Modeling assumptions → Live calculation**, enter `https://your-name.ngrok-free.app`. Without it, the app uses the built-in team domain (`AppStore.defaultServerBaseURL`).
+
+**6. Check it**
+
+- **Live:** the badge reads **Live calculation**, profile switching works, Morgan shows the **$963.80** extra card payment, **Why?** shows **AI-assisted priorities**, and **Compare scenario** returns. Repeat once on cellular with Wi-Fi off.
+- **Offline:** copy the bundle into the app (`mkdir -p ios/AdaptiveRetirement/Resources/Demo && cp backend/fixtures/generated/*.json ios/AdaptiveRetirement/Resources/Demo/`) and reinstall. Stop the server, turn on Airplane Mode, then force-quit and reopen the app: it shows **Saved demo calculation**, with every profile, preset and the Morgan demonstration.
 
 <details>
 <summary><b>🔌 API surface</b></summary>
@@ -232,7 +293,7 @@ BACKEND.md · FRONTEND.md             full specifications
 | Backend | Python 3.12, FastAPI, Pydantic, Uvicorn |
 | Financial engine | Pure Python, `Decimal` cents, deterministic monthly simulation |
 | AI | OpenAI GPT-6 Luna (default) or Gemini 3.5 Flash-Lite via `google-genai`, structured output, backend only |
-| Hosting | A teammate's laptop + Cloudflare quick tunnel |
+| Hosting | A teammate's laptop + ngrok tunnel on a fixed free domain |
 
 </details>
 
@@ -240,7 +301,7 @@ BACKEND.md · FRONTEND.md             full specifications
 
 ## 🆚 Why this beats a standard target-date default
 
-| Standard target-date fund | Adaptive Retirement |
+| Standard target-date fund | ARM |
 |---|---|
 | ❌ Uses age only | ✅ Uses cash flow, debt, APRs, savings and employer match |
 | ❌ Same plan for everyone born the same year | ✅ Same allocation, **personal contributions and cash priorities** |
@@ -256,32 +317,16 @@ What's still to build between Developer A (Neil) and Developer C (Eric). Everyth
 
 ### Neil (Developer A)
 
-1. ~~Revoke the Gemini key committed in `backend/.env.example`~~ **Done:** the key is revoked and `.env.example` is empty. It still exists in git history, but it no longer works. Keep real keys only in the git-ignored `backend/.env`.
-2. **Measure live latency against the 4-second budget. Done for Gemini; OpenAI still to measure.** Run: 15 live `POST /v1/evaluate` calls (5 each for Jordan, Morgan and Casey), `gemini-3.5-flash-lite`, `AI_THINKING_LEVEL=minimal`, 2026-09-26.
-
-   | Measure | Median | Slowest |
-   |---|---|---|
-   | Recommendation call | 1.5 s | 1.8 s |
-   | Explanation call | 0.9 s | 1.4 s |
-   | Whole request, both calls ran (8 requests) | 2.6 s | 3.1 s |
-
-   - Every request that reached the AI finished inside the 4-second budget, with at least 0.9 s to spare. None timed out.
-   - One of 8 AI explanations was rejected for containing numbers and replaced with the template, as designed.
-   - The limit that bites is the Gemini rate limit, not speed. The ninth request got `RATE_LIMITED` after about 17 calls in roughly 30 seconds. The breaker then returned `AI_COOLDOWN` fallbacks in about 0.1 s each, labeled honestly.
-   - Still to do: repeat with OpenAI (`AI_REASONING_EFFORT=low`, then `none`) once an `OPENAI_API_KEY` is available.
-
-Done in PR #12: the OpenAI client (`OpenAIModel`, `build_model`), provider configuration, the `openai` pin, and guards for every name C relies on (`Evaluation`, `permitted_orders`, `explanation_facts`, `OpenAIModel`, `build_model`).
+1. **Team decision needed: GPT-6 Luna doesn't fit the 4-second budget** (see [⚡ Speed](#-speed)). With the default effort `low`, every recommendation times out and the demo runs on the rules fallback. Options:
+   - Set `AI_REASONING_EFFORT=none`. The AI decision fits, but most explanations fall back to the template.
+   - Switch the live demo to Gemini (`AI_PROVIDER=gemini`). Both calls fit, but the free tier rate-limits bursts.
+   - Raise the budget toward the config maximum of 7 s. iOS allows 8 s per request (`scripts/smoke.py`).
 
 ### Eric (Developer C)
 
-1. **Generate the saved content:**
-   - Put the OpenAI key in `backend/.env` (`OPENAI_API_KEY=`) and make sure the OpenAI account has billing enabled.
-   - From `backend`, run `python -m scripts.prepare_decisions` (done: `fixtures/decisions.json` is committed).
-2. **Export the bundle:** run `python -m scripts.export_demo` twice, compare the bytes, commit `fixtures/generated/`, and hand the twelve files to the frontend for `Resources/Demo/`.
+1. **Get the bundle into the app:** the twelve files in `backend/fixtures/generated/` go into `ios/AdaptiveRetirement/Resources/Demo/` (see `ios/IOS_INTEGRATION.md`). Until then, `DemoRepository` reports `bundleMissing` and the app falls back to `DemoData`.
 
 No human sign-off step (team decision): the saved AI text is demo placeholder content. To change it later, edit `fixtures/decisions.json` or regenerate, then re-export. The exporter still rejects text with numbers, invalid decisions, and stale hashes.
-
-Done: `prepare_decisions` builds the model with Neil's `build_model` (the provider in `backend/.env`) and uses his `permitted_orders` and `explanation_facts`, so saved prompts match the live API's exactly.
 
 **Order matters:** the model ID and prompt version are part of every saved hash. Changing the provider, model or prompt version after generating means regenerating and re-exporting.
 
@@ -289,7 +334,7 @@ Done: `prepare_decisions` builds the model with Neil's `build_model` (the provid
 
 <div align="center">
 
-**Adaptive Retirement: a target-date plan that understands more than your retirement date.**
+**Adaptive Retirement Management (ARM): a target-date plan that understands more than your retirement date.**
 
 <sub>Educational prototype using synthetic data. Morgan, Jordan and Casey are fictional. Not affiliated with or endorsed by T. Rowe Price.</sub>
 

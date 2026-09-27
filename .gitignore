@@ -23,3 +23,6 @@ htmlcov/
 backend/fixtures/draft/
 # Export lock files (scripts.export_demo)
 backend/fixtures/*.lock
+
+# Per-developer iOS signing (see ios/Config/Signing.xcconfig)
+ios/Config/Signing.local.xcconfig
