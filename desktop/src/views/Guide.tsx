@@ -8,7 +8,7 @@ import { monthLabel, percent } from "../data/format";
 import { STYLE_INFO, STYLE_ORDER, outcomeFor, stylesDiffer } from "../data/styles";
 import { useStore } from "../store";
 
-const STEPS = 5;
+const STEPS = 3;
 const PRIORITY_TERM: Record<Priority, [string, TermId]> = {
   starter_reserve: ["One-month cushion", "cushion"],
   high_apr_debt: ["High-interest debt", "high-interest-debt"],
@@ -16,10 +16,8 @@ const PRIORITY_TERM: Record<Priority, [string, TermId]> = {
 };
 
 /**
- * Getting started (a modal dialog, shown on first open and from the sidebar). Five short pages:
- * welcome, how ARM decides, three key ideas, choosing a plan style (one style at a time, with the
- * order from the backend and two personal numbers), and where to find things. Finishing applies
- * the style and opens Your plan.
+ * Getting started: a short introduction, the decision order, and a plan style choice.
+ * Finishing applies the style and opens Your plan.
  */
 export function Guide() {
   const { guideOpen, closeGuide, profile, style, setStyle, setTab, openPlan } = useStore();
@@ -78,27 +76,17 @@ export function Guide() {
     {
       key: "welcome", eyebrow: `Welcome, ${first}`, title: "A retirement plan that fits your real finances",
       body: <WelcomePage onLearn={() => leave("learn")} />,
-      primary: <button className="btn-primary" onClick={next}>Show me how it works <Icon name="arrow" /></button>,
+      primary: <button className="btn-primary" onClick={next}>How it works <Icon name="arrow" /></button>,
     },
     {
       key: "how", eyebrow: "How ARM decides", title: "Your money goes out in a set order",
       body: <OrderPage />,
-      primary: <button className="btn-primary" onClick={next}>Next <Icon name="arrow" /></button>,
-    },
-    {
-      key: "ideas", eyebrow: "Three ideas", title: "What matters most early on",
-      body: <IdeasPage />,
       primary: <button className="btn-primary" onClick={next}>Choose my style <Icon name="arrow" /></button>,
     },
     {
       key: "choose", eyebrow: "Your plan style", title: "Choose your plan style",
       body: <ChoosePage picked={picked} onPick={setPicked} current={style} name={first} />,
-      primary: <button className="btn-primary" onClick={next}>Use {STYLE_INFO[picked].label} <Icon name="arrow" /></button>,
-    },
-    {
-      key: "tour", eyebrow: "You're set", title: "Where to find things",
-      body: <TourPage />,
-      primary: <button className="btn-primary" onClick={finish}>Open my plan <Icon name="arrow" /></button>,
+      primary: <button className="btn-primary" onClick={finish}>Use {STYLE_INFO[picked].label} and open my plan <Icon name="arrow" /></button>,
     },
   ];
   const page = pages[step];
@@ -132,19 +120,14 @@ function WelcomePage({ onLearn }: { onLearn: () => void }) {
   return (
     <>
       <p className="body guide-lead">
-        ARM keeps your <Term id="target-date-fund">target-date fund</Term> exactly as it is. It adapts how much you
-        save and where each extra dollar goes. This short guide takes about two minutes.
+        ARM helps you decide how to split extra money between an emergency cushion, expensive debt, and retirement saving.
+        Choose a plan style to set the order that fits you.
       </p>
-      <ul className="guide-agenda">
-        <li><Icon name="plan" /> How ARM decides where your money goes</li>
-        <li><Icon name="seal" /> The three ideas that matter most</li>
-        <li><Icon name="compare" /> Choosing your <Term id="plan-style">plan style</Term></li>
-      </ul>
       <button className="guide-learn" onClick={onLearn}>
         <span className="guide-icon"><Icon name="learn" /></span>
         <span>
-          <span className="strong" style={{ display: "block", fontSize: 15 }}>Prefer to read first? Start in Learn</span>
-          <span className="caption" style={{ fontSize: 13 }}>Short lessons on each idea. Reopen this guide anytime from Getting started.</span>
+          <span className="strong" style={{ display: "block", fontSize: 15 }}>Explore lessons in Learn</span>
+          <span className="caption" style={{ fontSize: 13 }}>Read more about the ideas behind your plan.</span>
         </span>
         <Icon name="chevron" />
       </button>
@@ -179,28 +162,6 @@ function OrderPage() {
   );
 }
 
-function IdeasPage() {
-  const ideas: { icon: string; title: ReactNode; text: string }[] = [
-    { icon: "seal", title: <Term id="employer-match">Take the full match</Term>, text: "It's part of your pay. Missing it means leaving money behind." },
-    { icon: "flag", title: <Term id="high-interest-debt">Clear expensive debt</Term>, text: "A 25% card costs more than investing can reliably earn." },
-    { icon: "umbrella", title: <Term id="emergency-fund">Keep a safety net</Term>, text: "Cash for surprises keeps you from borrowing again." },
-  ];
-  return (
-    <>
-      <p className="body guide-lead">Most of a good plan comes down to these. ARM handles all three; your style sets the balance between the last two.</p>
-      <div className="guide-ideas">
-        {ideas.map((idea, i) => (
-          <div key={i} className="guide-idea">
-            <span className="guide-icon"><Icon name={idea.icon} /></span>
-            <p className="strong" style={{ fontSize: 15, marginTop: 12 }}>{idea.title}</p>
-            <p className="body" style={{ fontSize: 14, marginTop: 4 }}>{idea.text}</p>
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
-
 function ChoosePage({ picked, onPick, current, name }: {
   picked: PlanningPreference; onPick: (s: PlanningPreference) => void; current: PlanningPreference; name: string;
 }) {
@@ -222,33 +183,6 @@ function ChoosePage({ picked, onPick, current, name }: {
           ))}
         </div>
         <StyleDetail style={picked} name={name} />
-      </div>
-    </>
-  );
-}
-
-function TourPage() {
-  const places: { icon: string; title: string; text: string }[] = [
-    { icon: "overview", title: "Overview", text: "Your next step and where you stand today." },
-    { icon: "plan", title: "Your plan", text: "Your future balance, then one topic per tab." },
-    { icon: "explore", title: "Explore", text: "Try another retirement age or contribution." },
-    { icon: "funds", title: "Fund shortlist", text: "Compare target-date funds." },
-    { icon: "learn", title: "Learn", text: "Short lessons, applied to your numbers." },
-    { icon: "chat", title: "Ask", text: "Type any question, bottom right." },
-  ];
-  return (
-    <>
-      <p className="body guide-lead">
-        Look for <span className="term-demo" aria-hidden="true">?</span> beside a word to see what it means, and
-        <b className="strong"> Why this matters</b> on any section to see how it affects your retirement.
-      </p>
-      <div className="guide-tour">
-        {places.map((p) => (
-          <div key={p.title} className="guide-place">
-            <span className="guide-icon"><Icon name={p.icon} /></span>
-            <span><b>{p.title}</b><span className="caption">{p.text}</span></span>
-          </div>
-        ))}
       </div>
     </>
   );

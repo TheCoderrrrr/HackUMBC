@@ -6,7 +6,7 @@ import { Guide } from "./views/Guide";
 import { Overview } from "./views/Overview";
 import { Plan } from "./views/Plan";
 import { errorMessage } from "./api/client";
-import { STYLE_INFO } from "./data/styles";
+import { STYLE_INFO, STYLE_ORDER } from "./data/styles";
 import { useStore, type Tab } from "./store";
 
 // Pages opened less often load on demand, keeping the first download small.
@@ -96,7 +96,7 @@ export function App() {
 }
 
 function Sidebar() {
-  const { tab, setTab, profiles, profile, selectProfile, connection, liveEnabled, setLiveEnabled, checkConnection, style, openGuide } = useStore();
+  const { tab, setTab, profiles, profile, selectProfile, connection, liveEnabled, setLiveEnabled, checkConnection, style, setStyle, openGuide } = useStore();
   const connectionText = {
     online: "Backend connected",
     offline: "Backend unreachable",
@@ -127,14 +127,17 @@ function Sidebar() {
         ))}
       </nav>
 
-      <button className="style-chip" onClick={openGuide} title="Change plan style">
-        <span className="eyebrow" style={{ padding: 0 }}>Plan style</span>
-        <span className="style-chip-row">
-          <i style={{ background: STYLE_INFO[style].color }} />
-          <span>{STYLE_INFO[style].label}</span>
-          <span className="link" style={{ marginLeft: "auto", fontSize: 12 }}>Change</span>
-        </span>
-      </button>
+      <div className="style-chip">
+        <label className="eyebrow" htmlFor="sidebar-plan-style">Plan style</label>
+        <div className="style-chip-row">
+          <i style={{ background: STYLE_INFO[style].color }} aria-hidden="true" />
+          <select id="sidebar-plan-style" value={style} onChange={(event) => setStyle(event.target.value as typeof style)}>
+            {STYLE_ORDER.map((option) => (
+              <option key={option} value={option}>{STYLE_INFO[option].label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       <div className="profiles">
         <p className="eyebrow" style={{ marginBottom: 6 }}>Customer</p>
