@@ -174,7 +174,7 @@ The OpenAI rows were timed with the budget raised to 20 s so every call could fi
 | API, contracts, AI pipeline (OpenAI or Gemini) | ✅ Done | Developer A |
 | Financial state, policy, validation | ✅ Done | Developer B |
 | Monthly simulation and evaluator | ✅ Done | Developer C |
-| Saved AI decisions and offline demo bundle | ✅ Done (not yet copied into the iOS app) | Developer C |
+| Saved AI decisions and offline demo bundle | ✅ Done (committed in the iOS app) | Developer C |
 | SwiftUI iPhone app | 🟡 In progress | Frontend |
 | Plaid Sandbox import | ⚪ Stretch goal | Developer A |
 
@@ -251,7 +251,7 @@ Run it from `backend/`, since the path is relative. If it fails with `CERTIFICAT
 **6. Check it**
 
 - **Live:** the badge reads **Live calculation**, profile switching works, Morgan shows the **$963.80** extra card payment, **Why?** shows **AI-assisted priorities**, and **Compare scenario** returns. Repeat once on cellular with Wi-Fi off.
-- **Offline:** copy the bundle into the app (`mkdir -p ios/AdaptiveRetirement/Resources/Demo && cp backend/fixtures/generated/*.json ios/AdaptiveRetirement/Resources/Demo/`) and reinstall. Stop the server, turn on Airplane Mode, then force-quit and reopen the app: it shows **Saved demo calculation**, with every profile, preset and the Morgan demonstration.
+- **Offline:** the bundle is committed in `ios/AdaptiveRetirement/Resources/Demo/` (kept in sync with `backend/fixtures/generated/` by a test). Stop the server, turn on Airplane Mode, then force-quit and reopen the app: it shows **Saved demo calculation**, with every profile, preset and the Morgan demonstration.
 
 <details>
 <summary><b>🔌 API surface</b></summary>
@@ -323,7 +323,7 @@ What's still to build between Developer A (Neil) and Developer C (Eric). Everyth
 
 ### Eric (Developer C)
 
-1. **Get the bundle into the app:** the twelve files in `backend/fixtures/generated/` go into `ios/AdaptiveRetirement/Resources/Demo/` (see `ios/IOS_INTEGRATION.md`). Until then, `DemoRepository` reports `bundleMissing` and the app falls back to `DemoData`.
+1. ~~Get the bundle into the app~~ **Done:** the twelve files from `backend/fixtures/generated/` are committed in `ios/AdaptiveRetirement/Resources/Demo/`, and `test_ios_bundle_matches_the_generated_export` keeps them in sync.
 
 No human sign-off step (team decision): the saved AI text is demo placeholder content. To change it later, edit `fixtures/decisions.json` or regenerate, then re-export. The exporter still rejects text with numbers, invalid decisions, and stale hashes.
 
